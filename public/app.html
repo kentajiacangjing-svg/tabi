@@ -13,21 +13,30 @@
 <style>
   :root {
     color-scheme: light;
-    --ink: #111111;
-    --muted: #666666;
-    --line: #EFEFF3;
-    --surface: #FAFAFC;
+    --ink: #14151A;
+    --muted: #6B6D76;
+    --line: #ECECF0;
+    --surface: #F7F7F9;
+    --surface-2: #FBFBFC;
     --accent: #4F46E5;
+    --accent-ink: #FFFFFF;
+    --good: #1C8A4B;
+    --good-bg: #EAF9EF;
+    --warn: #946200;
+    --warn-bg: #FFF6E5;
+    --danger: #C43D3D;
+    --danger-bg: #FEF1F1;
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; height: 100%;
-    background: #ffffff; color: var(--ink);
+    background: var(--surface); color: var(--ink);
     font-family: var(--font-sans);
     overscroll-behavior-y: none;
   }
   button { font-family: inherit; }
+  img { max-width: 100%; display: block; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   #app {
@@ -37,125 +46,202 @@
     max-width: 520px;
     margin: 0 auto;
     background: #fff;
+    position: relative;
   }
 
   .tab-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
   .tab-panel.active { display: flex; }
 
-  .px { padding-left: 20px; padding-right: 20px; }
+  .px { padding-left: 18px; padding-right: 18px; }
   .screen-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 20px 8px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px 10px;
     flex-shrink: 0;
   }
-  .topbar h1 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+  .topbar h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; flex: 1; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none;
+    background: var(--surface); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .icon-btn:active { transform: scale(0.92); }
 
   select#lang {
     border: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.78rem; font-weight: 600;
+    font-size: 0.76rem; font-weight: 600;
     padding: 6px 8px; border-radius: 8px;
   }
 
   .icon { width: 22px; height: 22px; display: block; }
-  .icon-sm { width: 18px; height: 18px; }
+  .icon-sm { width: 17px; height: 17px; }
+  .icon-xs { width: 14px; height: 14px; }
 
-  .eyebrow { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
-  h2.section-title { font-size: 1.0625rem; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
+  .eyebrow { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+  h2.section-title { font-size: 1.05rem; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .see-all { font-size: 0.78rem; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; }
 
   .card {
-    background: var(--surface);
+    background: #fff;
     border: 1px solid var(--line);
-    border-radius: 20px;
-    box-shadow: 0 1px 2px rgba(17,17,17,0.03), 0 8px 20px -16px rgba(17,17,17,0.3);
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(20,21,26,0.03), 0 10px 24px -18px rgba(20,21,26,0.35);
     text-align: left;
   }
 
-  .ai-entry {
-    width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: left;
-    padding: 16px; border-radius: 20px; border: 1px solid #ECEAFB;
-    background: linear-gradient(160deg, #F7F6FF 0%, #FDFCFF 100%);
-    box-shadow: 0 1px 2px rgba(79,70,229,0.04), 0 10px 24px -14px rgba(79,70,229,0.35);
-    cursor: pointer; transition: transform 0.12s ease;
+  /* ---- Home hero search ---- */
+  .hero-search {
+    margin: 6px 18px 18px;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 18px; padding: 15px 16px;
+    cursor: text;
   }
-  .ai-entry:active { transform: scale(0.98); }
-  .ai-badge {
-    width: 30px; height: 30px; border-radius: 9px; background: #111111; color: #fff;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    box-shadow: 0 4px 10px -3px rgba(17,17,17,0.4);
+  .hero-search input {
+    border: none; background: none; outline: none; flex: 1;
+    font-size: 0.98rem; font-weight: 600; color: var(--ink); min-width: 0;
   }
+  .hero-search input::placeholder { color: var(--muted); font-weight: 500; }
 
-  .qa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; }
-  .qa-item { display: flex; flex-direction: column; align-items: center; gap: 7px; background: none; border: none; cursor: pointer; padding: 2px; }
-  .qa-item:active { transform: scale(0.94); }
-  .qa-icon {
-    width: 50px; height: 50px; border-radius: 16px; background: #fff;
-    box-shadow: 0 1px 2px rgba(17,17,17,0.04), 0 6px 16px -10px rgba(17,17,17,0.25), inset 0 0 0 1px #F0F0F3;
-    display: flex; align-items: center; justify-content: center; color: var(--ink);
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 18px 22px; }
+  .feature-card {
+    display: flex; flex-direction: column; gap: 22px; justify-content: space-between;
+    padding: 16px; border-radius: 18px; border: none; cursor: pointer; text-align: left;
+    min-height: 96px; transition: transform 0.12s ease;
   }
-  .qa-item span { font-size: 0.6875rem; font-weight: 600; color: #444; }
+  .feature-card:active { transform: scale(0.97); }
+  .feature-card .fc-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .feature-card .fc-label { font-size: 0.92rem; font-weight: 800; }
+  .fc-purple { background: #EEECFC; } .fc-purple .fc-icon { background: #4F46E5; color: #fff; }
+  .fc-amber  { background: #FFF3E2; } .fc-amber  .fc-icon { background: #F5A524; color: #fff; }
+  .fc-green  { background: #E9F8EF; } .fc-green  .fc-icon { background: #1C8A4B; color: #fff; }
+  .fc-blue   { background: #E8F2FE; } .fc-blue   .fc-icon { background: #2E7CF6; color: #fff; }
+
+  /* ---- Store cards ---- */
+  .store-row { display: flex; gap: 12px; overflow-x: auto; padding: 2px 18px 4px; scroll-snap-type: x proximity; }
+  .store-card {
+    scroll-snap-align: start; flex-shrink: 0; width: 208px; overflow: hidden; cursor: pointer; padding: 0;
+  }
+  .store-card .photo-wrap { position: relative; height: 132px; background: var(--surface); }
+  .store-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .store-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 18px 18px; }
+  .store-list .store-card { width: 100%; display: flex; flex-direction: row; height: 96px; }
+  .store-list .store-card .photo-wrap { width: 96px; height: 96px; flex-shrink: 0; }
+  .store-list .store-card .store-body { flex: 1; min-width: 0; padding: 10px 12px; }
+
+  .store-body { padding: 10px 12px; }
+  .store-name { font-size: 0.9rem; font-weight: 800; line-height: 1.25; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .store-meta { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--muted); flex-wrap: wrap; }
+  .store-meta .dot::before { content: "·"; margin: 0 1px; }
+  .rating-pill { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; color: var(--ink); }
+  .status-badge { font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
+  .status-open { color: var(--good); background: var(--good-bg); }
+  .status-closed { color: var(--danger); background: var(--danger-bg); }
+
+  .art { position: relative; overflow: hidden; width: 100%; height: 100%; }
+  .art-a { background: radial-gradient(70% 60% at 75% 20%, rgba(255,138,92,0.35), transparent 60%), radial-gradient(70% 60% at 20% 90%, rgba(79,70,229,0.5), transparent 65%), linear-gradient(165deg, #1b1530, #0c0a16); }
+  .art-b { background: radial-gradient(65% 55% at 50% 100%, rgba(255,150,90,0.5), transparent 65%), radial-gradient(50% 40% at 80% 10%, rgba(46,124,246,0.35), transparent 60%), linear-gradient(180deg, #202436, #0e1220); }
+  .art-c { background: radial-gradient(55% 45% at 20% 20%, rgba(28,138,75,0.4), transparent 60%), radial-gradient(60% 50% at 90% 80%, rgba(255,220,180,0.4), transparent 60%), linear-gradient(165deg, #16302c, #0c1c1a); }
+  .art-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.55); }
 
   .empty-state { text-align: center; color: var(--muted); font-size: 0.875rem; padding: 40px 24px; }
+  .spinner-row { display: flex; justify-content: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
+
+  /* ---- Filter chips ---- */
+  .chips-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 18px 14px; flex-shrink: 0; }
+  .chip {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: var(--surface);
+    border: 1px solid var(--line); font-size: 0.78rem; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 
   /* ---- Assistant ---- */
-  .chat-header { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-  .chat-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+  .chat-header { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .chat-scroll { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
   .row { display: flex; }
   .row.user { justify-content: flex-end; }
-  .bubble-user { background: #111111; color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px; max-width: 78%; font-size: 0.9rem; font-weight: 600; }
+  .bubble-user { background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px; max-width: 78%; font-size: 0.9rem; font-weight: 600; }
   .ai-status { color: var(--muted); font-size: 0.85rem; padding: 10px 14px; background: var(--surface); border-radius: 4px 16px 16px 16px; display: inline-block; }
   .dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); margin-right: 3px; animation: blink 1.2s infinite; }
-  .dots span:nth-child(2) { animation-delay: 0.2s; }
-  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; } .dots span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
   .ai-wrap { max-width: 88%; display: flex; flex-direction: column; gap: 8px; }
   .rec-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 4px 16px 16px 16px; padding: 14px; }
   .rec-card + .rec-card { border-radius: 16px; }
-  .rec-card p { margin: 6px 0 0; font-size: 0.875rem; line-height: 1.5; color: #444; padding-right: 26px; }
+  .rec-card p { margin: 6px 0 0; font-size: 0.875rem; line-height: 1.5; color: #3A3B42; padding-right: 26px; }
   .rec-card .tip { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
   .save-heart {
     position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%;
     border: none; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #B4B4BC;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #C6C7CE;
   }
   .save-heart.active { color: #E23D6B; }
-  .book-btn { margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 10px; background: #111111; color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-  .error-bubble { background: #FEF1F1; border: 1px solid #FBD8D8; color: #C43D3D; padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 0.85rem; max-width: 88%; overflow-wrap: break-word; }
-  .chips-row { display: flex; gap: 8px; overflow-x: auto; padding: 8px 20px; flex-shrink: 0; }
-  .chip { flex-shrink: 0; padding: 7px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 0.75rem; font-weight: 600; color: #444; cursor: pointer; }
-  .chat-input-bar { padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; }
+  .book-btn { margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .book-btn.accent { background: var(--accent); }
+  .error-bubble { background: var(--danger-bg); border: 1px solid #FBD8D8; color: var(--danger); padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 0.85rem; max-width: 88%; overflow-wrap: break-word; }
+
+  .prechat { padding: 8px 18px 16px; }
+  .prechat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .prechat-card {
+    text-align: left; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; font-size: 0.82rem; font-weight: 700; line-height: 1.35; min-height: 70px;
+    display: flex; align-items: flex-end;
+  }
+  .prechat-card:active { transform: scale(0.97); }
+
+  .chat-input-bar { padding: 8px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; }
   .chat-input-row { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 16px; }
   .chat-input-row input { flex: 1; border: none; background: none; font-size: 0.9rem; outline: none; min-width: 0; }
-  .send-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: #111111; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .send-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .send-btn:disabled { opacity: 0.4; }
 
-  .saved-item { display: flex; gap: 12px; padding: 12px; align-items: center; margin-bottom: 10px; }
+  /* ---- Bookings / Saved rows ---- */
+  .list-row { display: flex; gap: 12px; padding: 10px; align-items: center; margin-bottom: 10px; }
+  .list-row .photo-wrap { width: 56px; height: 56px; border-radius: 14px; overflow: hidden; flex-shrink: 0; background: var(--surface); }
+  .list-row .photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ---- Store detail ---- */
+  .detail-hero { position: relative; height: 240px; background: var(--surface); flex-shrink: 0; }
+  .detail-hero img { width: 100%; height: 100%; object-fit: cover; }
+  .detail-topbar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 44px 16px 0; }
+  .on-photo { background: rgba(0,0,0,0.35); color: #fff; backdrop-filter: blur(6px); }
+  .detail-price-row { display: flex; align-items: center; gap: 14px; margin: 14px 0; }
+  .detail-actions { display: flex; gap: 10px; padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid var(--line); flex-shrink: 0; }
+  .detail-actions .book-btn { margin-top: 0; }
+  .hours-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; color: var(--muted); }
+  .hours-row.today { color: var(--ink); font-weight: 700; }
 
   /* ---- Bottom nav ---- */
   .bottom-nav {
     flex-shrink: 0; display: flex; justify-content: space-around; align-items: center;
-    padding: 10px 8px calc(env(safe-area-inset-bottom, 0px) + 10px);
+    padding: 8px 6px calc(env(safe-area-inset-bottom, 0px) + 10px);
     border-top: 1px solid var(--line); background: #fff;
   }
   .nav-item {
     appearance: none; border: none; background: transparent;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    color: #B4B4BC; cursor: pointer; padding: 4px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: #B4B4BC; cursor: pointer; padding: 4px 10px;
   }
-  .nav-item.active { color: #111111; }
+  .nav-item.active { color: var(--ink); }
   .nav-item .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0; }
   .nav-item.active .dot { opacity: 1; }
-  .nav-item span { font-size: 0.625rem; font-weight: 600; }
-  .nav-item.center-item { color: var(--accent); }
+  .nav-item span { font-size: 0.6rem; font-weight: 700; }
+  .nav-item.center-item {
+    color: #fff; background: var(--accent); width: 46px; height: 46px; border-radius: 50%;
+    margin-top: -22px; box-shadow: 0 6px 16px -4px rgba(79,70,229,0.6); justify-content: center;
+  }
+  .nav-item.center-item .icon { width: 22px; height: 22px; }
+  .nav-item.center-item span { display: none; }
 
   .toast {
-    position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
-    background: #111111; color: #fff; padding: 10px 16px; border-radius: 999px;
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 999px;
     font-size: 0.85rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-    opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
     z-index: 100; max-width: 80%; text-align: center;
   }
   .toast.show { opacity: 1; }
@@ -173,18 +259,22 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><line x1="20" y1="20" x2="15.8" y2="15.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
     <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" fill="currentColor"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" fill="currentColor"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.75"/><line x1="4" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="1.75"/><line x1="8" y1="3.5" x2="8" y2="7.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="16" y1="3.5" x2="16" y2="7.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
     <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.4 1 6.2 3.9C14.8 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></symbol>
     <symbol id="i-heart-filled" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.4 1 6.2 3.9C14.8 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z" fill="currentColor"/></symbol>
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M4.5 20c1.3-3.8 4.3-5.8 7.5-5.8s6.2 2 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
-    <symbol id="i-restaurant" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="21" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="3" x2="4" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="8" y1="3" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="8" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M18 3v6a2 2 0 0 1-2 2v10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-hotel" viewBox="0 0 24 24"><path d="M3 19v-7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 14h6a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="12" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="19" x2="3" y2="10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="21" y1="19" x2="21" y2="16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="3" y1="19" x2="21" y2="19" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
-    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 9a2 2 0 0 0 0-4V4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v1a2 2 0 0 0 0 4v2a2 2 0 0 0 0 4v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2"/></symbol>
-    <symbol id="i-shopping" viewBox="0 0 24 24"><path d="M6 8h12l1 12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 8z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
-    <symbol id="i-taxi" viewBox="0 0 24 24"><path d="M4 16v-3l2-5a2 2 0 0 1 2-1.3h8A2 2 0 0 1 18 8l2 5v3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="7.5" cy="16.5" r="1.6" fill="currentColor"/><circle cx="16.5" cy="16.5" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9L12 17l-5.2 2.8 1-5.9-4.3-4.2 5.9-.8L12 3.5z" fill="currentColor"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
     <symbol id="i-send" viewBox="0 0 24 24"><line x1="4" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><polyline points="12 6 18 12 12 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke="currentColor" stroke-width="1.75"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.5 4h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2 2C10.5 19.5 4.5 13.5 4.5 6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M9 15l6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M11 6l1-1a4 4 0 0 1 5.7 5.7l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M13 18l-1 1A4 4 0 0 1 6.3 13.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="9" y1="4" x2="9" y2="18" stroke="currentColor" stroke-width="1.6"/><line x1="15" y1="6" x2="15" y2="20" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-cutlery" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="21" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="3" x2="4" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="8" y1="3" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="8" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M18 3v6a2 2 0 0 1-2 2v10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
 </svg>
 
@@ -193,30 +283,74 @@
   <!-- HOME -->
   <section class="tab-panel active" id="tab-home">
     <div class="screen-scroll">
-      <div class="px" style="padding-top:16px;">
-        <div style="font-size:1.5rem;font-weight:700;letter-spacing:-0.01em;" data-en="Konnichiwa 👋" data-ja="こんにちは 👋">Konnichiwa 👋</div>
-        <div style="color:var(--muted);font-size:0.9rem;margin-top:2px;margin-bottom:18px;" data-en="Ask Tabi anything about your trip to Japan." data-ja="日本の旅について、Tabiに何でも聞いてください。">Ask Tabi anything about your trip to Japan.</div>
+      <div class="topbar" style="padding-bottom:0;">
+        <div>
+          <div style="font-size:1.45rem;font-weight:800;letter-spacing:-0.01em;" data-en="Konnichiwa 👋" data-ja="こんにちは 👋">Konnichiwa 👋</div>
+          <div style="color:var(--muted);font-size:0.85rem;margin-top:1px;" data-en="Where do you want to go?" data-ja="どこに行きたい?">Where do you want to go?</div>
+        </div>
+        <button class="icon-btn" onclick="showTab('profile')" aria-label="Profile"><svg class="icon-sm"><use href="#i-user"></use></svg></button>
       </div>
 
-      <div class="px" style="margin-bottom:20px;">
-        <button class="ai-entry" onclick="goAssistant()">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="ai-badge"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
-            <span style="font-weight:700;font-size:0.9375rem;" data-en="Ask Tabi AI" data-ja="Tabi AI に聞く">Ask Tabi AI</span>
-          </div>
-          <div style="color:var(--muted);font-size:0.8438rem;" data-en="“Where's a good sushi place near Shinjuku tonight?”" data-ja="「今夜、新宿近くでいい寿司屋はある?」">“Where's a good sushi place near Shinjuku tonight?”</div>
+      <form class="hero-search" id="homeSearchForm" style="margin-top:14px;">
+        <svg class="icon-sm" style="color:var(--muted);flex-shrink:0;"><use href="#i-search"></use></svg>
+        <input type="text" id="homeSearchInput" placeholder="Where to? What do you want to do?" data-placeholder-en="Where to? What do you want to do?" data-placeholder-ja="どこに行く?何がしたい?" autocomplete="off" />
+      </form>
+
+      <div class="feature-grid">
+        <button class="feature-card fc-purple" onclick="goAssistant()">
+          <span class="fc-icon"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+          <span class="fc-label" data-en="Ask AI" data-ja="AIに相談">Ask AI</span>
+        </button>
+        <button class="feature-card fc-blue" onclick="showTab('search')">
+          <span class="fc-icon"><svg class="icon-sm"><use href="#i-search"></use></svg></span>
+          <span class="fc-label" data-en="Find a place" data-ja="お店を探す">Find a place</span>
+        </button>
+        <button class="feature-card fc-green" onclick="openSearchWithFilter('restaurant', true)">
+          <span class="fc-icon"><svg class="icon-sm"><use href="#i-calendar"></use></svg></span>
+          <span class="fc-label" data-en="Book now" data-ja="予約する">Book now</span>
+        </button>
+        <button class="feature-card fc-amber" onclick="openSearchWithFilter('tourist_attraction', false)">
+          <span class="fc-icon"><svg class="icon-sm"><use href="#i-pin"></use></svg></span>
+          <span class="fc-label" data-en="Nearby spots" data-ja="周辺スポット">Nearby spots</span>
         </button>
       </div>
 
-      <div class="px" style="padding-bottom:24px;">
-        <div class="qa-grid">
-          <button class="qa-item" onclick="quickAction('Find me a good restaurant nearby')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-restaurant"></use></svg></span><span data-en="Restaurant" data-ja="レストラン">Restaurant</span></button>
-          <button class="qa-item" onclick="quickAction('Recommend a hotel in Shinjuku')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-hotel"></use></svg></span><span data-en="Hotel" data-ja="ホテル">Hotel</span></button>
-          <button class="qa-item" onclick="quickAction('What tickets or reservations should I book in advance?')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-ticket"></use></svg></span><span data-en="Tickets" data-ja="チケット">Tickets</span></button>
-          <button class="qa-item" onclick="quickAction('Where should I go shopping nearby?')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-shopping"></use></svg></span><span data-en="Shopping" data-ja="ショッピング">Shopping</span></button>
-          <button class="qa-item" onclick="quickAction('How do I get a taxi in Japan?')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-taxi"></use></svg></span><span data-en="Taxi" data-ja="タクシー">Taxi</span></button>
-          <button class="qa-item" onclick="quickAction(&quot;What's interesting near me right now?&quot;)"><span class="qa-icon"><svg class="icon-sm"><use href="#i-pin"></use></svg></span><span data-en="Nearby" data-ja="周辺">Nearby</span></button>
+      <div class="px" style="padding-bottom:10px;">
+        <div class="section-head">
+          <h2 class="section-title" data-en="Popular near you" data-ja="現在地周辺のおすすめ">Popular near you</h2>
+          <button class="see-all" onclick="showTab('search')" data-en="See all" data-ja="すべて見る">See all</button>
         </div>
+      </div>
+      <div class="store-row" id="homeNearby">
+        <div class="spinner-row" data-en="Finding places near you…" data-ja="周辺のスポットを探しています…">Finding places near you…</div>
+      </div>
+      <div style="height:20px;"></div>
+    </div>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="tab-panel" id="tab-search">
+    <div class="topbar">
+      <h1 data-en="Find a place" data-ja="お店を探す">Find a place</h1>
+    </div>
+    <form class="hero-search" id="searchForm" style="margin:0 18px 12px;">
+      <svg class="icon-sm" style="color:var(--muted);flex-shrink:0;"><use href="#i-search"></use></svg>
+      <input type="text" id="searchInput" placeholder="Search restaurants, cafes, spots..." data-placeholder-en="Search restaurants, cafes, spots..." data-placeholder-ja="レストラン・カフェ・スポットを検索..." autocomplete="off" />
+    </form>
+    <div class="chips-row" id="searchChips">
+      <span class="chip active" data-type="" data-en="All" data-ja="すべて">All</span>
+      <span class="chip" data-type="restaurant" data-en="Restaurant" data-ja="レストラン">Restaurant</span>
+      <span class="chip" data-type="cafe" data-en="Cafe" data-ja="カフェ">Cafe</span>
+      <span class="chip" data-type="tourist_attraction" data-en="Sightseeing" data-ja="観光地">Sightseeing</span>
+      <span class="chip" data-type="lodging" data-en="Hotel" data-ja="ホテル">Hotel</span>
+      <span class="chip" data-type="shopping_mall" data-en="Shopping" data-ja="ショッピング">Shopping</span>
+    </div>
+    <div class="chips-row" style="padding-top:0;">
+      <span class="chip" id="openNowChip" data-en="Open now" data-ja="営業中のみ">Open now</span>
+    </div>
+    <div class="screen-scroll">
+      <div class="store-list" id="searchResults">
+        <div class="spinner-row" data-en="Finding places near you…" data-ja="周辺のスポットを探しています…">Finding places near you…</div>
       </div>
     </div>
   </section>
@@ -224,22 +358,23 @@
   <!-- ASSISTANT -->
   <section class="tab-panel" id="tab-assistant">
     <div class="chat-header">
-      <span class="ai-badge"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+      <span class="icon-btn" style="background:var(--accent);color:#fff;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
       <div style="flex:1;">
-        <div style="font-weight:700;font-size:0.9375rem;">Tabi Assistant</div>
+        <div style="font-weight:800;font-size:0.9375rem;">Tabi AI</div>
         <div style="font-size:0.6875rem;color:var(--muted);" data-en="Answers in your language" data-ja="あなたの言語で回答します">Answers in your language</div>
       </div>
       <select id="lang"></select>
     </div>
     <div class="chat-scroll" id="chatScroll">
-      <div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:24px 8px;" id="chatIntro" data-en="Ask about restaurants, hotels, tickets, taxis, or anything else about your trip." data-ja="レストラン・ホテル・チケット・タクシーなど、旅について何でも聞いてください。">
-        Ask about restaurants, hotels, tickets, taxis, or anything else about your trip.
+      <div id="prechat" class="prechat">
+        <div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:6px 8px 16px;" data-en="What can I help with?" data-ja="何をお手伝いしましょうか?">What can I help with?</div>
+        <div class="prechat-grid">
+          <button class="prechat-card" onclick="handleQuickPrompt('plan')" data-en="Plan my day today" data-ja="今日の旅行プランを作る">Plan my day today</button>
+          <button class="prechat-card" onclick="handleQuickPrompt('popular_restaurants')" data-en="Popular restaurants nearby" data-ja="近くの人気レストラン">Popular restaurants nearby</button>
+          <button class="prechat-card" onclick="handleQuickPrompt('rainy_day')" data-en="Places to go on a rainy day" data-ja="雨の日に行ける場所">Places to go on a rainy day</button>
+          <button class="prechat-card" onclick="handleQuickPrompt('book_now')" data-en="Places I can book right now" data-ja="今から予約できるお店">Places I can book right now</button>
+        </div>
       </div>
-    </div>
-    <div class="chips-row">
-      <span class="chip" onclick="quickAction('What should I do in Shinjuku tonight?')" data-en="Shinjuku tonight" data-ja="今夜の新宿">Shinjuku tonight</span>
-      <span class="chip" onclick="quickAction('3 days in Kyoto, I love temples and food')" data-en="3 days in Kyoto" data-ja="京都3日間">3 days in Kyoto</span>
-      <span class="chip" onclick="quickAction('Find a restaurant near Tokyo Tower')" data-en="Near Tokyo Tower" data-ja="東京タワー周辺">Near Tokyo Tower</span>
     </div>
     <div class="chat-input-bar">
       <form id="chatForm" class="chat-input-row">
@@ -249,20 +384,36 @@
     </div>
   </section>
 
-  <!-- SAVED -->
-  <section class="tab-panel" id="tab-saved">
-    <div class="topbar"><h1 data-en="Saved" data-ja="お気に入り">Saved</h1></div>
-    <div class="screen-scroll px" id="savedList" style="padding-top:8px;"></div>
+  <!-- BOOKINGS -->
+  <section class="tab-panel" id="tab-bookings">
+    <div class="topbar"><h1 data-en="Bookings" data-ja="予約">Bookings</h1></div>
+    <div class="screen-scroll px" id="bookingsList" style="padding-top:8px;"></div>
+  </section>
+
+  <!-- STORE DETAIL -->
+  <section class="tab-panel" id="tab-detail">
+    <div class="screen-scroll">
+      <div class="detail-hero" id="detailHero">
+        <div class="detail-topbar">
+          <button class="icon-btn on-photo" onclick="closeDetail()"><svg class="icon-sm"><use href="#i-chevron-left"></use></svg></button>
+          <button class="icon-btn on-photo save-heart-detail" id="detailSaveBtn"><svg class="icon-sm"><use href="#i-heart"></use></svg></button>
+        </div>
+      </div>
+      <div class="px" style="padding-top:16px;" id="detailBody">
+        <div class="spinner-row" data-en="Loading…" data-ja="読み込み中…">Loading…</div>
+      </div>
+    </div>
+    <div class="detail-actions" id="detailActions"></div>
   </section>
 
   <!-- PROFILE -->
   <section class="tab-panel" id="tab-profile">
-    <div class="topbar"><h1 data-en="Profile" data-ja="プロフィール">Profile</h1></div>
+    <div class="topbar"><h1 data-en="My Page" data-ja="マイページ">My Page</h1></div>
     <div class="screen-scroll px" style="padding-top:8px;">
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;">
           <svg class="icon-sm"><use href="#i-globe"></use></svg>
-          <span style="flex:1;font-size:0.875rem;font-weight:600;" data-en="App language" data-ja="アプリの表示言語">App language</span>
+          <span style="flex:1;font-size:0.875rem;font-weight:700;" data-en="App language" data-ja="アプリの表示言語">App language</span>
           <div class="lang-toggle">
             <button class="lang-toggle-btn" data-applang="en">EN</button>
             <button class="lang-toggle-btn" data-applang="ja">日本語</button>
@@ -270,22 +421,29 @@
         </div>
         <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid var(--line);">
           <svg class="icon-sm"><use href="#i-globe"></use></svg>
-          <span style="flex:1;font-size:0.875rem;font-weight:600;" data-en="Answer language" data-ja="AIの回答言語">Answer language</span>
+          <span style="flex:1;font-size:0.875rem;font-weight:700;" data-en="Answer language" data-ja="AIの回答言語">Answer language</span>
           <select id="langProfile" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 8px;font-size:0.8rem;"></select>
         </div>
       </div>
-      <button class="card" style="width:100%;padding:13px 14px;text-align:left;color:#C43D3D;font-weight:700;font-size:0.875rem;cursor:pointer;" onclick="resetData()" data-en="Clear saved items" data-ja="お気に入りを削除">
-        Clear saved items
+
+      <div class="section-head" style="margin-top:6px;">
+        <h2 class="section-title" data-en="Saved" data-ja="お気に入り">Saved</h2>
+      </div>
+      <div id="savedList" style="margin-bottom:8px;"></div>
+
+      <button class="card" style="width:100%;padding:13px 14px;text-align:left;color:var(--danger);font-weight:700;font-size:0.875rem;cursor:pointer;margin-top:6px;" onclick="resetData()" data-en="Clear saved &amp; bookings" data-ja="お気に入り・予約履歴を削除">
+        Clear saved &amp; bookings
       </button>
-      <div style="text-align:center;color:#B4B4BC;font-size:0.75rem;margin-top:20px;">Tabi v0.1.0 — built with Claude</div>
+      <div style="text-align:center;color:#B4B4BC;font-size:0.75rem;margin-top:20px;">Tabi v0.2.0 — built with Claude</div>
     </div>
   </section>
 
   <nav class="bottom-nav">
     <button class="nav-item active" data-tab="home" onclick="showTab('home')"><svg class="icon"><use href="#i-home"></use></svg><span class="dot"></span><span data-en="Home" data-ja="ホーム">Home</span></button>
-    <button class="nav-item center-item" data-tab="assistant" onclick="showTab('assistant')"><svg class="icon"><use href="#i-sparkle"></use></svg><span class="dot"></span><span>AI</span></button>
-    <button class="nav-item" data-tab="saved" onclick="showTab('saved')"><svg class="icon"><use href="#i-heart"></use></svg><span class="dot"></span><span data-en="Saved" data-ja="お気に入り">Saved</span></button>
-    <button class="nav-item" data-tab="profile" onclick="showTab('profile')"><svg class="icon"><use href="#i-user"></use></svg><span class="dot"></span><span data-en="Profile" data-ja="プロフィール">Profile</span></button>
+    <button class="nav-item" data-tab="search" onclick="showTab('search')"><svg class="icon"><use href="#i-search"></use></svg><span class="dot"></span><span data-en="Find" data-ja="探す">Find</span></button>
+    <button class="nav-item center-item" data-tab="assistant" onclick="showTab('assistant')"><svg class="icon"><use href="#i-sparkle"></use></svg><span data-en="AI" data-ja="AI">AI</span></button>
+    <button class="nav-item" data-tab="bookings" onclick="showTab('bookings')"><svg class="icon"><use href="#i-calendar"></use></svg><span class="dot"></span><span data-en="Bookings" data-ja="予約">Bookings</span></button>
+    <button class="nav-item" data-tab="profile" onclick="showTab('profile')"><svg class="icon"><use href="#i-user"></use></svg><span class="dot"></span><span data-en="Mine" data-ja="マイページ">Mine</span></button>
   </nav>
 
   <div class="toast" id="toast"></div>
@@ -295,89 +453,344 @@
   const LANGUAGES = ["English","Chinese (Simplified)","Chinese (Traditional)","Korean","Thai","Vietnamese","Indonesian","Filipino (Tagalog)","Malay","Hindi","French","German","Spanish","Italian","Portuguese","Russian","Arabic"];
   const langSelect = document.getElementById('lang');
   const langProfileSelect = document.getElementById('langProfile');
-  LANGUAGES.forEach((l) => {
-    langSelect.appendChild(new Option(l, l));
-    langProfileSelect.appendChild(new Option(l, l));
-  });
+  LANGUAGES.forEach((l) => { langSelect.appendChild(new Option(l, l)); langProfileSelect.appendChild(new Option(l, l)); });
   const savedLang = localStorage.getItem('tabi_lang') || 'English';
-  langSelect.value = savedLang;
-  langProfileSelect.value = savedLang;
-  function syncLang(val) {
-    localStorage.setItem('tabi_lang', val);
-    langSelect.value = val;
-    langProfileSelect.value = val;
-  }
+  langSelect.value = savedLang; langProfileSelect.value = savedLang;
+  function syncLang(val) { localStorage.setItem('tabi_lang', val); langSelect.value = val; langProfileSelect.value = val; }
   langSelect.addEventListener('change', (e) => syncLang(e.target.value));
   langProfileSelect.addEventListener('change', (e) => syncLang(e.target.value));
 
-  // ---------- App UI language (EN/JA chrome) ----------
+  // ---------- App UI language ----------
   let currentAppLang = 'en';
   function t(en, ja) { return currentAppLang === 'ja' ? ja : en; }
   function setAppLang(lang) {
     currentAppLang = lang;
     localStorage.setItem('tabi_app_lang', lang);
-    document.querySelectorAll('[data-en]').forEach((el) => {
-      el.textContent = lang === 'ja' ? (el.dataset.ja || el.dataset.en) : el.dataset.en;
-    });
-    document.querySelectorAll('[data-placeholder-en]').forEach((el) => {
-      el.placeholder = lang === 'ja' ? (el.dataset.placeholderJa || el.dataset.placeholderEn) : el.dataset.placeholderEn;
-    });
+    document.querySelectorAll('[data-en]').forEach((el) => { el.textContent = lang === 'ja' ? (el.dataset.ja || el.dataset.en) : el.dataset.en; });
+    document.querySelectorAll('[data-placeholder-en]').forEach((el) => { el.placeholder = lang === 'ja' ? (el.dataset.placeholderJa || el.dataset.placeholderEn) : el.dataset.placeholderEn; });
     document.querySelectorAll('.lang-toggle-btn').forEach((b) => b.classList.toggle('active', b.dataset.applang === lang));
-    if (document.getElementById('tab-saved').classList.contains('active')) renderSaved();
+    if (document.getElementById('tab-profile').classList.contains('active')) renderSaved();
+    if (document.getElementById('tab-bookings').classList.contains('active')) renderBookings();
   }
-  document.querySelectorAll('.lang-toggle-btn').forEach((b) => {
-    b.addEventListener('click', () => setAppLang(b.dataset.applang));
-  });
+  document.querySelectorAll('.lang-toggle-btn').forEach((b) => b.addEventListener('click', () => setAppLang(b.dataset.applang)));
 
+  let previousTab = 'home';
   function showTab(id) {
+    const current = document.querySelector('.tab-panel.active');
+    if (current && current.id !== 'tab-detail') previousTab = current.id.replace('tab-', '');
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + id));
     document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.tab === id));
-    if (id === 'saved') renderSaved();
+    if (id === 'saved' || id === 'profile') renderSaved();
+    if (id === 'bookings') renderBookings();
+    if (id === 'search' && !searchLoadedOnce) runSearch();
   }
   function goAssistant() { showTab('assistant'); }
 
   function showToast(msg) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
+    el.textContent = msg; el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 2200);
   }
 
-  // ---------- Saved (localStorage) ----------
-  function getSaved() {
-    return JSON.parse(localStorage.getItem('tabi_saved') || '[]');
+  // ---------- Geolocation ----------
+  const TOKYO_STATION = { lat: 35.6812, lng: 139.7671 };
+  let coords = TOKYO_STATION;
+  function getCoords() {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve(TOKYO_STATION);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(coords); },
+        () => resolve(TOKYO_STATION),
+        { timeout: 6000 }
+      );
+    });
   }
-  function isSaved(rec) {
-    return getSaved().some((s) => s.title === rec.title);
+
+  // ---------- Place helpers ----------
+  const TYPE_LABELS = {
+    restaurant: { en: "Restaurant", ja: "レストラン" },
+    cafe: { en: "Cafe", ja: "カフェ" },
+    bar: { en: "Bar", ja: "バー" },
+    tourist_attraction: { en: "Sightseeing", ja: "観光地" },
+    lodging: { en: "Hotel", ja: "ホテル" },
+    shopping_mall: { en: "Shopping", ja: "ショッピング" },
+    store: { en: "Shop", ja: "ショップ" },
+    museum: { en: "Museum", ja: "美術館・博物館" },
+    park: { en: "Park", ja: "公園" },
+  };
+  function typeLabel(types) {
+    const hit = (types || []).find((ty) => TYPE_LABELS[ty]);
+    const l = TYPE_LABELS[hit];
+    return l ? t(l.en, l.ja) : t("Place", "スポット");
   }
-  function toggleSaved(rec, btn) {
+  function priceStr(level) {
+    if (level === null || level === undefined) return '';
+    return '¥'.repeat(Math.max(1, level));
+  }
+  function distStr(m) {
+    if (m === null || m === undefined) return '';
+    return m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`;
+  }
+  function photoUrl(ref) { return ref ? `/api/places/photo/${ref}` : null; }
+  function artClass(seed) { const arr = ['art-a', 'art-b', 'art-c']; return arr[Math.abs(hashStr(seed)) % arr.length]; }
+  function hashStr(s) { let h = 0; for (let i = 0; i < (s || '').length; i++) h = (h << 5) - h + s.charCodeAt(i); return h; }
+
+  function photoOrArt(place) {
+    const url = photoUrl(place.photoRef);
+    if (url) return `<img src="${url}" alt="" loading="lazy" />`;
+    return `<div class="art ${artClass(place.name)}"><span class="art-icon"><svg class="icon"><use href="#i-cutlery"></use></svg></span></div>`;
+  }
+
+  function storeCardHtml(place) {
+    const status = place.openNow === true
+      ? `<span class="status-badge status-open">${t('Open', '営業中')}</span>`
+      : place.openNow === false
+      ? `<span class="status-badge status-closed">${t('Closed', '営業終了')}</span>`
+      : '';
+    const rating = place.rating ? `<span class="rating-pill"><svg class="icon-xs" style="color:#F5A524;"><use href="#i-star"></use></svg>${place.rating.toFixed(1)}</span>` : '';
+    return `
+      <div class="photo-wrap">${photoOrArt(place)}</div>
+      <div class="store-body">
+        <div class="store-name">${place.name}</div>
+        <div class="store-meta">
+          <span>${typeLabel(place.types)}</span>
+          ${rating ? `<span class="dot"></span>${rating}` : ''}
+          ${place.distanceMeters != null ? `<span class="dot"></span><span>${distStr(place.distanceMeters)}</span>` : ''}
+        </div>
+        <div class="store-meta" style="margin-top:4px;">
+          ${status}
+          ${priceStr(place.priceLevel) ? `<span class="dot"></span><span>${priceStr(place.priceLevel)}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreCards(container, places, layout) {
+    container.className = layout === 'list' ? 'store-list' : 'store-row';
+    if (!places.length) {
+      container.innerHTML = `<div class="empty-state">${t('No places found nearby.', '周辺にスポットが見つかりませんでした。')}</div>`;
+      return;
+    }
+    container.innerHTML = '';
+    places.forEach((place) => {
+      const card = document.createElement('div');
+      card.className = 'card store-card';
+      card.innerHTML = storeCardHtml(place);
+      card.addEventListener('click', () => openDetail(place.placeId));
+      container.appendChild(card);
+    });
+  }
+
+  // ---------- Home nearby ----------
+  async function loadHomeNearby() {
+    await getCoords();
+    try {
+      const res = await fetch(`/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}&type=restaurant`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      renderStoreCards(document.getElementById('homeNearby'), (data.results || []).slice(0, 10), 'row');
+    } catch (err) {
+      document.getElementById('homeNearby').innerHTML = `<div class="empty-state">${t('Could not load nearby places.', '周辺情報を取得できませんでした。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
+    }
+  }
+
+  // ---------- Search ----------
+  let searchLoadedOnce = false;
+  let activeType = '';
+  let activeOpenNow = false;
+  const searchInput = document.getElementById('searchInput');
+  const homeSearchInput = document.getElementById('homeSearchInput');
+
+  async function runSearch() {
+    searchLoadedOnce = true;
+    await getCoords();
+    const container = document.getElementById('searchResults');
+    container.innerHTML = `<div class="spinner-row">${t('Searching…', '検索中…')}</div>`;
+    try {
+      const query = searchInput.value.trim();
+      let url;
+      if (query) {
+        url = `/api/places/search?query=${encodeURIComponent(query)}&lat=${coords.lat}&lng=${coords.lng}`;
+      } else {
+        url = `/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}`;
+        if (activeType) url += `&type=${activeType}`;
+      }
+      if (activeOpenNow) url += `&openNow=true`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      renderStoreCards(container, data.results || [], 'list');
+    } catch (err) {
+      container.innerHTML = `<div class="empty-state">${t('Search failed.', '検索に失敗しました。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
+    }
+  }
+
+  document.getElementById('searchChips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('#searchChips .chip').forEach((c) => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeType = chip.dataset.type;
+    runSearch();
+  });
+  document.getElementById('openNowChip').addEventListener('click', (e) => {
+    activeOpenNow = !activeOpenNow;
+    e.target.classList.toggle('active', activeOpenNow);
+    runSearch();
+  });
+  document.getElementById('searchForm').addEventListener('submit', (e) => { e.preventDefault(); runSearch(); });
+  document.getElementById('homeSearchForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = homeSearchInput.value.trim();
+    homeSearchInput.value = '';
+    searchInput.value = q;
+    showTab('search');
+    runSearch();
+  });
+
+  function openSearchWithFilter(type, openNow) {
+    activeType = type; activeOpenNow = openNow;
+    document.querySelectorAll('#searchChips .chip').forEach((c) => c.classList.toggle('active', c.dataset.type === type));
+    document.getElementById('openNowChip').classList.toggle('active', openNow);
+    showTab('search');
+    runSearch();
+  }
+
+  // ---------- Store detail ----------
+  let currentDetailPlace = null;
+  async function openDetail(placeId) {
+    showTab('detail');
+    const body = document.getElementById('detailBody');
+    const hero = document.getElementById('detailHero');
+    const actions = document.getElementById('detailActions');
+    body.innerHTML = `<div class="spinner-row">${t('Loading…', '読み込み中…')}</div>`;
+    actions.innerHTML = '';
+    hero.style.background = '';
+    try {
+      const res = await fetch(`/api/places/${placeId}`);
+      const p = await res.json();
+      if (!res.ok) throw new Error(p.error);
+      currentDetailPlace = p;
+      const heroPhoto = photoUrl(p.photoRef);
+      hero.querySelector('img')?.remove();
+      if (heroPhoto) {
+        const img = document.createElement('img');
+        img.src = heroPhoto; img.alt = '';
+        hero.insertBefore(img, hero.firstChild);
+        hero.classList.remove(...['art-a','art-b','art-c']);
+      } else {
+        hero.className = 'detail-hero ' + artClass(p.name);
+      }
+      const statusHtml = p.openNow === true ? `<span class="status-badge status-open">${t('Open now', '営業中')}</span>` : p.openNow === false ? `<span class="status-badge status-closed">${t('Closed', '営業終了')}</span>` : '';
+      body.innerHTML = `
+        <div class="eyebrow">${typeLabel(p.types)}</div>
+        <div style="font-size:1.3rem;font-weight:800;letter-spacing:-0.01em;margin-top:4px;">${p.name}</div>
+        <div class="detail-price-row">
+          ${p.rating ? `<span class="rating-pill"><svg class="icon-sm" style="color:#F5A524;"><use href="#i-star"></use></svg>${p.rating.toFixed(1)} <span style="color:var(--muted);font-weight:500;">(${p.userRatingsTotal || 0})</span></span>` : ''}
+          ${priceStr(p.priceLevel) ? `<span style="font-weight:700;">${priceStr(p.priceLevel)}</span>` : ''}
+          ${statusHtml}
+        </div>
+        <div style="font-size:0.88rem;color:var(--muted);margin-bottom:14px;">📍 ${p.address}${p.distanceMeters != null ? ` · ${distStr(p.distanceMeters)}` : ''}</div>
+        ${p.weekdayText && p.weekdayText.length ? `
+          <h2 class="section-title" style="margin-bottom:8px;">${t('Hours', '営業時間')}</h2>
+          <div style="margin-bottom:16px;">${p.weekdayText.map((line) => `<div class="hours-row">${line}</div>`).join('')}</div>
+        ` : ''}
+      `;
+      let actionsHtml = '';
+      if (p.phone) {
+        actionsHtml += `<a class="book-btn accent" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;" href="tel:${p.phone.replace(/[^0-9+]/g,'')}" onclick="logBooking(currentDetailPlace,'call')"><svg class="icon-sm"><use href="#i-phone"></use></svg>${t('Call to reserve', '電話で予約')}</a>`;
+      }
+      if (p.website) {
+        actionsHtml += `<a class="book-btn" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);color:var(--ink);border:1px solid var(--line);" href="${p.website}" target="_blank" onclick="logBooking(currentDetailPlace,'website')"><svg class="icon-sm"><use href="#i-link"></use></svg>${t('Website', '公式サイト')}</a>`;
+      }
+      if (!p.phone && !p.website) {
+        actionsHtml += `<button class="book-btn accent" onclick="reserveFallback(currentDetailPlace)">${t('Find booking options', '予約方法を探す')}</button>`;
+      }
+      actions.innerHTML = actionsHtml;
+      const heartBtn = document.getElementById('detailSaveBtn');
+      heartBtn.classList.toggle('active', isSaved(p));
+      heartBtn.querySelector('use').setAttribute('href', '#' + (isSaved(p) ? 'i-heart-filled' : 'i-heart'));
+      heartBtn.onclick = () => {
+        toggleSaved(p);
+        heartBtn.classList.toggle('active', isSaved(p));
+        heartBtn.querySelector('use').setAttribute('href', '#' + (isSaved(p) ? 'i-heart-filled' : 'i-heart'));
+      };
+    } catch (err) {
+      body.innerHTML = `<div class="empty-state">${t('Could not load this place.', '情報を取得できませんでした。')}</div>`;
+    }
+  }
+  function closeDetail() { showTab(previousTab); }
+  function reserveFallback(place) {
+    logBooking(place, 'searched');
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(place.name + ' 予約')}`, '_blank');
+  }
+
+  // ---------- Saved ----------
+  function getSaved() { return JSON.parse(localStorage.getItem('tabi_saved') || '[]'); }
+  function isSaved(place) { return getSaved().some((s) => s.placeId === place.placeId || s.title === place.name); }
+  function toggleSaved(place) {
     let list = getSaved();
-    if (list.some((s) => s.title === rec.title)) {
-      list = list.filter((s) => s.title !== rec.title);
+    const entry = { placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, rating: place.rating };
+    if (isSaved(place)) {
+      list = list.filter((s) => s.placeId !== place.placeId && s.title !== place.name);
       showToast(t('Removed from Saved', 'お気に入りから削除しました'));
     } else {
-      list.unshift(rec);
+      list.unshift(entry);
       showToast(t('Saved', '保存しました'));
     }
     localStorage.setItem('tabi_saved', JSON.stringify(list));
-    if (btn) btn.classList.toggle('active', isSaved(rec));
   }
   function renderSaved() {
     const el = document.getElementById('savedList');
     const list = getSaved();
     if (list.length === 0) {
-      el.innerHTML = `<div class="empty-state">${t('Nothing saved yet. Tap the heart on any suggestion from Tabi AI.', 'まだ何も保存されていません。Tabi AIの提案にあるハートマークをタップしてください。')}</div>`;
+      el.innerHTML = `<div class="empty-state">${t('Nothing saved yet.', 'まだ何も保存されていません。')}</div>`;
       return;
     }
     el.innerHTML = '';
-    list.forEach((rec) => {
+    list.forEach((s) => {
       const row = document.createElement('div');
-      row.className = 'card saved-item';
+      row.className = 'card list-row';
+      const img = photoUrl(s.photoRef);
+      row.innerHTML = `
+        <div class="photo-wrap">${img ? `<img src="${img}" alt=""/>` : `<div class="art ${artClass(s.title)}"></div>`}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="store-name">${s.title}</div>
+          <div class="store-meta">${s.area || ''}</div>
+        </div>
+      `;
+      if (s.placeId) row.addEventListener('click', () => openDetail(s.placeId));
+      el.appendChild(row);
+    });
+  }
+
+  // ---------- Bookings ----------
+  function getBookings() { return JSON.parse(localStorage.getItem('tabi_bookings') || '[]'); }
+  function logBooking(place, action) {
+    if (!place) return;
+    const list = getBookings();
+    list.unshift({ title: place.name, area: place.address, action, createdAt: new Date().toISOString() });
+    localStorage.setItem('tabi_bookings', JSON.stringify(list));
+    showToast(t('Added to Bookings', '予約リストに追加しました'));
+  }
+  function renderBookings() {
+    const el = document.getElementById('bookingsList');
+    const list = getBookings();
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state">${t('No bookings yet. Reserve a place to see it here.', 'まだ予約はありません。お店を予約するとここに表示されます。')}</div>`;
+      return;
+    }
+    el.innerHTML = '';
+    const actionLabel = { call: t('Called', '電話済み'), website: t('Visited site', 'サイト訪問済み'), searched: t('Searched', '検索済み') };
+    list.forEach((b) => {
+      const row = document.createElement('div');
+      row.className = 'card list-row';
+      const date = new Date(b.createdAt);
       row.innerHTML = `
         <div style="flex:1;">
-          <div class="eyebrow">${rec.area || ''}</div>
-          <div style="font-size:0.9rem;font-weight:700;margin-top:2px;">${rec.title}</div>
-          <div style="font-size:0.8125rem;color:var(--muted);margin-top:2px;">${rec.description || ''}</div>
+          <div class="store-name" style="white-space:normal;">${b.title}</div>
+          <div class="store-meta">${b.area || ''}</div>
+          <div class="store-meta" style="margin-top:4px;">${date.toLocaleDateString()} · ${actionLabel[b.action] || b.action}</div>
         </div>
       `;
       el.appendChild(row);
@@ -386,21 +799,21 @@
 
   function resetData() {
     localStorage.removeItem('tabi_saved');
+    localStorage.removeItem('tabi_bookings');
     showToast(t('Cleared', '削除しました'));
-    if (document.getElementById('tab-saved').classList.contains('active')) renderSaved();
+    renderSaved(); renderBookings();
   }
 
   // ---------- Assistant chat ----------
   const chatScroll = document.getElementById('chatScroll');
-  const chatIntro = document.getElementById('chatIntro');
+  const prechat = document.getElementById('prechat');
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
   const chatSend = document.getElementById('chatSend');
 
   function scrollChatToBottom() { chatScroll.scrollTop = chatScroll.scrollHeight; }
-
   function addUserMessage(text) {
-    if (chatIntro) chatIntro.remove();
+    if (prechat) prechat.remove();
     const row = document.createElement('div');
     row.className = 'row user';
     row.innerHTML = '<div class="bubble-user"></div>';
@@ -408,7 +821,6 @@
     chatScroll.appendChild(row);
     scrollChatToBottom();
   }
-
   function addAiStatus() {
     const row = document.createElement('div');
     row.className = 'row';
@@ -417,56 +829,49 @@
     scrollChatToBottom();
     return row;
   }
-
   function renderAiResult(row, data) {
     const wrap = document.createElement('div');
     wrap.className = 'ai-wrap';
     (data.recommendations || []).forEach((rec) => {
       const card = document.createElement('div');
       card.className = 'rec-card';
-      const prBadge = rec.type === 'affiliate'
-        ? `<span style="font-size:0.625rem;font-weight:700;color:#946200;background:#FFF6E5;padding:2px 7px;border-radius:999px;margin-left:6px;">PR</span>`
-        : '';
-      const actionBtn = rec.type === 'affiliate'
-        ? `<button class="book-btn">${t('Search on', '検索する:')} ${rec.provider || 'partner site'} ↗</button>`
-        : '';
+      const prBadge = rec.type === 'affiliate' ? `<span style="font-size:0.625rem;font-weight:700;color:var(--warn);background:var(--warn-bg);padding:2px 7px;border-radius:999px;margin-left:6px;">PR</span>` : '';
+      const actionBtn = rec.type === 'affiliate' ? `<button class="book-btn">${t('Search on', '検索する:')} ${rec.provider || 'partner site'} ↗</button>` : '';
       card.innerHTML = `
-        <button class="save-heart ${isSaved(rec) ? 'active' : ''}"><svg class="icon-sm"><use href="#${isSaved(rec) ? 'i-heart-filled' : 'i-heart'}"></use></svg></button>
+        <button class="save-heart"><svg class="icon-sm"><use href="#i-heart"></use></svg></button>
         <div class="eyebrow">${rec.area || ''}${prBadge}</div>
-        <div style="font-weight:700;font-size:0.9rem;margin-top:2px;">${rec.title}</div>
+        <div style="font-weight:800;font-size:0.9rem;margin-top:2px;">${rec.title}</div>
         <p>${rec.description || ''}</p>
         <div class="tip">💡 ${rec.tip || ''}</div>
         ${actionBtn}
       `;
-      card.querySelector('.save-heart').addEventListener('click', (e) => {
-        toggleSaved(rec, e.currentTarget);
-        e.currentTarget.querySelector('use').setAttribute('href', '#' + (isSaved(rec) ? 'i-heart-filled' : 'i-heart'));
-      });
       if (rec.type === 'affiliate') {
-        card.querySelector('.book-btn').addEventListener('click', () => {
-          if (rec.contactUrl) window.open(rec.contactUrl, '_blank');
-        });
+        card.querySelector('.book-btn').addEventListener('click', () => { if (rec.contactUrl) window.open(rec.contactUrl, '_blank'); });
       }
+      card.querySelector('.save-heart').addEventListener('click', (e) => {
+        const pseudo = { placeId: null, name: rec.title, address: rec.area, photoRef: null };
+        toggleSaved(pseudo);
+        const active = isSaved(pseudo);
+        e.currentTarget.classList.toggle('active', active);
+        e.currentTarget.querySelector('use').setAttribute('href', '#' + (active ? 'i-heart-filled' : 'i-heart'));
+      });
       wrap.appendChild(card);
     });
     row.innerHTML = '';
     row.appendChild(wrap);
     scrollChatToBottom();
   }
-
   function renderAiError(row, message) {
     row.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`;
     scrollChatToBottom();
   }
-
   async function askAI(query) {
     addUserMessage(query);
     const statusRow = addAiStatus();
     chatSend.disabled = true;
     try {
       const res = await fetch('/api/concierge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, language: langSelect.value }),
       });
       const data = await res.json();
@@ -478,10 +883,13 @@
       chatSend.disabled = false;
     }
   }
+  function quickAction(prompt) { showTab('assistant'); askAI(prompt); }
 
-  function quickAction(prompt) {
-    showTab('assistant');
-    askAI(prompt);
+  async function handleQuickPrompt(kind) {
+    if (kind === 'popular_restaurants') { openSearchWithFilter('restaurant', false); return; }
+    if (kind === 'book_now') { openSearchWithFilter('restaurant', true); return; }
+    if (kind === 'plan') { quickAction(t('Help me plan my day today in Tokyo', '今日の東京での過ごし方を計画してほしい')); return; }
+    if (kind === 'rainy_day') { quickAction(t('Suggest indoor places to go on a rainy day', '雨の日に行ける屋内スポットを教えて')); return; }
   }
 
   chatForm.addEventListener('submit', (e) => {
@@ -493,11 +901,10 @@
   });
 
   setAppLang(localStorage.getItem('tabi_app_lang') || 'en');
+  loadHomeNearby();
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
   }
 </script>
 </body>
