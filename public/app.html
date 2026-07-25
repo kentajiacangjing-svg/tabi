@@ -19,7 +19,9 @@
     --muted: #7A776F;
     --line: #E4E1DA;
     --surface: #FFFFFF;
-    --accent: #4F6BF6;
+    --accent: #C23B22;
+    --accent-2: #5B7A63;
+    --accent-2-bg: #EBF1EC;
     --accent-ink: #FFFFFF;
     --good: #1C8A4B;
     --good-bg: #E9F6EE;
@@ -69,7 +71,7 @@
   .icon-sm { width: 17px; height: 17px; }
   .icon-xs { width: 14px; height: 14px; }
 
-  .eyebrow { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+  .eyebrow { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent-2); }
   h2.section-title { font-size: 1.15rem; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .see-all { font-size: 0.8rem; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; }
@@ -114,7 +116,7 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .ai-hero-input:focus-within {
-    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,246,0.12);
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(194,59,34,0.14);
   }
   .ai-hero-input input {
     border: none; background: none; outline: none; flex: 1; min-width: 0;
@@ -299,7 +301,9 @@
   .detail-topbar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 44px 16px 0; }
   .on-photo { background: rgba(0,0,0,0.4); color: #fff; backdrop-filter: blur(6px); }
   .detail-price-row { display: flex; align-items: center; gap: 14px; margin: 14px 0; flex-wrap: wrap; }
-  .detail-actions { display: flex; gap: 10px; padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
+  .detail-actions { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
+  .detail-actions-row { display: flex; gap: 8px; }
+  .detail-actions-row .btn { flex: 1; }
   .hours-row { display: flex; justify-content: space-between; font-size: 0.86rem; padding: 7px 0; color: var(--muted); font-weight: 500; }
   .hours-row.today { color: var(--ink); font-weight: 700; }
 
@@ -343,7 +347,7 @@
   .nav-item span { font-size: 0.6rem; font-weight: 700; }
   .nav-item.center-item {
     color: #fff; background: var(--accent); width: 44px; height: 44px; border-radius: 50%;
-    margin-top: -10px; box-shadow: 0 3px 8px -2px rgba(79,107,246,0.4); justify-content: center;
+    margin-top: -10px; box-shadow: 0 3px 8px -2px rgba(194,59,34,0.35); justify-content: center;
   }
   .nav-item.center-item .icon { width: 20px; height: 20px; }
   .nav-item.center-item span { display: none; }
@@ -631,15 +635,22 @@
   let coords = TOKYO_STATION;
   let isRaining = false;
   let currentTemp = null;
+  let locationAvailable = true;
+  let coordsChecked = false;
   function getCoords() {
+    if (coordsChecked) return Promise.resolve(coords);
     return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(TOKYO_STATION);
+      if (!navigator.geolocation) { locationAvailable = false; coordsChecked = true; showLocationNotice(); return resolve(TOKYO_STATION); }
       navigator.geolocation.getCurrentPosition(
-        (pos) => { coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(coords); },
-        () => resolve(TOKYO_STATION),
+        (pos) => { coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }; coordsChecked = true; resolve(coords); },
+        () => { locationAvailable = false; coordsChecked = true; showLocationNotice(); resolve(TOKYO_STATION); },
         { timeout: 6000 }
       );
     });
+  }
+  function showLocationNotice() {
+    document.getElementById('locationLabel').textContent = t('Central Tokyo (location unavailable)', '東京中心部(現在地取得不可)');
+    showToast(t("Couldn't get your location — showing central Tokyo instead", '現在地を取得できなかったため、東京中心部を表示しています'));
   }
   async function checkWeather() {
     try {
@@ -722,6 +733,12 @@
   function distStr(m) { return m == null ? '' : m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`; }
   function walkMin(m) { return m == null ? null : Math.max(1, Math.round(m / 80)); }
   function photoUrl(ref) { return ref ? `/api/places/photo/${ref}` : null; }
+  function directionsUrl(place) {
+    if (place.googleMapsUrl) return place.googleMapsUrl;
+    if (place.lat != null && place.lng != null) return `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
+    if (place.placeId) return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(place.name || '')}&destination_place_id=${place.placeId}`;
+    return null;
+  }
   function artClass(seed) { const arr = ['art-a', 'art-b', 'art-c']; return arr[Math.abs(hashStr(seed)) % arr.length]; }
   function hashStr(s) { let h = 0; for (let i = 0; i < (s || '').length; i++) h = (h << 5) - h + s.charCodeAt(i); return h; }
   function photoOrArt(place) {
@@ -818,7 +835,7 @@
     container.className = layout === 'list' ? 'store-list' : 'store-row';
     if (!places.length) {
       container.className = '';
-      container.innerHTML = `<div class="empty-state"><span>${t('Nothing perfect here yet.', 'まだ良いスポットが見つかりません。')}</span><button class="btn btn-accent btn-sm" onclick="quickAction(t('Help me find something nearby', '近くで何かおすすめを探して'))">${t('Ask Tabi instead', 'Tabiに聞いてみる')}</button></div>`;
+      container.innerHTML = `<div class="empty-state"><span style="font-weight:800;color:var(--ink);">${t('Nothing nearby matches this.', '条件に合うスポットが見つかりません。')}</span><span>${t('Try expanding the distance or filters.', '距離や条件を広げてみてください。')}</span><div style="display:flex;gap:8px;"><button class="btn btn-ghost btn-sm" onclick="expandSearch()">${t('Expand search', '検索範囲を広げる')}</button><button class="btn btn-accent btn-sm" onclick="quickAction(t('Help me find something nearby', '近くで何かおすすめを探して'))">${t('Ask Tabi', 'Tabiに聞く')}</button></div></div>`;
       return;
     }
     container.innerHTML = '';
@@ -895,6 +912,7 @@
 
   // ---------- Home ----------
   async function loadLocationLabel() {
+    if (!locationAvailable) return;
     try {
       const r = await fetch(`/api/geocode?lat=${coords.lat}&lng=${coords.lng}`);
       const data = await r.json();
@@ -940,18 +958,22 @@
     const el = document.getElementById('nextPlanCard');
     const leaveBy = leaveByTime(next.suggestedTime, next.distanceMeters);
     const wm = walkMin(next.distanceMeters);
+    const nextDirUrl = directionsUrl(next);
     el.innerHTML = `
-      <div class="card list-row" style="align-items:flex-start;">
-        <div class="photo-wrap">${next.photoRef ? `<img src="${photoUrl(next.photoRef)}" alt=""/>` : `<div class="art ${artClass(next.title)}"></div>`}</div>
-        <div style="flex:1;min-width:0;">
-          ${next.suggestedTime ? `<div class="eyebrow">${next.suggestedTime}</div>` : ''}
-          <div class="store-name" style="white-space:normal;">${next.title}</div>
-          <div class="store-meta">${next.area || ''}</div>
-          ${wm != null ? `<div class="store-meta" style="margin-top:4px;">🚶 ${t(`${wm} min away`, `徒歩${wm}分`)}${leaveBy ? ` <span class="dot"></span> ${t(`Leave by ${leaveBy}`, `${leaveBy}に出発`)}` : ''}</div>` : ''}
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="list-row" id="nextPlanRow" style="align-items:flex-start;cursor:pointer;margin-bottom:0;">
+          <div class="photo-wrap">${next.photoRef ? `<img src="${photoUrl(next.photoRef)}" alt=""/>` : `<div class="art ${artClass(next.title)}"></div>`}</div>
+          <div style="flex:1;min-width:0;">
+            ${next.suggestedTime ? `<div class="eyebrow">${next.suggestedTime}</div>` : ''}
+            <div class="store-name" style="white-space:normal;">${next.title}</div>
+            <div class="store-meta">${next.area || ''}</div>
+            ${wm != null ? `<div class="store-meta" style="margin-top:4px;">🚶 ${t(`${wm} min away`, `徒歩${wm}分`)}${leaveBy ? ` <span class="dot"></span> ${t(`Leave by ${leaveBy}`, `${leaveBy}に出発`)}` : ''}</div>` : ''}
+          </div>
         </div>
+        ${nextDirUrl ? `<a href="${nextDirUrl}" target="_blank" class="btn btn-ghost btn-sm" style="margin:0 12px 12px;text-decoration:none;display:flex;">${t('Directions', '経路')}</a>` : ''}
       </div>
     `;
-    if (next.placeId) el.querySelector('.list-row').addEventListener('click', () => openDetail(next.placeId));
+    if (next.placeId) document.getElementById('nextPlanRow').addEventListener('click', () => openDetail(next.placeId));
   }
 
   // ---------- Explore / Search ----------
@@ -961,6 +983,15 @@
   const searchInput = document.getElementById('searchInput');
   const homeSearchInput = document.getElementById('homeSearchInput');
 
+  function expandSearch() {
+    searchInput.value = '';
+    activeType = ''; activeOpenNow = false; activeRated = false; activeBudget = false;
+    document.querySelectorAll('#searchChips .chip').forEach((c) => c.classList.toggle('active', c.dataset.type === ''));
+    document.getElementById('openNowChip').classList.remove('active');
+    document.getElementById('ratedChip').classList.remove('active');
+    document.getElementById('budgetChip').classList.remove('active');
+    runSearch();
+  }
   async function runSearch() {
     searchLoadedOnce = true;
     skeletonList(document.getElementById('searchResults'), 4);
@@ -1053,9 +1084,16 @@
       `;
       askAi.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => quickAction(c.dataset.q)));
 
-      let actionsHtml = `<button class="btn btn-accent btn-block" id="detailReserveBtn">${t('Reserve', '予約する')}</button>`;
-      actions.innerHTML = actionsHtml;
+      const dirUrl = directionsUrl(p);
+      actions.innerHTML = `
+        <button class="btn btn-accent btn-block" id="detailReserveBtn">${t('Reserve', '予約する')}</button>
+        <div class="detail-actions-row">
+          ${dirUrl ? `<a class="btn btn-ghost" href="${dirUrl}" target="_blank" style="text-decoration:none;">${t('Directions', '経路')}</a>` : ''}
+          <button class="btn btn-ghost" id="detailAddTripBtn">${t('Add to Trip', '旅程に追加')}</button>
+        </div>
+      `;
       document.getElementById('detailReserveBtn').onclick = () => openReserveSheet(p);
+      document.getElementById('detailAddTripBtn').onclick = () => addToTrip(p);
 
       const heartBtn = document.getElementById('detailSaveBtn');
       heartBtn.classList.toggle('active', isSaved(p));
@@ -1106,14 +1144,14 @@
     if (!place) return;
     const list = getBookings();
     const status = action === 'call' || action === 'website' ? 'confirmed' : 'needs_booking';
-    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, action, status, createdAt: new Date().toISOString() });
+    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, lat: place.lat, lng: place.lng, action, status, createdAt: new Date().toISOString() });
     localStorage.setItem('tabi_bookings', JSON.stringify(list));
     showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
     renderHomeTripPreview();
   }
   function addToTrip(place, suggestedTime) {
     const list = getBookings();
-    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, suggestedTime: suggestedTime || null, action: 'planned', status: 'needs_booking', createdAt: new Date().toISOString() });
+    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, lat: place.lat, lng: place.lng, suggestedTime: suggestedTime || null, action: 'planned', status: 'needs_booking', createdAt: new Date().toISOString() });
     localStorage.setItem('tabi_bookings', JSON.stringify(list));
     showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
     renderHomeTripPreview();

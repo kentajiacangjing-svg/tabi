@@ -48,6 +48,8 @@ function simplifyPlace(p, origin) {
     address: p.vicinity || p.formatted_address || "",
     distanceMeters: distanceM,
     photoRef: p.photos?.[0]?.photo_reference || null,
+    lat: loc?.lat ?? null,
+    lng: loc?.lng ?? null,
   };
 }
 
