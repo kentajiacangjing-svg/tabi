@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
-<title>Tabi — Japan AI Concierge</title>
-<meta name="theme-color" content="#4F46E5" />
+<title>Tabi — AI Travel Concierge</title>
+<meta name="theme-color" content="#F8F7F4" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Tabi" />
@@ -13,244 +13,339 @@
 <style>
   :root {
     color-scheme: light;
-    --ink: #14151A;
-    --muted: #6B6D76;
-    --line: #ECECF0;
-    --surface: #F7F7F9;
-    --surface-2: #FBFBFC;
-    --accent: #4F46E5;
+    --bg: #F8F7F4;
+    --bg2: #ECEAE5;
+    --ink: #161616;
+    --muted: #7A776F;
+    --line: #E4E1DA;
+    --surface: #FFFFFF;
+    --accent: #E84A35;
     --accent-ink: #FFFFFF;
     --good: #1C8A4B;
-    --good-bg: #EAF9EF;
+    --good-bg: #E9F6EE;
     --warn: #946200;
-    --warn-bg: #FFF6E5;
-    --danger: #C43D3D;
-    --danger-bg: #FEF1F1;
+    --warn-bg: #FBF1DE;
+    --danger: #C4402F;
+    --danger-bg: #FBEBE8;
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+    --r-lg: 22px;
+    --r-md: 16px;
+    --r-sm: 12px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; height: 100%;
-    background: var(--surface); color: var(--ink);
+    background: var(--bg); color: var(--ink);
     font-family: var(--font-sans);
     overscroll-behavior-y: none;
   }
   button { font-family: inherit; }
   img { max-width: 100%; display: block; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  a { color: inherit; }
 
   #app {
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-    max-width: 520px;
-    margin: 0 auto;
-    background: #fff;
-    position: relative;
+    display: flex; flex-direction: column; height: 100dvh;
+    max-width: 520px; margin: 0 auto;
+    background: var(--bg); position: relative;
   }
 
   .tab-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
   .tab-panel.active { display: flex; }
-
   .px { padding-left: 18px; padding-right: 18px; }
   .screen-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  .topbar {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 18px 10px;
-    flex-shrink: 0;
-  }
-  .topbar h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; flex: 1; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 18px 8px; flex-shrink: 0; }
+  .topbar h1 { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; flex: 1; }
   .icon-btn {
-    width: 36px; height: 36px; border-radius: 50%; border: none;
-    background: var(--surface); color: var(--ink);
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(22,22,22,0.05);
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+    transition: transform 0.15s ease;
   }
   .icon-btn:active { transform: scale(0.92); }
-
-  select#lang {
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--ink);
-    font-size: 0.76rem; font-weight: 600;
-    padding: 6px 8px; border-radius: 8px;
-  }
 
   .icon { width: 22px; height: 22px; display: block; }
   .icon-sm { width: 17px; height: 17px; }
   .icon-xs { width: 14px; height: 14px; }
 
   .eyebrow { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
-  h2.section-title { font-size: 1.05rem; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  h2.section-title { font-size: 1.15rem; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .see-all { font-size: 0.78rem; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; }
+  .see-all { font-size: 0.8rem; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; }
 
   .card {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    box-shadow: 0 1px 2px rgba(20,21,26,0.03), 0 10px 24px -18px rgba(20,21,26,0.35);
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: 0 1px 2px rgba(22,22,22,0.02), 0 6px 16px -14px rgba(22,22,22,0.25);
     text-align: left;
   }
 
-  /* ---- Home hero search ---- */
-  .hero-search {
-    margin: 6px 18px 18px;
-    display: flex; align-items: center; gap: 10px;
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: 18px; padding: 15px 16px;
-    cursor: text;
+  select#lang, select.select-plain {
+    border: 1px solid var(--line); background: var(--bg2); color: var(--ink);
+    font-size: 0.78rem; font-weight: 700; padding: 6px 8px; border-radius: 10px;
   }
-  .hero-search input {
-    border: none; background: none; outline: none; flex: 1;
-    font-size: 0.98rem; font-weight: 600; color: var(--ink); min-width: 0;
-  }
-  .hero-search input::placeholder { color: var(--muted); font-weight: 500; }
 
-  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 18px 22px; }
-  .feature-card {
-    display: flex; flex-direction: column; gap: 22px; justify-content: space-between;
-    padding: 16px; border-radius: 18px; border: none; cursor: pointer; text-align: left;
-    min-height: 96px; transition: transform 0.12s ease;
+  /* ---- Buttons ---- */
+  .btn {
+    height: 52px; border-radius: 16px; border: none; font-weight: 800; font-size: 0.95rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 0.15s cubic-bezier(.2,.8,.2,1), opacity 0.15s ease;
+    text-decoration: none;
   }
-  .feature-card:active { transform: scale(0.97); }
-  .feature-card .fc-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-  .feature-card .fc-label { font-size: 0.92rem; font-weight: 800; }
-  .fc-purple { background: #EEECFC; } .fc-purple .fc-icon { background: #4F46E5; color: #fff; }
-  .fc-amber  { background: #FFF3E2; } .fc-amber  .fc-icon { background: #F5A524; color: #fff; }
-  .fc-green  { background: #E9F8EF; } .fc-green  .fc-icon { background: #1C8A4B; color: #fff; }
-  .fc-blue   { background: #E8F2FE; } .fc-blue   .fc-icon { background: #2E7CF6; color: #fff; }
+  .btn:active { transform: scale(0.97); }
+  .btn-accent { background: var(--accent); color: var(--accent-ink); }
+  .btn-ink { background: var(--ink); color: #fff; }
+  .btn-ghost { background: var(--bg2); color: var(--ink); }
+  .btn-sm { height: 42px; font-size: 0.85rem; border-radius: 13px; }
+  .btn-block { width: 100%; }
+
+  /* ---- HOME ---- */
+  .home-header { padding: 16px 18px 4px; }
+  .greeting-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .greeting-text { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
+  .location-row { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.85rem; font-weight: 600; margin-top: 3px; }
+
+  .hero-question { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 18px 18px 14px; text-wrap: balance; }
+
+  .ai-hero-input {
+    margin: 0 18px 16px; display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1.5px solid var(--ink); border-radius: 20px;
+    padding: 6px 8px 6px 18px; box-shadow: 0 4px 18px -10px rgba(22,22,22,0.25);
+  }
+  .ai-hero-input input {
+    border: none; background: none; outline: none; flex: 1; min-width: 0;
+    font-size: 1rem; font-weight: 600; color: var(--ink);
+  }
+  .ai-hero-input input::placeholder { color: var(--muted); font-weight: 500; }
+  .ai-hero-send {
+    width: 42px; height: 42px; border-radius: 14px; border: none; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+  .ai-hero-send:active { transform: scale(0.9); }
+
+  .quick-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 18px 22px; }
+  .quick-pill {
+    flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 11px 16px;
+    border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
+    font-size: 0.83rem; font-weight: 700; color: var(--ink); cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .quick-pill:active { transform: scale(0.95); }
+  .quick-pill svg { color: var(--accent); }
+
+  .section-block { padding: 4px 0 22px; }
 
   /* ---- Store cards ---- */
   .store-row { display: flex; gap: 12px; overflow-x: auto; padding: 2px 18px 4px; scroll-snap-type: x proximity; }
   .store-card {
-    scroll-snap-align: start; flex-shrink: 0; width: 208px; overflow: hidden; cursor: pointer; padding: 0;
+    scroll-snap-align: start; flex-shrink: 0; width: 232px; overflow: hidden; cursor: pointer; padding: 0;
+    transition: transform 0.15s ease;
   }
-  .store-card .photo-wrap { position: relative; height: 132px; background: var(--surface); }
+  .store-card:active { transform: scale(0.98); }
+  .store-card .photo-wrap { position: relative; height: 148px; background: var(--bg2); }
   .store-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
-  .store-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 18px 18px; }
-  .store-list .store-card { width: 100%; display: flex; flex-direction: row; height: 96px; }
-  .store-list .store-card .photo-wrap { width: 96px; height: 96px; flex-shrink: 0; }
-  .store-list .store-card .store-body { flex: 1; min-width: 0; padding: 10px 12px; }
+  .store-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 18px 18px; }
+  .store-list .store-card { width: 100%; }
+  .store-list .store-card .photo-wrap { height: 150px; }
 
-  .store-body { padding: 10px 12px; }
-  .store-name { font-size: 0.9rem; font-weight: 800; line-height: 1.25; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .store-meta { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--muted); flex-wrap: wrap; }
+  .fav-btn {
+    position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.92); box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #C6C7CE; z-index: 2;
+    transition: transform 0.15s ease;
+  }
+  .fav-btn:active { transform: scale(0.85); }
+  .fav-btn.active { color: #E23D6B; }
+
+  .store-body { padding: 12px 14px 14px; }
+  .store-name { font-size: 1rem; font-weight: 800; line-height: 1.25; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .store-meta { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--muted); font-weight: 600; flex-wrap: wrap; }
   .store-meta .dot::before { content: "·"; margin: 0 1px; }
-  .rating-pill { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; color: var(--ink); }
-  .status-badge { font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
+  .rating-pill { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--ink); }
+  .status-badge { font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
   .status-open { color: var(--good); background: var(--good-bg); }
   .status-closed { color: var(--danger); background: var(--danger-bg); }
 
-  .art { position: relative; overflow: hidden; width: 100%; height: 100%; }
-  .art-a { background: radial-gradient(70% 60% at 75% 20%, rgba(255,138,92,0.35), transparent 60%), radial-gradient(70% 60% at 20% 90%, rgba(79,70,229,0.5), transparent 65%), linear-gradient(165deg, #1b1530, #0c0a16); }
-  .art-b { background: radial-gradient(65% 55% at 50% 100%, rgba(255,150,90,0.5), transparent 65%), radial-gradient(50% 40% at 80% 10%, rgba(46,124,246,0.35), transparent 60%), linear-gradient(180deg, #202436, #0e1220); }
-  .art-c { background: radial-gradient(55% 45% at 20% 20%, rgba(28,138,75,0.4), transparent 60%), radial-gradient(60% 50% at 90% 80%, rgba(255,220,180,0.4), transparent 60%), linear-gradient(165deg, #16302c, #0c1c1a); }
-  .art-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.55); }
-
-  .empty-state { text-align: center; color: var(--muted); font-size: 0.875rem; padding: 40px 24px; }
-  .spinner-row { display: flex; justify-content: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
-
-  /* ---- Filter chips ---- */
-  .chips-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 18px 14px; flex-shrink: 0; }
-  .chip {
-    flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: var(--surface);
-    border: 1px solid var(--line); font-size: 0.78rem; font-weight: 700; color: var(--ink); cursor: pointer;
+  .tabi-pick {
+    display: flex; align-items: flex-start; gap: 6px; margin-top: 9px; padding-top: 9px;
+    border-top: 1px dashed var(--line); font-size: 0.78rem; color: var(--ink); font-weight: 600; line-height: 1.4;
   }
+  .tabi-pick .tp-badge {
+    flex-shrink: 0; background: var(--accent); color: #fff; font-size: 0.62rem; font-weight: 800;
+    padding: 2px 7px; border-radius: 999px; margin-top: 1px;
+  }
+
+  .store-actions { display: flex; gap: 8px; margin-top: 11px; }
+  .store-actions .btn { flex: 1; }
+
+  .art { position: relative; overflow: hidden; width: 100%; height: 100%; }
+  .art-a { background: radial-gradient(70% 60% at 75% 20%, rgba(232,74,53,0.28), transparent 60%), radial-gradient(70% 60% at 20% 90%, rgba(60,50,110,0.4), transparent 65%), linear-gradient(165deg, #241b38, #100c1a); }
+  .art-b { background: radial-gradient(65% 55% at 50% 100%, rgba(232,74,53,0.32), transparent 65%), radial-gradient(50% 40% at 80% 10%, rgba(46,124,246,0.3), transparent 60%), linear-gradient(180deg, #23283a, #10131f); }
+  .art-c { background: radial-gradient(55% 45% at 20% 20%, rgba(28,138,75,0.32), transparent 60%), radial-gradient(60% 50% at 90% 80%, rgba(255,220,180,0.3), transparent 60%), linear-gradient(165deg, #16302c, #0c1c1a); }
+  .art-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); }
+
+  /* ---- Skeletons ---- */
+  @keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
+  .skel { background: linear-gradient(90deg, var(--bg2) 25%, #F4F2EC 37%, var(--bg2) 63%); background-size: 400px 100%; animation: shimmer 1.4s ease infinite; border-radius: 10px; }
+  .skel-card { width: 232px; flex-shrink: 0; }
+  .skel-card .skel-photo { height: 148px; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  .skel-card .skel-line { height: 12px; margin: 10px 14px 0; border-radius: 6px; }
+  .skel-card .skel-line.w60 { width: 60%; }
+  .skel-card .skel-line.w40 { width: 40%; margin-bottom: 14px; }
+  .skel-row { display: flex; gap: 12px; padding: 2px 18px; overflow: hidden; }
+  .skel-list .skel-card { width: 100%; }
+
+  .empty-state { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 44px 28px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .empty-state .btn { width: auto; padding: 0 22px; }
+
+  /* ---- Chips ---- */
+  .chips-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 18px 12px; flex-shrink: 0; }
+  .chip {
+    flex-shrink: 0; padding: 9px 15px; border-radius: 999px; background: var(--surface);
+    border: 1px solid var(--line); font-size: 0.8rem; font-weight: 700; color: var(--ink); cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .chip:active { transform: scale(0.95); }
   .chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+  /* ---- Explore search bar ---- */
+  .search-bar {
+    margin: 4px 18px 12px; display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 13px 16px;
+  }
+  .search-bar input { border: none; background: none; outline: none; flex: 1; font-size: 0.95rem; font-weight: 600; color: var(--ink); min-width: 0; }
+
   /* ---- Assistant ---- */
-  .chat-header { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-  .chat-scroll { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+  .chat-header { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
+  .chat-scroll { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; }
   .row { display: flex; }
   .row.user { justify-content: flex-end; }
-  .bubble-user { background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px; max-width: 78%; font-size: 0.9rem; font-weight: 600; }
-  .ai-status { color: var(--muted); font-size: 0.85rem; padding: 10px 14px; background: var(--surface); border-radius: 4px 16px 16px 16px; display: inline-block; }
-  .dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); margin-right: 3px; animation: blink 1.2s infinite; }
+  .bubble-user { background: var(--ink); color: #fff; padding: 11px 16px; border-radius: 18px 18px 4px 18px; max-width: 80%; font-size: 0.92rem; font-weight: 600; }
+  .ai-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.85rem; font-weight: 600; padding: 11px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px 18px 18px 18px; }
+  .dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); margin-right: 3px; animation: blink 1.2s infinite; }
   .dots span:nth-child(2) { animation-delay: 0.2s; } .dots span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
-  .ai-wrap { max-width: 88%; display: flex; flex-direction: column; gap: 8px; }
-  .rec-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 4px 16px 16px 16px; padding: 14px; }
-  .rec-card + .rec-card { border-radius: 16px; }
-  .rec-card p { margin: 6px 0 0; font-size: 0.875rem; line-height: 1.5; color: #3A3B42; padding-right: 26px; }
-  .rec-card .tip { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
-  .save-heart {
-    position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%;
-    border: none; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #C6C7CE;
-  }
-  .save-heart.active { color: #E23D6B; }
-  .book-btn { margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-  .book-btn.accent { background: var(--accent); }
-  .error-bubble { background: var(--danger-bg); border: 1px solid #FBD8D8; color: var(--danger); padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 0.85rem; max-width: 88%; overflow-wrap: break-word; }
+  .ai-wrap { max-width: 92%; display: flex; flex-direction: column; gap: 10px; }
 
-  .prechat { padding: 8px 18px 16px; }
+  .plan-item { display: flex; gap: 10px; }
+  .plan-time-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 44px; padding-top: 4px; }
+  .plan-time { font-size: 0.72rem; font-weight: 800; color: var(--accent); }
+  .plan-connector { flex: 1; width: 2px; background: var(--line); margin-top: 4px; min-height: 18px; }
+
+  .rec-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; flex: 1; overflow: hidden; }
+  .rec-card.plain { padding: 14px; }
+  .rec-card p { margin: 6px 0 0; font-size: 0.86rem; line-height: 1.5; color: #3A3B42; }
+  .rec-card .tip { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); margin-top: 9px; padding-top: 9px; font-weight: 500; }
+  .rec-photo { height: 110px; border-radius: var(--r-sm); overflow: hidden; margin-bottom: 10px; position: relative; }
+  .rec-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .pr-badge { font-size: 0.62rem; font-weight: 800; color: var(--warn); background: var(--warn-bg); padding: 2px 7px; border-radius: 999px; margin-left: 6px; }
+
+  .error-bubble { background: var(--danger-bg); border: 1px solid #F0C7C0; color: var(--danger); padding: 11px 16px; border-radius: 4px 18px 18px 18px; font-size: 0.85rem; max-width: 88%; overflow-wrap: break-word; }
+
+  .trip-add-btn { margin-top: 4px; }
+
+  .prechat { padding: 6px 18px 18px; }
+  .prechat-title { text-align: center; color: var(--muted); font-size: 0.88rem; font-weight: 600; padding: 4px 8px 16px; }
   .prechat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .prechat-card {
-    text-align: left; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface);
-    cursor: pointer; font-size: 0.82rem; font-weight: 700; line-height: 1.35; min-height: 70px;
-    display: flex; align-items: flex-end;
+    text-align: left; padding: 15px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; font-size: 0.85rem; font-weight: 700; line-height: 1.35; min-height: 74px;
+    display: flex; align-items: flex-end; transition: transform 0.15s ease;
   }
-  .prechat-card:active { transform: scale(0.97); }
+  .prechat-card:active { transform: scale(0.96); }
 
-  .chat-input-bar { padding: 8px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; }
-  .chat-input-row { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 16px; }
-  .chat-input-row input { flex: 1; border: none; background: none; font-size: 0.9rem; outline: none; min-width: 0; }
-  .send-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .context-chips { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 4px; }
+
+  .chat-input-bar { padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
+  .chat-input-row { display: flex; align-items: center; gap: 8px; background: var(--bg2); border-radius: 999px; padding: 6px 6px 6px 18px; }
+  .chat-input-row input { flex: 1; border: none; background: none; font-size: 0.92rem; outline: none; min-width: 0; }
+  .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s ease; }
+  .send-btn:active { transform: scale(0.9); }
   .send-btn:disabled { opacity: 0.4; }
 
-  /* ---- Bookings / Saved rows ---- */
-  .list-row { display: flex; gap: 12px; padding: 10px; align-items: center; margin-bottom: 10px; }
-  .list-row .photo-wrap { width: 56px; height: 56px; border-radius: 14px; overflow: hidden; flex-shrink: 0; background: var(--surface); }
+  /* ---- My Trip timeline ---- */
+  .trip-date-label { font-size: 0.78rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 6px 0 12px; }
+  .timeline { position: relative; padding-left: 4px; }
+  .timeline-item { display: flex; gap: 14px; padding-bottom: 18px; position: relative; }
+  .timeline-item .t-time { width: 50px; flex-shrink: 0; font-size: 0.82rem; font-weight: 800; padding-top: 14px; }
+  .timeline-track { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .timeline-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); margin-top: 16px; flex-shrink: 0; }
+  .timeline-line { flex: 1; width: 2px; background: var(--line); min-height: 40px; }
+  .timeline-card { flex: 1; }
+  .walk-note { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--muted); font-weight: 700; padding: 8px 0 8px 64px; }
+
+  /* ---- List rows (saved etc) ---- */
+  .list-row { display: flex; gap: 12px; padding: 11px; align-items: center; margin-bottom: 10px; }
+  .list-row .photo-wrap { width: 58px; height: 58px; border-radius: var(--r-sm); overflow: hidden; flex-shrink: 0; background: var(--bg2); }
   .list-row .photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
   /* ---- Store detail ---- */
-  .detail-hero { position: relative; height: 240px; background: var(--surface); flex-shrink: 0; }
+  .detail-hero { position: relative; height: 260px; background: var(--bg2); flex-shrink: 0; }
   .detail-hero img { width: 100%; height: 100%; object-fit: cover; }
   .detail-topbar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 44px 16px 0; }
-  .on-photo { background: rgba(0,0,0,0.35); color: #fff; backdrop-filter: blur(6px); }
-  .detail-price-row { display: flex; align-items: center; gap: 14px; margin: 14px 0; }
-  .detail-actions { display: flex; gap: 10px; padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid var(--line); flex-shrink: 0; }
-  .detail-actions .book-btn { margin-top: 0; }
-  .hours-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; color: var(--muted); }
+  .on-photo { background: rgba(0,0,0,0.4); color: #fff; backdrop-filter: blur(6px); }
+  .detail-price-row { display: flex; align-items: center; gap: 14px; margin: 14px 0; flex-wrap: wrap; }
+  .detail-actions { display: flex; gap: 10px; padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
+  .hours-row { display: flex; justify-content: space-between; font-size: 0.86rem; padding: 7px 0; color: var(--muted); font-weight: 500; }
   .hours-row.today { color: var(--ink); font-weight: 700; }
+
+  /* ---- Bottom sheet ---- */
+  .sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(22,22,22,0.4); z-index: 200;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 50%; bottom: 0; transform: translate(-50%, 100%); width: 100%; max-width: 520px;
+    background: var(--surface); border-radius: 24px 24px 0 0; z-index: 201; padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 20px);
+    transition: transform 0.28s cubic-bezier(.2,.9,.25,1); box-shadow: 0 -8px 30px rgba(0,0,0,0.15);
+  }
+  .sheet.show { transform: translate(-50%, 0); }
+  .sheet-handle { width: 36px; height: 4px; border-radius: 3px; background: var(--line); margin: 6px auto 14px; }
+  .sheet-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 14px; }
+  .sheet-option {
+    display: flex; align-items: center; gap: 12px; padding: 14px 4px; width: 100%; background: none; border: none;
+    border-top: 1px solid var(--line); text-align: left; font-size: 0.92rem; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .sheet-option:first-child { border-top: none; }
+  .sheet-option .so-icon { width: 38px; height: 38px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
 
   /* ---- Bottom nav ---- */
   .bottom-nav {
     flex-shrink: 0; display: flex; justify-content: space-around; align-items: center;
     padding: 8px 6px calc(env(safe-area-inset-bottom, 0px) + 10px);
-    border-top: 1px solid var(--line); background: #fff;
+    border-top: 1px solid var(--line); background: var(--surface);
   }
   .nav-item {
     appearance: none; border: none; background: transparent;
     display: flex; flex-direction: column; align-items: center; gap: 3px;
-    color: #B4B4BC; cursor: pointer; padding: 4px 10px;
+    color: #B7B4AB; cursor: pointer; padding: 4px 10px; min-width: 44px; min-height: 44px; justify-content: center;
+    transition: transform 0.15s ease;
   }
+  .nav-item:active { transform: scale(0.92); }
   .nav-item.active { color: var(--ink); }
   .nav-item .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0; }
   .nav-item.active .dot { opacity: 1; }
   .nav-item span { font-size: 0.6rem; font-weight: 700; }
   .nav-item.center-item {
-    color: #fff; background: var(--accent); width: 46px; height: 46px; border-radius: 50%;
-    margin-top: -22px; box-shadow: 0 6px 16px -4px rgba(79,70,229,0.6); justify-content: center;
+    color: #fff; background: var(--accent); width: 50px; height: 50px; border-radius: 50%;
+    margin-top: -24px; box-shadow: 0 8px 18px -4px rgba(232,74,53,0.55); justify-content: center;
   }
-  .nav-item.center-item .icon { width: 22px; height: 22px; }
+  .nav-item.center-item .icon { width: 23px; height: 23px; }
   .nav-item.center-item span { display: none; }
 
   .toast {
     position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
-    background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 999px;
-    font-size: 0.85rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
-    z-index: 100; max-width: 80%; text-align: center;
+    z-index: 250; max-width: 80%; text-align: center;
   }
   .toast.show { opacity: 1; }
 
-  .lang-toggle { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
-  .lang-toggle-btn {
-    appearance: none; border: none; background: transparent; color: var(--muted);
-    font-size: 0.72rem; font-weight: 700; padding: 10px 12px; min-height: 36px; border-radius: 6px; cursor: pointer;
-  }
+  .lang-toggle { display: flex; gap: 2px; background: var(--bg2); border-radius: 10px; padding: 3px; }
+  .lang-toggle-btn { appearance: none; border: none; background: transparent; color: var(--muted); font-size: 0.72rem; font-weight: 700; padding: 10px 12px; min-height: 40px; border-radius: 7px; cursor: pointer; }
   .lang-toggle-btn.active { background: var(--accent); color: #fff; }
 </style>
 </head>
@@ -260,21 +355,25 @@
   <defs>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><line x1="20" y1="20" x2="15.8" y2="15.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M15 9l-2 6-4 1 2-6 4-1z" fill="currentColor"/></symbol>
     <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" fill="currentColor"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" fill="currentColor"/></symbol>
-    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.75"/><line x1="4" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="1.75"/><line x1="8" y1="3.5" x2="8" y2="7.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="16" y1="3.5" x2="16" y2="7.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+    <symbol id="i-map-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.2" fill="none" stroke="currentColor" stroke-width="1.75"/><circle cx="18" cy="18" r="2.2" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M6 8.2V12a4 4 0 0 0 4 4h4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-dasharray="1 3.3"/></symbol>
     <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.4 1 6.2 3.9C14.8 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></symbol>
     <symbol id="i-heart-filled" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.4 1 6.2 3.9C14.8 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z" fill="currentColor"/></symbol>
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M4.5 20c1.3-3.8 4.3-5.8 7.5-5.8s6.2 2 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
     <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9L12 17l-5.2 2.8 1-5.9-4.3-4.2 5.9-.8L12 3.5z" fill="currentColor"/></symbol>
     <symbol id="i-chevron-left" viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-chevron-right" viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
     <symbol id="i-send" viewBox="0 0 24 24"><line x1="4" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><polyline points="12 6 18 12 12 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke="currentColor" stroke-width="1.75"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.5 4h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2 2C10.5 19.5 4.5 13.5 4.5 6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24"><path d="M9 15l6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M11 6l1-1a4 4 0 0 1 5.7 5.7l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M13 18l-1 1A4 4 0 0 1 6.3 13.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
-    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="9" y1="4" x2="9" y2="18" stroke="currentColor" stroke-width="1.6"/><line x1="15" y1="6" x2="15" y2="20" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8" fill="currentColor"/><path d="M10 9l3-1.5 2 2 3 1M9 22l2-6 -1.5-2 1-4M13 9.5l1 3-3 3-1 3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-cutlery" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="21" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="3" x2="4" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="8" y1="3" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="8" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M18 3v6a2 2 0 0 1-2 2v10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M7 15a4.5 4.5 0 0 1 .5-9 5.5 5.5 0 0 1 10.4 1.8A3.8 3.8 0 0 1 17 15H7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><line x1="9" y1="18" x2="8" y2="21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="13" y1="18" x2="12" y2="21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="17" y1="18" x2="16" y2="21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></symbol>
   </defs>
 </svg>
 
@@ -283,92 +382,89 @@
   <!-- HOME -->
   <section class="tab-panel active" id="tab-home">
     <div class="screen-scroll">
-      <div class="topbar" style="padding-bottom:0;">
-        <div>
-          <div style="font-size:1.45rem;font-weight:800;letter-spacing:-0.01em;" data-en="Konnichiwa 👋" data-ja="こんにちは 👋">Konnichiwa 👋</div>
-          <div style="color:var(--muted);font-size:0.85rem;margin-top:1px;" data-en="Where do you want to go?" data-ja="どこに行きたい?">Where do you want to go?</div>
+      <div class="home-header">
+        <div class="greeting-row">
+          <div>
+            <div class="greeting-text" id="greetingText">Konnichiwa 👋</div>
+            <div class="location-row"><svg class="icon-xs"><use href="#i-pin"></use></svg><span id="locationLabel">Tokyo</span><span>·</span><span id="dateLabel"></span></div>
+          </div>
+          <button class="icon-btn" onclick="showTab('profile')" aria-label="Profile"><svg class="icon-sm"><use href="#i-user"></use></svg></button>
         </div>
-        <button class="icon-btn" onclick="showTab('profile')" aria-label="Profile"><svg class="icon-sm"><use href="#i-user"></use></svg></button>
       </div>
 
-      <form class="hero-search" id="homeSearchForm" style="margin-top:14px;">
-        <svg class="icon-sm" style="color:var(--muted);flex-shrink:0;"><use href="#i-search"></use></svg>
-        <input type="text" id="homeSearchInput" placeholder="Where to? What do you want to do?" data-placeholder-en="Where to? What do you want to do?" data-placeholder-ja="どこに行く?何がしたい?" autocomplete="off" />
+      <div class="hero-question" data-en="What do you want to do today?" data-ja="今日、何をしたいですか?">What do you want to do today?</div>
+
+      <form class="ai-hero-input" id="homeSearchForm">
+        <svg class="icon-sm" style="color:var(--accent);flex-shrink:0;"><use href="#i-sparkle"></use></svg>
+        <input type="text" id="homeSearchInput" placeholder="Dinner in Shibuya for two" data-placeholder-en="Dinner in Shibuya for two" data-placeholder-ja="渋谷で2人分の夕食" autocomplete="off" />
+        <button type="submit" class="ai-hero-send"><svg class="icon-sm"><use href="#i-send"></use></svg></button>
       </form>
 
-      <div class="feature-grid">
-        <button class="feature-card fc-purple" onclick="goAssistant()">
-          <span class="fc-icon"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
-          <span class="fc-label" data-en="Ask AI" data-ja="AIに相談">Ask AI</span>
-        </button>
-        <button class="feature-card fc-blue" onclick="showTab('search')">
-          <span class="fc-icon"><svg class="icon-sm"><use href="#i-search"></use></svg></span>
-          <span class="fc-label" data-en="Find a place" data-ja="お店を探す">Find a place</span>
-        </button>
-        <button class="feature-card fc-green" onclick="openSearchWithFilter('restaurant', true)">
-          <span class="fc-icon"><svg class="icon-sm"><use href="#i-calendar"></use></svg></span>
-          <span class="fc-label" data-en="Book now" data-ja="予約する">Book now</span>
-        </button>
-        <button class="feature-card fc-amber" onclick="openSearchWithFilter('tourist_attraction', false)">
-          <span class="fc-icon"><svg class="icon-sm"><use href="#i-pin"></use></svg></span>
-          <span class="fc-label" data-en="Nearby spots" data-ja="周辺スポット">Nearby spots</span>
-        </button>
+      <div class="quick-row">
+        <button class="quick-pill" onclick="handleQuickPrompt('plan')"><svg class="icon-xs"><use href="#i-sparkle"></use></svg><span data-en="Plan my day" data-ja="今日の計画">Plan my day</span></button>
+        <button class="quick-pill" onclick="handleQuickPrompt('popular_restaurants')"><svg class="icon-xs"><use href="#i-cutlery"></use></svg><span data-en="Find food" data-ja="食事を探す">Find food</span></button>
+        <button class="quick-pill" onclick="openSearchWithFilter('tourist_attraction', false)"><svg class="icon-xs"><use href="#i-compass"></use></svg><span data-en="Things to do" data-ja="やること">Things to do</span></button>
+        <button class="quick-pill" onclick="showTab('search')"><svg class="icon-xs"><use href="#i-pin"></use></svg><span data-en="Nearby" data-ja="周辺">Nearby</span></button>
       </div>
 
-      <div class="px" style="padding-bottom:10px;">
-        <div class="section-head">
-          <h2 class="section-title" data-en="Popular near you" data-ja="現在地周辺のおすすめ">Popular near you</h2>
+      <div class="section-block">
+        <div class="px section-head">
+          <h2 class="section-title" id="dynamicSectionTitle">Popular near you</h2>
           <button class="see-all" onclick="showTab('search')" data-en="See all" data-ja="すべて見る">See all</button>
         </div>
+        <div class="store-row" id="homeNearby"></div>
       </div>
-      <div class="store-row" id="homeNearby">
-        <div class="spinner-row" data-en="Finding places near you…" data-ja="周辺のスポットを探しています…">Finding places near you…</div>
+
+      <div class="section-block" id="homeTripPreviewBlock" style="display:none;">
+        <div class="px section-head">
+          <h2 class="section-title" data-en="Your trip today" data-ja="今日の旅程">Your trip today</h2>
+          <button class="see-all" onclick="showTab('trip')" data-en="View" data-ja="見る">View</button>
+        </div>
+        <div class="px" id="homeTripPreview"></div>
       </div>
-      <div style="height:20px;"></div>
+      <div style="height:12px;"></div>
     </div>
   </section>
 
-  <!-- SEARCH -->
+  <!-- EXPLORE -->
   <section class="tab-panel" id="tab-search">
-    <div class="topbar">
-      <h1 data-en="Find a place" data-ja="お店を探す">Find a place</h1>
-    </div>
-    <form class="hero-search" id="searchForm" style="margin:0 18px 12px;">
+    <div class="topbar"><h1 data-en="Explore" data-ja="探す">Explore</h1></div>
+    <form class="search-bar" id="searchForm">
       <svg class="icon-sm" style="color:var(--muted);flex-shrink:0;"><use href="#i-search"></use></svg>
       <input type="text" id="searchInput" placeholder="Search restaurants, cafes, spots..." data-placeholder-en="Search restaurants, cafes, spots..." data-placeholder-ja="レストラン・カフェ・スポットを検索..." autocomplete="off" />
     </form>
     <div class="chips-row" id="searchChips">
-      <span class="chip active" data-type="" data-en="All" data-ja="すべて">All</span>
-      <span class="chip" data-type="restaurant" data-en="Restaurant" data-ja="レストラン">Restaurant</span>
+      <span class="chip active" data-type="restaurant" data-en="Food" data-ja="グルメ">Food</span>
       <span class="chip" data-type="cafe" data-en="Cafe" data-ja="カフェ">Cafe</span>
       <span class="chip" data-type="tourist_attraction" data-en="Sightseeing" data-ja="観光地">Sightseeing</span>
-      <span class="chip" data-type="lodging" data-en="Hotel" data-ja="ホテル">Hotel</span>
       <span class="chip" data-type="shopping_mall" data-en="Shopping" data-ja="ショッピング">Shopping</span>
+      <span class="chip" data-type="bar" data-en="Nightlife" data-ja="ナイトライフ">Nightlife</span>
+      <span class="chip" data-type="lodging" data-en="Hotel" data-ja="ホテル">Hotel</span>
     </div>
     <div class="chips-row" style="padding-top:0;">
-      <span class="chip" id="openNowChip" data-en="Open now" data-ja="営業中のみ">Open now</span>
+      <span class="chip" id="openNowChip" data-en="Open now" data-ja="営業中">Open now</span>
+      <span class="chip" id="ratedChip" data-en="Highly rated" data-ja="高評価">Highly rated</span>
+      <span class="chip" id="budgetChip" data-en="Budget-friendly" data-ja="お手頃価格">Budget-friendly</span>
     </div>
     <div class="screen-scroll">
-      <div class="store-list" id="searchResults">
-        <div class="spinner-row" data-en="Finding places near you…" data-ja="周辺のスポットを探しています…">Finding places near you…</div>
-      </div>
+      <div class="store-list" id="searchResults"></div>
     </div>
   </section>
 
   <!-- ASSISTANT -->
   <section class="tab-panel" id="tab-assistant">
     <div class="chat-header">
-      <span class="icon-btn" style="background:var(--accent);color:#fff;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+      <span class="icon-btn" style="background:var(--accent);color:#fff;box-shadow:none;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
       <div style="flex:1;">
-        <div style="font-weight:800;font-size:0.9375rem;">Tabi AI</div>
-        <div style="font-size:0.6875rem;color:var(--muted);" data-en="Answers in your language" data-ja="あなたの言語で回答します">Answers in your language</div>
+        <div style="font-weight:800;font-size:0.95rem;">Tabi AI</div>
+        <div style="font-size:0.7rem;color:var(--muted);font-weight:600;" data-en="Answers in your language" data-ja="あなたの言語で回答します">Answers in your language</div>
       </div>
       <select id="lang"></select>
     </div>
     <div class="chat-scroll" id="chatScroll">
       <div id="prechat" class="prechat">
-        <div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:6px 8px 16px;" data-en="What can I help with?" data-ja="何をお手伝いしましょうか?">What can I help with?</div>
-        <div class="prechat-grid">
+        <div class="prechat-title" id="prechatTitle" data-en="What can I help with?" data-ja="何をお手伝いしましょうか?">What can I help with?</div>
+        <div class="prechat-grid" id="prechatGrid">
           <button class="prechat-card" onclick="handleQuickPrompt('plan')" data-en="Plan my day today" data-ja="今日の旅行プランを作る">Plan my day today</button>
           <button class="prechat-card" onclick="handleQuickPrompt('popular_restaurants')" data-en="Popular restaurants nearby" data-ja="近くの人気レストラン">Popular restaurants nearby</button>
           <button class="prechat-card" onclick="handleQuickPrompt('rainy_day')" data-en="Places to go on a rainy day" data-ja="雨の日に行ける場所">Places to go on a rainy day</button>
@@ -384,10 +480,10 @@
     </div>
   </section>
 
-  <!-- BOOKINGS -->
-  <section class="tab-panel" id="tab-bookings">
-    <div class="topbar"><h1 data-en="Bookings" data-ja="予約">Bookings</h1></div>
-    <div class="screen-scroll px" id="bookingsList" style="padding-top:8px;"></div>
+  <!-- MY TRIP -->
+  <section class="tab-panel" id="tab-trip">
+    <div class="topbar"><h1 data-en="My Trip" data-ja="マイ旅程">My Trip</h1></div>
+    <div class="screen-scroll px" id="tripList" style="padding-top:8px;"></div>
   </section>
 
   <!-- STORE DETAIL -->
@@ -395,23 +491,22 @@
     <div class="screen-scroll">
       <div class="detail-hero" id="detailHero">
         <div class="detail-topbar">
-          <button class="icon-btn on-photo" onclick="closeDetail()"><svg class="icon-sm"><use href="#i-chevron-left"></use></svg></button>
-          <button class="icon-btn on-photo save-heart-detail" id="detailSaveBtn"><svg class="icon-sm"><use href="#i-heart"></use></svg></button>
+          <button class="icon-btn on-photo" onclick="closeDetail()" style="box-shadow:none;"><svg class="icon-sm"><use href="#i-chevron-left"></use></svg></button>
+          <button class="icon-btn on-photo" id="detailSaveBtn" style="box-shadow:none;"><svg class="icon-sm"><use href="#i-heart"></use></svg></button>
         </div>
       </div>
-      <div class="px" style="padding-top:16px;" id="detailBody">
-        <div class="spinner-row" data-en="Loading…" data-ja="読み込み中…">Loading…</div>
-      </div>
+      <div class="px" style="padding-top:16px;" id="detailBody"></div>
+      <div class="px" id="detailAskAi" style="padding-bottom:6px;"></div>
     </div>
     <div class="detail-actions" id="detailActions"></div>
   </section>
 
   <!-- PROFILE -->
   <section class="tab-panel" id="tab-profile">
-    <div class="topbar"><h1 data-en="My Page" data-ja="マイページ">My Page</h1></div>
+    <div class="topbar"><h1 data-en="Profile" data-ja="プロフィール">Profile</h1></div>
     <div class="screen-scroll px" style="padding-top:8px;">
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;">
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;">
           <svg class="icon-sm"><use href="#i-globe"></use></svg>
           <span style="flex:1;font-size:0.875rem;font-weight:700;" data-en="App language" data-ja="アプリの表示言語">App language</span>
           <div class="lang-toggle">
@@ -419,10 +514,10 @@
             <button class="lang-toggle-btn" data-applang="ja">日本語</button>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid var(--line);">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line);">
           <svg class="icon-sm"><use href="#i-globe"></use></svg>
           <span style="flex:1;font-size:0.875rem;font-weight:700;" data-en="Answer language" data-ja="AIの回答言語">Answer language</span>
-          <select id="langProfile" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 8px;font-size:0.8rem;"></select>
+          <select id="langProfile" class="select-plain"></select>
         </div>
       </div>
 
@@ -431,22 +526,29 @@
       </div>
       <div id="savedList" style="margin-bottom:8px;"></div>
 
-      <button class="card" style="width:100%;padding:13px 14px;text-align:left;color:var(--danger);font-weight:700;font-size:0.875rem;cursor:pointer;margin-top:6px;" onclick="resetData()" data-en="Clear saved &amp; bookings" data-ja="お気に入り・予約履歴を削除">
-        Clear saved &amp; bookings
+      <button class="btn btn-ghost btn-block" style="justify-content:flex-start;padding-left:16px;color:var(--danger);margin-top:10px;" onclick="resetData()" data-en="Clear saved &amp; trip" data-ja="お気に入り・旅程を削除">
+        Clear saved &amp; trip
       </button>
-      <div style="text-align:center;color:#B4B4BC;font-size:0.75rem;margin-top:20px;">Tabi v0.2.0 — built with Claude</div>
+      <div style="text-align:center;color:#B7B4AB;font-size:0.75rem;margin-top:20px;">Tabi v0.3.0 — built with Claude</div>
     </div>
   </section>
 
   <nav class="bottom-nav">
     <button class="nav-item active" data-tab="home" onclick="showTab('home')"><svg class="icon"><use href="#i-home"></use></svg><span class="dot"></span><span data-en="Home" data-ja="ホーム">Home</span></button>
-    <button class="nav-item" data-tab="search" onclick="showTab('search')"><svg class="icon"><use href="#i-search"></use></svg><span class="dot"></span><span data-en="Find" data-ja="探す">Find</span></button>
+    <button class="nav-item" data-tab="search" onclick="showTab('search')"><svg class="icon"><use href="#i-compass"></use></svg><span class="dot"></span><span data-en="Explore" data-ja="探す">Explore</span></button>
     <button class="nav-item center-item" data-tab="assistant" onclick="showTab('assistant')"><svg class="icon"><use href="#i-sparkle"></use></svg><span data-en="AI" data-ja="AI">AI</span></button>
-    <button class="nav-item" data-tab="bookings" onclick="showTab('bookings')"><svg class="icon"><use href="#i-calendar"></use></svg><span class="dot"></span><span data-en="Bookings" data-ja="予約">Bookings</span></button>
-    <button class="nav-item" data-tab="profile" onclick="showTab('profile')"><svg class="icon"><use href="#i-user"></use></svg><span class="dot"></span><span data-en="Mine" data-ja="マイページ">Mine</span></button>
+    <button class="nav-item" data-tab="trip" onclick="showTab('trip')"><svg class="icon"><use href="#i-map-route"></use></svg><span class="dot"></span><span data-en="Trips" data-ja="旅程">Trips</span></button>
+    <button class="nav-item" data-tab="profile" onclick="showTab('profile')"><svg class="icon"><use href="#i-user"></use></svg><span class="dot"></span><span data-en="Profile" data-ja="プロフィール">Profile</span></button>
   </nav>
 
   <div class="toast" id="toast"></div>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetTitle"></div>
+    <div id="sheetBody"></div>
+  </div>
 </div>
 
 <script>
@@ -469,19 +571,21 @@
     document.querySelectorAll('[data-en]').forEach((el) => { el.textContent = lang === 'ja' ? (el.dataset.ja || el.dataset.en) : el.dataset.en; });
     document.querySelectorAll('[data-placeholder-en]').forEach((el) => { el.placeholder = lang === 'ja' ? (el.dataset.placeholderJa || el.dataset.placeholderEn) : el.dataset.placeholderEn; });
     document.querySelectorAll('.lang-toggle-btn').forEach((b) => b.classList.toggle('active', b.dataset.applang === lang));
+    renderGreeting();
     if (document.getElementById('tab-profile').classList.contains('active')) renderSaved();
-    if (document.getElementById('tab-bookings').classList.contains('active')) renderBookings();
+    if (document.getElementById('tab-trip').classList.contains('active')) renderTrip();
   }
   document.querySelectorAll('.lang-toggle-btn').forEach((b) => b.addEventListener('click', () => setAppLang(b.dataset.applang)));
 
+  // ---------- Tabs ----------
   let previousTab = 'home';
   function showTab(id) {
     const current = document.querySelector('.tab-panel.active');
     if (current && current.id !== 'tab-detail') previousTab = current.id.replace('tab-', '');
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + id));
     document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.tab === id));
-    if (id === 'saved' || id === 'profile') renderSaved();
-    if (id === 'bookings') renderBookings();
+    if (id === 'profile') renderSaved();
+    if (id === 'trip') renderTrip();
     if (id === 'search' && !searchLoadedOnce) runSearch();
   }
   function goAssistant() { showTab('assistant'); }
@@ -492,9 +596,22 @@
     setTimeout(() => el.classList.remove('show'), 2200);
   }
 
-  // ---------- Geolocation ----------
+  // ---------- Bottom sheet ----------
+  function openSheet(title, optionsHtml) {
+    document.getElementById('sheetTitle').textContent = title;
+    document.getElementById('sheetBody').innerHTML = optionsHtml;
+    document.getElementById('sheetBackdrop').classList.add('show');
+    document.getElementById('sheet').classList.add('show');
+  }
+  function closeSheet() {
+    document.getElementById('sheetBackdrop').classList.remove('show');
+    document.getElementById('sheet').classList.remove('show');
+  }
+
+  // ---------- Geolocation + greeting + weather ----------
   const TOKYO_STATION = { lat: 35.6812, lng: 139.7671 };
   let coords = TOKYO_STATION;
+  let isRaining = false;
   function getCoords() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) return resolve(TOKYO_STATION);
@@ -505,51 +622,91 @@
       );
     });
   }
+  async function checkWeather() {
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&current=precipitation,weather_code`);
+      const data = await r.json();
+      const code = data.current?.weather_code ?? 0;
+      const precip = data.current?.precipitation ?? 0;
+      isRaining = precip > 0 || (code >= 51 && code <= 82);
+    } catch (e) { isRaining = false; }
+  }
+  function getDaypart() {
+    const h = new Date().getHours();
+    if (h < 5) return 'night';
+    if (h < 11) return 'morning';
+    if (h < 15) return 'lunch';
+    if (h < 18) return 'afternoon';
+    return 'evening';
+  }
+  function renderGreeting() {
+    const part = getDaypart();
+    const greetings = {
+      morning: [t('Good morning ☀️', 'おはようございます ☀️')],
+      lunch: [t('Lunch time 🍜', 'お昼の時間です 🍜')],
+      afternoon: [t('Good afternoon 👋', 'こんにちは 👋')],
+      evening: [t('Good evening 🌆', 'こんばんは 🌆')],
+      night: [t('Still up? 🌙', '夜更かしですか? 🌙')],
+    };
+    document.getElementById('greetingText').textContent = greetings[part][0];
+    document.getElementById('dateLabel').textContent = new Date().toLocaleDateString(currentAppLang === 'ja' ? 'ja-JP' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+    let sectionTitle, prechatOverrides;
+    if (isRaining) sectionTitle = t('Rainy day ideas ☔', '雨の日のおすすめ ☔');
+    else if (part === 'morning') sectionTitle = t('Start your day', '今日のスタート');
+    else if (part === 'lunch') sectionTitle = t('Lunch near you', '近くのランチ');
+    else if (part === 'evening' || part === 'night') sectionTitle = t('Tonight in Tokyo', '今夜の東京');
+    else sectionTitle = t('Popular near you', '現在地周辺のおすすめ');
+    document.getElementById('dynamicSectionTitle').textContent = sectionTitle;
+  }
 
   // ---------- Place helpers ----------
   const TYPE_LABELS = {
-    restaurant: { en: "Restaurant", ja: "レストラン" },
-    cafe: { en: "Cafe", ja: "カフェ" },
-    bar: { en: "Bar", ja: "バー" },
-    tourist_attraction: { en: "Sightseeing", ja: "観光地" },
-    lodging: { en: "Hotel", ja: "ホテル" },
-    shopping_mall: { en: "Shopping", ja: "ショッピング" },
-    store: { en: "Shop", ja: "ショップ" },
-    museum: { en: "Museum", ja: "美術館・博物館" },
-    park: { en: "Park", ja: "公園" },
+    restaurant: { en: "Restaurant", ja: "レストラン" }, cafe: { en: "Cafe", ja: "カフェ" }, bar: { en: "Bar", ja: "バー" },
+    tourist_attraction: { en: "Sightseeing", ja: "観光地" }, lodging: { en: "Hotel", ja: "ホテル" },
+    shopping_mall: { en: "Shopping", ja: "ショッピング" }, store: { en: "Shop", ja: "ショップ" },
+    museum: { en: "Museum", ja: "美術館・博物館" }, park: { en: "Park", ja: "公園" },
   };
   function typeLabel(types) {
     const hit = (types || []).find((ty) => TYPE_LABELS[ty]);
     const l = TYPE_LABELS[hit];
     return l ? t(l.en, l.ja) : t("Place", "スポット");
   }
-  function priceStr(level) {
-    if (level === null || level === undefined) return '';
-    return '¥'.repeat(Math.max(1, level));
-  }
-  function distStr(m) {
-    if (m === null || m === undefined) return '';
-    return m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`;
-  }
+  function priceStr(level) { return level === null || level === undefined ? '' : '¥'.repeat(Math.max(1, level)); }
+  function distStr(m) { return m == null ? '' : m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`; }
+  function walkMin(m) { return m == null ? null : Math.max(1, Math.round(m / 80)); }
   function photoUrl(ref) { return ref ? `/api/places/photo/${ref}` : null; }
   function artClass(seed) { const arr = ['art-a', 'art-b', 'art-c']; return arr[Math.abs(hashStr(seed)) % arr.length]; }
   function hashStr(s) { let h = 0; for (let i = 0; i < (s || '').length; i++) h = (h << 5) - h + s.charCodeAt(i); return h; }
-
   function photoOrArt(place) {
     const url = photoUrl(place.photoRef);
     if (url) return `<img src="${url}" alt="" loading="lazy" />`;
     return `<div class="art ${artClass(place.name)}"><span class="art-icon"><svg class="icon"><use href="#i-cutlery"></use></svg></span></div>`;
   }
+  function tabiPickReason(place) {
+    const bits = [];
+    if (place.distanceMeters != null) bits.push(t(`${distStr(place.distanceMeters)} away`, `現在地から${distStr(place.distanceMeters)}`));
+    if (place.rating) bits.push(t(`rated ${place.rating.toFixed(1)}★`, `評価${place.rating.toFixed(1)}`));
+    if (place.openNow === true) bits.push(t('open now', '営業中'));
+    return bits.join(t(', ', '、'));
+  }
 
-  function storeCardHtml(place) {
-    const status = place.openNow === true
-      ? `<span class="status-badge status-open">${t('Open', '営業中')}</span>`
-      : place.openNow === false
-      ? `<span class="status-badge status-closed">${t('Closed', '営業終了')}</span>`
-      : '';
+  function storeCardHtml(place, opts) {
+    opts = opts || {};
+    const status = place.openNow === true ? `<span class="status-badge status-open">${t('Open', '営業中')}</span>` : place.openNow === false ? `<span class="status-badge status-closed">${t('Closed', '営業終了')}</span>` : '';
     const rating = place.rating ? `<span class="rating-pill"><svg class="icon-xs" style="color:#F5A524;"><use href="#i-star"></use></svg>${place.rating.toFixed(1)}</span>` : '';
+    const wm = walkMin(place.distanceMeters);
+    const tabiPick = opts.showPick !== false ? `<div class="tabi-pick"><span class="tp-badge">Tabi Pick</span><span>${tabiPickReason(place)}</span></div>` : '';
+    const actions = opts.showActions ? `
+      <div class="store-actions">
+        <button class="btn btn-ghost btn-sm" data-view>${t('View', '詳細')}</button>
+        <button class="btn btn-accent btn-sm" data-reserve>${t('Reserve', '予約')}</button>
+      </div>` : '';
     return `
-      <div class="photo-wrap">${photoOrArt(place)}</div>
+      <div class="photo-wrap">
+        ${photoOrArt(place)}
+        <button class="fav-btn ${isSaved(place) ? 'active' : ''}" data-fav><svg class="icon-sm"><use href="#${isSaved(place) ? 'i-heart-filled' : 'i-heart'}"></use></svg></button>
+      </div>
       <div class="store-body">
         <div class="store-name">${place.name}</div>
         <div class="store-meta">
@@ -557,103 +714,173 @@
           ${rating ? `<span class="dot"></span>${rating}` : ''}
           ${place.distanceMeters != null ? `<span class="dot"></span><span>${distStr(place.distanceMeters)}</span>` : ''}
         </div>
-        <div class="store-meta" style="margin-top:4px;">
+        <div class="store-meta" style="margin-top:5px;">
           ${status}
           ${priceStr(place.priceLevel) ? `<span class="dot"></span><span>${priceStr(place.priceLevel)}</span>` : ''}
+          ${wm ? `<span class="dot"></span><span>🚶 ${wm} min</span>` : ''}
         </div>
+        ${tabiPick}
+        ${actions}
       </div>
     `;
   }
 
-  function renderStoreCards(container, places, layout) {
+  function bindStoreCard(card, place) {
+    card.querySelector('[data-fav]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSaved(place);
+      const btn = e.currentTarget;
+      btn.classList.toggle('active', isSaved(place));
+      btn.querySelector('use').setAttribute('href', '#' + (isSaved(place) ? 'i-heart-filled' : 'i-heart'));
+    });
+    card.querySelector('[data-view]')?.addEventListener('click', (e) => { e.stopPropagation(); openDetail(place.placeId); });
+    card.querySelector('[data-reserve]')?.addEventListener('click', (e) => { e.stopPropagation(); openReserveSheet(place); });
+    card.addEventListener('click', () => openDetail(place.placeId));
+  }
+
+  function skeletonRow(container, count) {
+    container.className = 'store-row';
+    container.innerHTML = Array.from({ length: count || 4 }).map(() => `
+      <div class="skel-card">
+        <div class="skel skel-photo"></div>
+        <div class="skel skel-line w60"></div>
+        <div class="skel skel-line w40"></div>
+      </div>
+    `).join('');
+  }
+  function skeletonList(container, count) {
+    container.className = 'store-list skel-list';
+    container.innerHTML = Array.from({ length: count || 3 }).map(() => `
+      <div class="skel-card"><div class="skel skel-photo"></div><div class="skel skel-line w60"></div><div class="skel skel-line w40"></div></div>
+    `).join('');
+  }
+
+  function renderStoreCards(container, places, layout, opts) {
     container.className = layout === 'list' ? 'store-list' : 'store-row';
     if (!places.length) {
-      container.innerHTML = `<div class="empty-state">${t('No places found nearby.', '周辺にスポットが見つかりませんでした。')}</div>`;
+      container.innerHTML = `<div class="empty-state" style="padding:24px;">${t('No places found nearby.', '周辺にスポットが見つかりませんでした。')}</div>`;
       return;
     }
     container.innerHTML = '';
     places.forEach((place) => {
       const card = document.createElement('div');
       card.className = 'card store-card';
-      card.innerHTML = storeCardHtml(place);
-      card.addEventListener('click', () => openDetail(place.placeId));
+      card.innerHTML = storeCardHtml(place, opts);
+      bindStoreCard(card, place);
       container.appendChild(card);
     });
   }
 
-  // ---------- Home nearby ----------
-  async function loadHomeNearby() {
-    await getCoords();
+  function openReserveSheet(place) {
+    openSheet(t('Reserve', '予約する'), `
+      <button class="sheet-option" id="sheetCall"><span class="so-icon"><svg class="icon-sm"><use href="#i-phone"></use></svg></span>${t('Call to reserve', '電話で予約')}</button>
+      <button class="sheet-option" id="sheetWeb"><span class="so-icon"><svg class="icon-sm"><use href="#i-link"></use></svg></span>${t('Visit website', '公式サイトを見る')}</button>
+      <button class="sheet-option" id="sheetSearch"><span class="so-icon"><svg class="icon-sm"><use href="#i-search"></use></svg></span>${t('Search on partner site', '提携サイトで検索')}</button>
+      <button class="sheet-option" id="sheetAddTrip"><span class="so-icon"><svg class="icon-sm"><use href="#i-plus"></use></svg></span>${t('Add to my trip', 'マイ旅程に追加')}</button>
+    `);
+    document.getElementById('sheetCall').onclick = async () => { const d = await fetchPlaceDetail(place.placeId); if (d?.phone) { logBooking(place, 'call'); window.location.href = 'tel:' + d.phone.replace(/[^0-9+]/g, ''); } else showToast(t('No phone number available', '電話番号が見つかりません')); closeSheet(); };
+    document.getElementById('sheetWeb').onclick = async () => { const d = await fetchPlaceDetail(place.placeId); if (d?.website) { logBooking(place, 'website'); window.open(d.website, '_blank'); } else showToast(t('No website available', '公式サイトが見つかりません')); closeSheet(); };
+    document.getElementById('sheetSearch').onclick = () => { reserveFallback(place); closeSheet(); };
+    document.getElementById('sheetAddTrip').onclick = () => { addToTrip(place); closeSheet(); };
+  }
+  const placeDetailCache = {};
+  async function fetchPlaceDetail(placeId) {
+    if (!placeId) return null;
+    if (placeDetailCache[placeId]) return placeDetailCache[placeId];
     try {
-      const res = await fetch(`/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}&type=restaurant`);
+      const res = await fetch(`/api/places/${placeId}`);
+      const data = await res.json();
+      if (!res.ok) return null;
+      placeDetailCache[placeId] = data;
+      return data;
+    } catch (e) { return null; }
+  }
+  function reserveFallback(place) {
+    logBooking(place, 'searched');
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(place.name + ' 予約')}`, '_blank');
+  }
+
+  // ---------- Home ----------
+  async function loadHomeNearby() {
+    skeletonRow(document.getElementById('homeNearby'), 4);
+    await getCoords();
+    await checkWeather();
+    renderGreeting();
+    try {
+      const type = isRaining ? 'museum' : (getDaypart() === 'evening' || getDaypart() === 'night') ? 'restaurant' : 'restaurant';
+      const res = await fetch(`/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}&type=${type}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       renderStoreCards(document.getElementById('homeNearby'), (data.results || []).slice(0, 10), 'row');
     } catch (err) {
-      document.getElementById('homeNearby').innerHTML = `<div class="empty-state">${t('Could not load nearby places.', '周辺情報を取得できませんでした。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
+      document.getElementById('homeNearby').innerHTML = `<div class="empty-state" style="padding:24px;">${t('Could not load nearby places.', '周辺情報を取得できませんでした。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
     }
+    renderHomeTripPreview();
+  }
+  function renderHomeTripPreview() {
+    const trip = getBookings();
+    const block = document.getElementById('homeTripPreviewBlock');
+    if (!trip.length) { block.style.display = 'none'; return; }
+    block.style.display = '';
+    const el = document.getElementById('homeTripPreview');
+    el.innerHTML = trip.slice(0, 2).map((b) => `
+      <div class="card list-row">
+        <div class="photo-wrap">${b.photoRef ? `<img src="${photoUrl(b.photoRef)}" alt=""/>` : `<div class="art ${artClass(b.title)}"></div>`}</div>
+        <div style="flex:1;min-width:0;"><div class="store-name" style="white-space:normal;">${b.title}</div><div class="store-meta">${b.suggestedTime || ''} ${b.area || ''}</div></div>
+      </div>
+    `).join('');
   }
 
-  // ---------- Search ----------
+  // ---------- Explore / Search ----------
   let searchLoadedOnce = false;
-  let activeType = '';
-  let activeOpenNow = false;
+  let activeType = 'restaurant';
+  let activeOpenNow = false, activeRated = false, activeBudget = false;
   const searchInput = document.getElementById('searchInput');
   const homeSearchInput = document.getElementById('homeSearchInput');
 
   async function runSearch() {
     searchLoadedOnce = true;
+    skeletonList(document.getElementById('searchResults'), 4);
     await getCoords();
     const container = document.getElementById('searchResults');
-    container.innerHTML = `<div class="spinner-row">${t('Searching…', '検索中…')}</div>`;
     try {
       const query = searchInput.value.trim();
       let url;
-      if (query) {
-        url = `/api/places/search?query=${encodeURIComponent(query)}&lat=${coords.lat}&lng=${coords.lng}`;
-      } else {
-        url = `/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}`;
-        if (activeType) url += `&type=${activeType}`;
-      }
+      if (query) url = `/api/places/search?query=${encodeURIComponent(query)}&lat=${coords.lat}&lng=${coords.lng}`;
+      else { url = `/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}`; if (activeType) url += `&type=${activeType}`; }
       if (activeOpenNow) url += `&openNow=true`;
       const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      renderStoreCards(container, data.results || [], 'list');
+      let results = data.results || [];
+      if (activeRated) results = results.filter((p) => p.rating && p.rating >= 4.3);
+      if (activeBudget) results = results.filter((p) => p.priceLevel == null || p.priceLevel <= 1);
+      renderStoreCards(container, results, 'list', { showActions: true });
     } catch (err) {
       container.innerHTML = `<div class="empty-state">${t('Search failed.', '検索に失敗しました。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
     }
   }
-
   document.getElementById('searchChips').addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip');
-    if (!chip) return;
+    const chip = e.target.closest('.chip'); if (!chip) return;
     document.querySelectorAll('#searchChips .chip').forEach((c) => c.classList.remove('active'));
-    chip.classList.add('active');
-    activeType = chip.dataset.type;
-    runSearch();
+    chip.classList.add('active'); activeType = chip.dataset.type; runSearch();
   });
-  document.getElementById('openNowChip').addEventListener('click', (e) => {
-    activeOpenNow = !activeOpenNow;
-    e.target.classList.toggle('active', activeOpenNow);
-    runSearch();
-  });
+  document.getElementById('openNowChip').addEventListener('click', (e) => { activeOpenNow = !activeOpenNow; e.target.classList.toggle('active', activeOpenNow); runSearch(); });
+  document.getElementById('ratedChip').addEventListener('click', (e) => { activeRated = !activeRated; e.target.classList.toggle('active', activeRated); runSearch(); });
+  document.getElementById('budgetChip').addEventListener('click', (e) => { activeBudget = !activeBudget; e.target.classList.toggle('active', activeBudget); runSearch(); });
   document.getElementById('searchForm').addEventListener('submit', (e) => { e.preventDefault(); runSearch(); });
   document.getElementById('homeSearchForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const q = homeSearchInput.value.trim();
+    if (!q) return;
     homeSearchInput.value = '';
-    searchInput.value = q;
-    showTab('search');
-    runSearch();
+    quickAction(q);
   });
-
   function openSearchWithFilter(type, openNow) {
     activeType = type; activeOpenNow = openNow;
     document.querySelectorAll('#searchChips .chip').forEach((c) => c.classList.toggle('active', c.dataset.type === type));
     document.getElementById('openNowChip').classList.toggle('active', openNow);
-    showTab('search');
-    runSearch();
+    showTab('search'); runSearch();
   }
 
   // ---------- Store detail ----------
@@ -663,50 +890,48 @@
     const body = document.getElementById('detailBody');
     const hero = document.getElementById('detailHero');
     const actions = document.getElementById('detailActions');
-    body.innerHTML = `<div class="spinner-row">${t('Loading…', '読み込み中…')}</div>`;
-    actions.innerHTML = '';
-    hero.style.background = '';
+    const askAi = document.getElementById('detailAskAi');
+    body.innerHTML = `<div class="skel skel-photo" style="height:20px;width:40%;margin:0 0 10px;"></div><div class="skel skel-photo" style="height:28px;width:70%;margin:0 0 16px;"></div><div class="skel skel-photo" style="height:60px;"></div>`;
+    actions.innerHTML = ''; askAi.innerHTML = '';
+    hero.className = 'detail-hero';
     try {
-      const res = await fetch(`/api/places/${placeId}`);
-      const p = await res.json();
-      if (!res.ok) throw new Error(p.error);
+      const p = await fetchPlaceDetail(placeId);
+      if (!p) throw new Error('not found');
       currentDetailPlace = p;
       const heroPhoto = photoUrl(p.photoRef);
-      hero.querySelector('img')?.remove();
-      if (heroPhoto) {
-        const img = document.createElement('img');
-        img.src = heroPhoto; img.alt = '';
-        hero.insertBefore(img, hero.firstChild);
-        hero.classList.remove(...['art-a','art-b','art-c']);
-      } else {
-        hero.className = 'detail-hero ' + artClass(p.name);
-      }
+      if (heroPhoto) hero.innerHTML = `<img src="${heroPhoto}" alt=""/><div class="detail-topbar"><button class="icon-btn on-photo" onclick="closeDetail()" style="box-shadow:none;"><svg class="icon-sm"><use href="#i-chevron-left"></use></svg></button><button class="icon-btn on-photo" id="detailSaveBtn" style="box-shadow:none;"><svg class="icon-sm"><use href="#i-heart"></use></svg></button></div>`;
+      else { hero.classList.add(artClass(p.name)); hero.innerHTML = `<div class="detail-topbar"><button class="icon-btn on-photo" onclick="closeDetail()" style="box-shadow:none;"><svg class="icon-sm"><use href="#i-chevron-left"></use></svg></button><button class="icon-btn on-photo" id="detailSaveBtn" style="box-shadow:none;"><svg class="icon-sm"><use href="#i-heart"></use></svg></button></div>`; }
+
       const statusHtml = p.openNow === true ? `<span class="status-badge status-open">${t('Open now', '営業中')}</span>` : p.openNow === false ? `<span class="status-badge status-closed">${t('Closed', '営業終了')}</span>` : '';
+      const wm = walkMin(p.distanceMeters);
       body.innerHTML = `
         <div class="eyebrow">${typeLabel(p.types)}</div>
-        <div style="font-size:1.3rem;font-weight:800;letter-spacing:-0.01em;margin-top:4px;">${p.name}</div>
+        <div style="font-size:1.5rem;font-weight:800;letter-spacing:-0.01em;margin-top:4px;text-wrap:balance;">${p.name}</div>
         <div class="detail-price-row">
           ${p.rating ? `<span class="rating-pill"><svg class="icon-sm" style="color:#F5A524;"><use href="#i-star"></use></svg>${p.rating.toFixed(1)} <span style="color:var(--muted);font-weight:500;">(${p.userRatingsTotal || 0})</span></span>` : ''}
           ${priceStr(p.priceLevel) ? `<span style="font-weight:700;">${priceStr(p.priceLevel)}</span>` : ''}
           ${statusHtml}
         </div>
-        <div style="font-size:0.88rem;color:var(--muted);margin-bottom:14px;">📍 ${p.address}${p.distanceMeters != null ? ` · ${distStr(p.distanceMeters)}` : ''}</div>
+        <div style="font-size:0.88rem;color:var(--muted);font-weight:500;margin-bottom:16px;">📍 ${p.address}${p.distanceMeters != null ? ` · ${distStr(p.distanceMeters)}` : ''}${wm ? ` · 🚶 ${wm} min` : ''}</div>
         ${p.weekdayText && p.weekdayText.length ? `
-          <h2 class="section-title" style="margin-bottom:8px;">${t('Hours', '営業時間')}</h2>
-          <div style="margin-bottom:16px;">${p.weekdayText.map((line) => `<div class="hours-row">${line}</div>`).join('')}</div>
+          <h2 class="section-title" style="margin-bottom:8px;font-size:1rem;">${t('Hours', '営業時間')}</h2>
+          <div style="margin-bottom:8px;">${p.weekdayText.map((line) => `<div class="hours-row">${line}</div>`).join('')}</div>
         ` : ''}
       `;
-      let actionsHtml = '';
-      if (p.phone) {
-        actionsHtml += `<a class="book-btn accent" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;" href="tel:${p.phone.replace(/[^0-9+]/g,'')}" onclick="logBooking(currentDetailPlace,'call')"><svg class="icon-sm"><use href="#i-phone"></use></svg>${t('Call to reserve', '電話で予約')}</a>`;
-      }
-      if (p.website) {
-        actionsHtml += `<a class="book-btn" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);color:var(--ink);border:1px solid var(--line);" href="${p.website}" target="_blank" onclick="logBooking(currentDetailPlace,'website')"><svg class="icon-sm"><use href="#i-link"></use></svg>${t('Website', '公式サイト')}</a>`;
-      }
-      if (!p.phone && !p.website) {
-        actionsHtml += `<button class="book-btn accent" onclick="reserveFallback(currentDetailPlace)">${t('Find booking options', '予約方法を探す')}</button>`;
-      }
+      askAi.innerHTML = `
+        <h2 class="section-title" style="margin-bottom:10px;font-size:1rem;">${t('Ask Tabi about this place', 'この場所についてTabiに聞く')}</h2>
+        <div class="context-chips">
+          <span class="chip" data-q="${t('Is this place good?', 'この場所はいいですか?')}">${t('Is this good?', 'ここはいい?')}</span>
+          <span class="chip" data-q="${t('Find something cheaper near ' + p.name, p.name + 'の近くでもっと安いところを探して')}">${t('Cheaper nearby', 'もっと安い場所')}</span>
+          <span class="chip" data-q="${t('Find something similar to ' + p.name, p.name + 'に似た場所を教えて')}">${t('Similar places', '似た場所')}</span>
+        </div>
+      `;
+      askAi.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => quickAction(c.dataset.q)));
+
+      let actionsHtml = `<button class="btn btn-accent btn-block" id="detailReserveBtn">${t('Reserve', '予約する')}</button>`;
       actions.innerHTML = actionsHtml;
+      document.getElementById('detailReserveBtn').onclick = () => openReserveSheet(p);
+
       const heartBtn = document.getElementById('detailSaveBtn');
       heartBtn.classList.toggle('active', isSaved(p));
       heartBtn.querySelector('use').setAttribute('href', '#' + (isSaved(p) ? 'i-heart-filled' : 'i-heart'));
@@ -720,10 +945,6 @@
     }
   }
   function closeDetail() { showTab(previousTab); }
-  function reserveFallback(place) {
-    logBooking(place, 'searched');
-    window.open(`https://www.google.com/search?q=${encodeURIComponent(place.name + ' 予約')}`, '_blank');
-  }
 
   // ---------- Saved ----------
   function getSaved() { return JSON.parse(localStorage.getItem('tabi_saved') || '[]'); }
@@ -731,20 +952,15 @@
   function toggleSaved(place) {
     let list = getSaved();
     const entry = { placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, rating: place.rating };
-    if (isSaved(place)) {
-      list = list.filter((s) => s.placeId !== place.placeId && s.title !== place.name);
-      showToast(t('Removed from Saved', 'お気に入りから削除しました'));
-    } else {
-      list.unshift(entry);
-      showToast(t('Saved', '保存しました'));
-    }
+    if (isSaved(place)) { list = list.filter((s) => s.placeId !== place.placeId && s.title !== place.name); showToast(t('Removed from Saved', 'お気に入りから削除しました')); }
+    else { list.unshift(entry); showToast(t('Saved', '保存しました')); }
     localStorage.setItem('tabi_saved', JSON.stringify(list));
   }
   function renderSaved() {
     const el = document.getElementById('savedList');
     const list = getSaved();
     if (list.length === 0) {
-      el.innerHTML = `<div class="empty-state">${t('Nothing saved yet.', 'まだ何も保存されていません。')}</div>`;
+      el.innerHTML = `<div class="empty-state"><span>${t('Nothing saved yet', 'まだ何も保存されていません')}</span><button class="btn btn-ink" onclick="showTab('search')">${t('Explore Tokyo', '東京を探す')}</button></div>`;
       return;
     }
     el.innerHTML = '';
@@ -752,56 +968,63 @@
       const row = document.createElement('div');
       row.className = 'card list-row';
       const img = photoUrl(s.photoRef);
-      row.innerHTML = `
-        <div class="photo-wrap">${img ? `<img src="${img}" alt=""/>` : `<div class="art ${artClass(s.title)}"></div>`}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="store-name">${s.title}</div>
-          <div class="store-meta">${s.area || ''}</div>
-        </div>
-      `;
+      row.innerHTML = `<div class="photo-wrap">${img ? `<img src="${img}" alt=""/>` : `<div class="art ${artClass(s.title)}"></div>`}</div><div style="flex:1;min-width:0;"><div class="store-name" style="white-space:normal;">${s.title}</div><div class="store-meta">${s.area || ''}</div></div>`;
       if (s.placeId) row.addEventListener('click', () => openDetail(s.placeId));
       el.appendChild(row);
     });
   }
 
-  // ---------- Bookings ----------
+  // ---------- My Trip ----------
   function getBookings() { return JSON.parse(localStorage.getItem('tabi_bookings') || '[]'); }
   function logBooking(place, action) {
     if (!place) return;
     const list = getBookings();
-    list.unshift({ title: place.name, area: place.address, action, createdAt: new Date().toISOString() });
+    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, action, createdAt: new Date().toISOString() });
     localStorage.setItem('tabi_bookings', JSON.stringify(list));
-    showToast(t('Added to Bookings', '予約リストに追加しました'));
+    showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
   }
-  function renderBookings() {
-    const el = document.getElementById('bookingsList');
+  function addToTrip(place, suggestedTime) {
+    const list = getBookings();
+    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, suggestedTime: suggestedTime || null, action: 'planned', createdAt: new Date().toISOString() });
+    localStorage.setItem('tabi_bookings', JSON.stringify(list));
+    showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
+  }
+  function renderTrip() {
+    const el = document.getElementById('tripList');
     const list = getBookings();
     if (list.length === 0) {
-      el.innerHTML = `<div class="empty-state">${t('No bookings yet. Reserve a place to see it here.', 'まだ予約はありません。お店を予約するとここに表示されます。')}</div>`;
+      el.innerHTML = `<div class="empty-state"><span>${t('No plans yet.', 'まだ予定がありません。')}</span><span style="font-weight:800;color:var(--ink);">${t('Let Tabi plan your day.', 'Tabiに今日の計画を立ててもらいましょう。')}</span><button class="btn btn-accent" onclick="showTab('assistant')">${t('Plan my day', '今日の計画を立てる')}</button></div>`;
       return;
     }
-    el.innerHTML = '';
-    const actionLabel = { call: t('Called', '電話済み'), website: t('Visited site', 'サイト訪問済み'), searched: t('Searched', '検索済み') };
-    list.forEach((b) => {
-      const row = document.createElement('div');
-      row.className = 'card list-row';
-      const date = new Date(b.createdAt);
-      row.innerHTML = `
-        <div style="flex:1;">
-          <div class="store-name" style="white-space:normal;">${b.title}</div>
-          <div class="store-meta">${b.area || ''}</div>
-          <div class="store-meta" style="margin-top:4px;">${date.toLocaleDateString()} · ${actionLabel[b.action] || b.action}</div>
+    el.innerHTML = `<div class="trip-date-label">${t('Today', '今日')}</div><div class="timeline" id="timelineWrap"></div>`;
+    const wrap = document.getElementById('timelineWrap');
+    list.forEach((b, i) => {
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      const img = photoUrl(b.photoRef);
+      item.innerHTML = `
+        <div class="t-time">${b.suggestedTime || ''}</div>
+        <div class="timeline-track"><div class="timeline-dot"></div>${i < list.length - 1 ? '<div class="timeline-line"></div>' : ''}</div>
+        <div class="timeline-card card list-row" style="margin-bottom:0;">
+          <div class="photo-wrap">${img ? `<img src="${img}" alt=""/>` : `<div class="art ${artClass(b.title)}"></div>`}</div>
+          <div style="flex:1;min-width:0;"><div class="store-name" style="white-space:normal;">${b.title}</div><div class="store-meta">${b.area || ''}</div></div>
         </div>
       `;
-      el.appendChild(row);
+      if (b.placeId) item.querySelector('.timeline-card').addEventListener('click', () => openDetail(b.placeId));
+      wrap.appendChild(item);
+      if (i < list.length - 1 && b.distanceMeters != null) {
+        const wm = walkMin(b.distanceMeters);
+        const note = document.createElement('div');
+        note.className = 'walk-note';
+        note.innerHTML = `<svg class="icon-xs"><use href="#i-walk"></use></svg> ${t(`about ${wm} min walk to next stop`, `次の場所まで徒歩約${wm}分`)}`;
+        wrap.appendChild(note);
+      }
     });
   }
-
   function resetData() {
-    localStorage.removeItem('tabi_saved');
-    localStorage.removeItem('tabi_bookings');
+    localStorage.removeItem('tabi_saved'); localStorage.removeItem('tabi_bookings');
     showToast(t('Cleared', '削除しました'));
-    renderSaved(); renderBookings();
+    renderSaved(); renderTrip(); renderHomeTripPreview();
   }
 
   // ---------- Assistant chat ----------
@@ -813,7 +1036,7 @@
 
   function scrollChatToBottom() { chatScroll.scrollTop = chatScroll.scrollHeight; }
   function addUserMessage(text) {
-    if (prechat) prechat.remove();
+    if (prechat) { prechat.remove(); }
     const row = document.createElement('div');
     row.className = 'row user';
     row.innerHTML = '<div class="bubble-user"></div>';
@@ -824,55 +1047,103 @@
   function addAiStatus() {
     const row = document.createElement('div');
     row.className = 'row';
-    row.innerHTML = '<div class="ai-status"><span class="dots"><span></span><span></span><span></span></span></div>';
+    row.innerHTML = `<div class="ai-status"><span class="dots"><span></span><span></span><span></span></span>${t('Tabi is thinking…', 'Tabiが考えています…')}</div>`;
     chatScroll.appendChild(row);
     scrollChatToBottom();
     return row;
   }
+
+  function recCardHtml(rec) {
+    const place = rec.place;
+    if (place) {
+      const status = place.openNow === true ? `<span class="status-badge status-open">${t('Open', '営業中')}</span>` : place.openNow === false ? `<span class="status-badge status-closed">${t('Closed', '営業終了')}</span>` : '';
+      const photo = photoUrl(place.photoRef);
+      return `
+        <div class="rec-photo">${photo ? `<img src="${photo}" alt=""/>` : `<div class="art ${artClass(place.name)}"></div>`}</div>
+        <button class="fav-btn ${isSaved(place) ? 'active' : ''}" data-fav style="top:8px;right:8px;"><svg class="icon-sm"><use href="#${isSaved(place) ? 'i-heart-filled' : 'i-heart'}"></use></svg></button>
+        <div class="eyebrow">${place.address ? typeLabel(place.types) : rec.area || ''}</div>
+        <div style="font-weight:800;font-size:0.95rem;margin-top:2px;">${place.name}</div>
+        <div class="store-meta" style="margin-top:4px;">
+          ${place.rating ? `<span class="rating-pill"><svg class="icon-xs" style="color:#F5A524;"><use href="#i-star"></use></svg>${place.rating.toFixed(1)}</span><span class="dot"></span>` : ''}
+          ${place.distanceMeters != null ? `<span>${distStr(place.distanceMeters)}</span><span class="dot"></span>` : ''}
+          ${status}
+        </div>
+        <p>${rec.tip || rec.description || ''}</p>
+        <div class="store-actions">
+          <button class="btn btn-ghost btn-sm" data-view>${t('View', '詳細')}</button>
+          <button class="btn btn-accent btn-sm" data-reserve>${t('Reserve', '予約')}</button>
+        </div>
+      `;
+    }
+    const prBadge = rec.type === 'affiliate' ? `<span class="pr-badge">PR</span>` : '';
+    const actionBtn = rec.type === 'affiliate' ? `<button class="btn btn-ink btn-sm btn-block" data-affiliate>${t('Search on', '検索する:')} ${rec.provider || 'partner site'} ↗</button>` : '';
+    return `
+      <div class="eyebrow">${rec.area || ''}${prBadge}</div>
+      <div style="font-weight:800;font-size:0.92rem;margin-top:2px;">${rec.title}</div>
+      <p>${rec.description || ''}</p>
+      ${rec.tip ? `<div class="tip">💡 ${rec.tip}</div>` : ''}
+      ${actionBtn}
+    `;
+  }
+
   function renderAiResult(row, data) {
     const wrap = document.createElement('div');
     wrap.className = 'ai-wrap';
-    (data.recommendations || []).forEach((rec) => {
+    const recs = data.recommendations || [];
+    const hasTimes = recs.some((r) => r.suggestedTime);
+    recs.forEach((rec, i) => {
+      const cardWrap = document.createElement('div');
       const card = document.createElement('div');
-      card.className = 'rec-card';
-      const prBadge = rec.type === 'affiliate' ? `<span style="font-size:0.625rem;font-weight:700;color:var(--warn);background:var(--warn-bg);padding:2px 7px;border-radius:999px;margin-left:6px;">PR</span>` : '';
-      const actionBtn = rec.type === 'affiliate' ? `<button class="book-btn">${t('Search on', '検索する:')} ${rec.provider || 'partner site'} ↗</button>` : '';
-      card.innerHTML = `
-        <button class="save-heart"><svg class="icon-sm"><use href="#i-heart"></use></svg></button>
-        <div class="eyebrow">${rec.area || ''}${prBadge}</div>
-        <div style="font-weight:800;font-size:0.9rem;margin-top:2px;">${rec.title}</div>
-        <p>${rec.description || ''}</p>
-        <div class="tip">💡 ${rec.tip || ''}</div>
-        ${actionBtn}
-      `;
-      if (rec.type === 'affiliate') {
-        card.querySelector('.book-btn').addEventListener('click', () => { if (rec.contactUrl) window.open(rec.contactUrl, '_blank'); });
+      card.className = 'rec-card' + (rec.place ? '' : ' plain');
+      card.style.position = 'relative';
+      card.innerHTML = recCardHtml(rec);
+
+      if (rec.place) {
+        card.querySelector('[data-fav]').addEventListener('click', () => {
+          toggleSaved(rec.place);
+          const btn = card.querySelector('[data-fav]');
+          btn.classList.toggle('active', isSaved(rec.place));
+          btn.querySelector('use').setAttribute('href', '#' + (isSaved(rec.place) ? 'i-heart-filled' : 'i-heart'));
+        });
+        card.querySelector('[data-view]').addEventListener('click', () => openDetail(rec.place.placeId));
+        card.querySelector('[data-reserve]').addEventListener('click', () => openReserveSheet(rec.place));
+      } else if (rec.type === 'affiliate') {
+        card.querySelector('[data-affiliate]')?.addEventListener('click', () => { if (rec.contactUrl) window.open(rec.contactUrl, '_blank'); });
       }
-      card.querySelector('.save-heart').addEventListener('click', (e) => {
-        const pseudo = { placeId: null, name: rec.title, address: rec.area, photoRef: null };
-        toggleSaved(pseudo);
-        const active = isSaved(pseudo);
-        e.currentTarget.classList.toggle('active', active);
-        e.currentTarget.querySelector('use').setAttribute('href', '#' + (active ? 'i-heart-filled' : 'i-heart'));
-      });
-      wrap.appendChild(card);
+
+      if (hasTimes && rec.place) {
+        cardWrap.className = 'plan-item';
+        cardWrap.innerHTML = `<div class="plan-time-col"><span class="plan-time">${rec.suggestedTime || ''}</span>${i < recs.length - 1 ? '<div class="plan-connector"></div>' : ''}</div>`;
+        cardWrap.appendChild(card);
+      } else {
+        cardWrap.appendChild(card);
+      }
+      wrap.appendChild(cardWrap);
     });
+
+    if (recs.some((r) => r.place)) {
+      const addAllBtn = document.createElement('button');
+      addAllBtn.className = 'btn btn-accent btn-block trip-add-btn';
+      addAllBtn.textContent = t('Add all to my trip', 'すべてマイ旅程に追加');
+      addAllBtn.onclick = () => { recs.filter((r) => r.place).forEach((r) => addToTrip(r.place, r.suggestedTime)); showToast(t('Added to My Trip', 'マイ旅程に追加しました')); };
+      wrap.appendChild(addAllBtn);
+    }
+
     row.innerHTML = '';
     row.appendChild(wrap);
     scrollChatToBottom();
   }
-  function renderAiError(row, message) {
-    row.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`;
-    scrollChatToBottom();
-  }
+  function renderAiError(row, message) { row.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`; scrollChatToBottom(); }
+
   async function askAI(query) {
     addUserMessage(query);
     const statusRow = addAiStatus();
     chatSend.disabled = true;
     try {
+      await getCoords();
       const res = await fetch('/api/concierge', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, language: langSelect.value }),
+        body: JSON.stringify({ query, language: langSelect.value, lat: coords.lat, lng: coords.lng }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -885,21 +1156,16 @@
   }
   function quickAction(prompt) { showTab('assistant'); askAI(prompt); }
 
-  async function handleQuickPrompt(kind) {
+  function handleQuickPrompt(kind) {
     if (kind === 'popular_restaurants') { openSearchWithFilter('restaurant', false); return; }
     if (kind === 'book_now') { openSearchWithFilter('restaurant', true); return; }
-    if (kind === 'plan') { quickAction(t('Help me plan my day today in Tokyo', '今日の東京での過ごし方を計画してほしい')); return; }
+    if (kind === 'plan') { quickAction(t('Plan my afternoon in Tokyo', '今日の午後の東京での過ごし方を計画してほしい')); return; }
     if (kind === 'rainy_day') { quickAction(t('Suggest indoor places to go on a rainy day', '雨の日に行ける屋内スポットを教えて')); return; }
   }
 
-  chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const q = chatInput.value.trim();
-    if (!q) return;
-    chatInput.value = '';
-    askAI(q);
-  });
+  chatForm.addEventListener('submit', (e) => { e.preventDefault(); const q = chatInput.value.trim(); if (!q) return; chatInput.value = ''; askAI(q); });
 
+  // ---------- Init ----------
   setAppLang(localStorage.getItem('tabi_app_lang') || 'en');
   loadHomeNearby();
 
