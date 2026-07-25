@@ -1,0 +1,16 @@
+[
+  {
+    "id": "hotpepper",
+    "category": "restaurant",
+    "name": "Hot Pepper Gourmet",
+    "searchUrlTemplate": "https://www.hotpepper.jp/svcSB/?SA=1&FW={query}",
+    "affiliateParam": "&vos=REPLACE_WITH_YOUR_AFFILIATE_ID"
+  },
+  {
+    "id": "agoda",
+    "category": "hotel",
+    "name": "Agoda",
+    "searchUrlTemplate": "https://www.agoda.com/search?city={query}",
+    "affiliateParam": "&cid=REPLACE_WITH_YOUR_AFFILIATE_ID"
+  }
+]

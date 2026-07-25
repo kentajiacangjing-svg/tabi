@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
+<title>Tabi — Japan AI Concierge</title>
+<meta name="theme-color" content="#4F46E5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Tabi" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icon.svg" />
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #111111;
+    --muted: #666666;
+    --line: #EFEFF3;
+    --surface: #FAFAFC;
+    --accent: #4F46E5;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #ffffff; color: var(--ink);
+    font-family: var(--font-sans);
+    overscroll-behavior-y: none;
+  }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 520px;
+    margin: 0 auto;
+    background: #fff;
+  }
+
+  .tab-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
+  .tab-panel.active { display: flex; }
+
+  .px { padding-left: 20px; padding-right: 20px; }
+  .screen-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 8px;
+    flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+
+  select#lang {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.78rem; font-weight: 600;
+    padding: 6px 8px; border-radius: 8px;
+  }
+
+  .icon { width: 22px; height: 22px; display: block; }
+  .icon-sm { width: 18px; height: 18px; }
+
+  .eyebrow { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  h2.section-title { font-size: 1.0625rem; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(17,17,17,0.03), 0 8px 20px -16px rgba(17,17,17,0.3);
+    text-align: left;
+  }
+
+  .ai-entry {
+    width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: left;
+    padding: 16px; border-radius: 20px; border: 1px solid #ECEAFB;
+    background: linear-gradient(160deg, #F7F6FF 0%, #FDFCFF 100%);
+    box-shadow: 0 1px 2px rgba(79,70,229,0.04), 0 10px 24px -14px rgba(79,70,229,0.35);
+    cursor: pointer; transition: transform 0.12s ease;
+  }
+  .ai-entry:active { transform: scale(0.98); }
+  .ai-badge {
+    width: 30px; height: 30px; border-radius: 9px; background: #111111; color: #fff;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    box-shadow: 0 4px 10px -3px rgba(17,17,17,0.4);
+  }
+
+  .qa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; }
+  .qa-item { display: flex; flex-direction: column; align-items: center; gap: 7px; background: none; border: none; cursor: pointer; padding: 2px; }
+  .qa-item:active { transform: scale(0.94); }
+  .qa-icon {
+    width: 50px; height: 50px; border-radius: 16px; background: #fff;
+    box-shadow: 0 1px 2px rgba(17,17,17,0.04), 0 6px 16px -10px rgba(17,17,17,0.25), inset 0 0 0 1px #F0F0F3;
+    display: flex; align-items: center; justify-content: center; color: var(--ink);
+  }
+  .qa-item span { font-size: 0.6875rem; font-weight: 600; color: #444; }
+
+  .empty-state { text-align: center; color: var(--muted); font-size: 0.875rem; padding: 40px 24px; }
+
+  /* ---- Assistant ---- */
+  .chat-header { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .chat-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+  .row { display: flex; }
+  .row.user { justify-content: flex-end; }
+  .bubble-user { background: #111111; color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px; max-width: 78%; font-size: 0.9rem; font-weight: 600; }
+  .ai-status { color: var(--muted); font-size: 0.85rem; padding: 10px 14px; background: var(--surface); border-radius: 4px 16px 16px 16px; display: inline-block; }
+  .dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); margin-right: 3px; animation: blink 1.2s infinite; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+  .ai-wrap { max-width: 88%; display: flex; flex-direction: column; gap: 8px; }
+  .rec-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 4px 16px 16px 16px; padding: 14px; }
+  .rec-card + .rec-card { border-radius: 16px; }
+  .rec-card p { margin: 6px 0 0; font-size: 0.875rem; line-height: 1.5; color: #444; padding-right: 26px; }
+  .rec-card .tip { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+  .save-heart {
+    position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%;
+    border: none; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #B4B4BC;
+  }
+  .save-heart.active { color: #E23D6B; }
+  .book-btn { margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 10px; background: #111111; color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .error-bubble { background: #FEF1F1; border: 1px solid #FBD8D8; color: #C43D3D; padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 0.85rem; max-width: 88%; overflow-wrap: break-word; }
+  .chips-row { display: flex; gap: 8px; overflow-x: auto; padding: 8px 20px; flex-shrink: 0; }
+  .chip { flex-shrink: 0; padding: 7px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 0.75rem; font-weight: 600; color: #444; cursor: pointer; }
+  .chat-input-bar { padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; }
+  .chat-input-row { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 16px; }
+  .chat-input-row input { flex: 1; border: none; background: none; font-size: 0.9rem; outline: none; min-width: 0; }
+  .send-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: #111111; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .send-btn:disabled { opacity: 0.4; }
+
+  .saved-item { display: flex; gap: 12px; padding: 12px; align-items: center; margin-bottom: 10px; }
+
+  /* ---- Bottom nav ---- */
+  .bottom-nav {
+    flex-shrink: 0; display: flex; justify-content: space-around; align-items: center;
+    padding: 10px 8px calc(env(safe-area-inset-bottom, 0px) + 10px);
+    border-top: 1px solid var(--line); background: #fff;
+  }
+  .nav-item {
+    appearance: none; border: none; background: transparent;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: #B4B4BC; cursor: pointer; padding: 4px 12px;
+  }
+  .nav-item.active { color: #111111; }
+  .nav-item .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0; }
+  .nav-item.active .dot { opacity: 1; }
+  .nav-item span { font-size: 0.625rem; font-weight: 600; }
+  .nav-item.center-item { color: var(--accent); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
+    background: #111111; color: #fff; padding: 10px 16px; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 100; max-width: 80%; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+
+  .lang-toggle { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+  .lang-toggle-btn {
+    appearance: none; border: none; background: transparent; color: var(--muted);
+    font-size: 0.72rem; font-weight: 700; padding: 10px 12px; min-height: 36px; border-radius: 6px; cursor: pointer;
+  }
+  .lang-toggle-btn.active { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" fill="currentColor"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" fill="currentColor"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.4 1 6.2 3.9C14.8 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></symbol>
+    <symbol id="i-heart-filled" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.4 1 6.2 3.9C14.8 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z" fill="currentColor"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M4.5 20c1.3-3.8 4.3-5.8 7.5-5.8s6.2 2 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+    <symbol id="i-restaurant" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="21" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="3" x2="4" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="8" y1="3" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="4" y1="8" x2="8" y2="8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M18 3v6a2 2 0 0 1-2 2v10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-hotel" viewBox="0 0 24 24"><path d="M3 19v-7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 14h6a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="12" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="19" x2="3" y2="10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="21" y1="19" x2="21" y2="16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><line x1="3" y1="19" x2="21" y2="19" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 9a2 2 0 0 0 0-4V4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v1a2 2 0 0 0 0 4v2a2 2 0 0 0 0 4v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2"/></symbol>
+    <symbol id="i-shopping" viewBox="0 0 24 24"><path d="M6 8h12l1 12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 8z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+    <symbol id="i-taxi" viewBox="0 0 24 24"><path d="M4 16v-3l2-5a2 2 0 0 1 2-1.3h8A2 2 0 0 1 18 8l2 5v3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="7.5" cy="16.5" r="1.6" fill="currentColor"/><circle cx="16.5" cy="16.5" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><line x1="4" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><polyline points="12 6 18 12 12 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5" fill="none" stroke="currentColor" stroke-width="1.75"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke="currentColor" stroke-width="1.75"/></symbol>
+  </defs>
+</svg>
+
+<div id="app">
+
+  <!-- HOME -->
+  <section class="tab-panel active" id="tab-home">
+    <div class="screen-scroll">
+      <div class="px" style="padding-top:16px;">
+        <div style="font-size:1.5rem;font-weight:700;letter-spacing:-0.01em;" data-en="Konnichiwa 👋" data-ja="こんにちは 👋">Konnichiwa 👋</div>
+        <div style="color:var(--muted);font-size:0.9rem;margin-top:2px;margin-bottom:18px;" data-en="Ask Tabi anything about your trip to Japan." data-ja="日本の旅について、Tabiに何でも聞いてください。">Ask Tabi anything about your trip to Japan.</div>
+      </div>
+
+      <div class="px" style="margin-bottom:20px;">
+        <button class="ai-entry" onclick="goAssistant()">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="ai-badge"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+            <span style="font-weight:700;font-size:0.9375rem;" data-en="Ask Tabi AI" data-ja="Tabi AI に聞く">Ask Tabi AI</span>
+          </div>
+          <div style="color:var(--muted);font-size:0.8438rem;" data-en="“Where's a good sushi place near Shinjuku tonight?”" data-ja="「今夜、新宿近くでいい寿司屋はある?」">“Where's a good sushi place near Shinjuku tonight?”</div>
+        </button>
+      </div>
+
+      <div class="px" style="padding-bottom:24px;">
+        <div class="qa-grid">
+          <button class="qa-item" onclick="quickAction('Find me a good restaurant nearby')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-restaurant"></use></svg></span><span data-en="Restaurant" data-ja="レストラン">Restaurant</span></button>
+          <button class="qa-item" onclick="quickAction('Recommend a hotel in Shinjuku')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-hotel"></use></svg></span><span data-en="Hotel" data-ja="ホテル">Hotel</span></button>
+          <button class="qa-item" onclick="quickAction('What tickets or reservations should I book in advance?')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-ticket"></use></svg></span><span data-en="Tickets" data-ja="チケット">Tickets</span></button>
+          <button class="qa-item" onclick="quickAction('Where should I go shopping nearby?')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-shopping"></use></svg></span><span data-en="Shopping" data-ja="ショッピング">Shopping</span></button>
+          <button class="qa-item" onclick="quickAction('How do I get a taxi in Japan?')"><span class="qa-icon"><svg class="icon-sm"><use href="#i-taxi"></use></svg></span><span data-en="Taxi" data-ja="タクシー">Taxi</span></button>
+          <button class="qa-item" onclick="quickAction(&quot;What's interesting near me right now?&quot;)"><span class="qa-icon"><svg class="icon-sm"><use href="#i-pin"></use></svg></span><span data-en="Nearby" data-ja="周辺">Nearby</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASSISTANT -->
+  <section class="tab-panel" id="tab-assistant">
+    <div class="chat-header">
+      <span class="ai-badge"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.9375rem;">Tabi Assistant</div>
+        <div style="font-size:0.6875rem;color:var(--muted);" data-en="Answers in your language" data-ja="あなたの言語で回答します">Answers in your language</div>
+      </div>
+      <select id="lang"></select>
+    </div>
+    <div class="chat-scroll" id="chatScroll">
+      <div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:24px 8px;" id="chatIntro" data-en="Ask about restaurants, hotels, tickets, taxis, or anything else about your trip." data-ja="レストラン・ホテル・チケット・タクシーなど、旅について何でも聞いてください。">
+        Ask about restaurants, hotels, tickets, taxis, or anything else about your trip.
+      </div>
+    </div>
+    <div class="chips-row">
+      <span class="chip" onclick="quickAction('What should I do in Shinjuku tonight?')" data-en="Shinjuku tonight" data-ja="今夜の新宿">Shinjuku tonight</span>
+      <span class="chip" onclick="quickAction('3 days in Kyoto, I love temples and food')" data-en="3 days in Kyoto" data-ja="京都3日間">3 days in Kyoto</span>
+      <span class="chip" onclick="quickAction('Find a restaurant near Tokyo Tower')" data-en="Near Tokyo Tower" data-ja="東京タワー周辺">Near Tokyo Tower</span>
+    </div>
+    <div class="chat-input-bar">
+      <form id="chatForm" class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Ask Tabi anything..." data-placeholder-en="Ask Tabi anything..." data-placeholder-ja="Tabiに何でも聞いてください..." autocomplete="off" />
+        <button class="send-btn" id="chatSend" type="submit"><svg class="icon-sm"><use href="#i-send"></use></svg></button>
+      </form>
+    </div>
+  </section>
+
+  <!-- SAVED -->
+  <section class="tab-panel" id="tab-saved">
+    <div class="topbar"><h1 data-en="Saved" data-ja="お気に入り">Saved</h1></div>
+    <div class="screen-scroll px" id="savedList" style="padding-top:8px;"></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="tab-panel" id="tab-profile">
+    <div class="topbar"><h1 data-en="Profile" data-ja="プロフィール">Profile</h1></div>
+    <div class="screen-scroll px" style="padding-top:8px;">
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;">
+          <svg class="icon-sm"><use href="#i-globe"></use></svg>
+          <span style="flex:1;font-size:0.875rem;font-weight:600;" data-en="App language" data-ja="アプリの表示言語">App language</span>
+          <div class="lang-toggle">
+            <button class="lang-toggle-btn" data-applang="en">EN</button>
+            <button class="lang-toggle-btn" data-applang="ja">日本語</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid var(--line);">
+          <svg class="icon-sm"><use href="#i-globe"></use></svg>
+          <span style="flex:1;font-size:0.875rem;font-weight:600;" data-en="Answer language" data-ja="AIの回答言語">Answer language</span>
+          <select id="langProfile" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 8px;font-size:0.8rem;"></select>
+        </div>
+      </div>
+      <button class="card" style="width:100%;padding:13px 14px;text-align:left;color:#C43D3D;font-weight:700;font-size:0.875rem;cursor:pointer;" onclick="resetData()" data-en="Clear saved items" data-ja="お気に入りを削除">
+        Clear saved items
+      </button>
+      <div style="text-align:center;color:#B4B4BC;font-size:0.75rem;margin-top:20px;">Tabi v0.1.0 — built with Claude</div>
+    </div>
+  </section>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="home" onclick="showTab('home')"><svg class="icon"><use href="#i-home"></use></svg><span class="dot"></span><span data-en="Home" data-ja="ホーム">Home</span></button>
+    <button class="nav-item center-item" data-tab="assistant" onclick="showTab('assistant')"><svg class="icon"><use href="#i-sparkle"></use></svg><span class="dot"></span><span>AI</span></button>
+    <button class="nav-item" data-tab="saved" onclick="showTab('saved')"><svg class="icon"><use href="#i-heart"></use></svg><span class="dot"></span><span data-en="Saved" data-ja="お気に入り">Saved</span></button>
+    <button class="nav-item" data-tab="profile" onclick="showTab('profile')"><svg class="icon"><use href="#i-user"></use></svg><span class="dot"></span><span data-en="Profile" data-ja="プロフィール">Profile</span></button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  const LANGUAGES = ["English","Chinese (Simplified)","Chinese (Traditional)","Korean","Thai","Vietnamese","Indonesian","Filipino (Tagalog)","Malay","Hindi","French","German","Spanish","Italian","Portuguese","Russian","Arabic"];
+  const langSelect = document.getElementById('lang');
+  const langProfileSelect = document.getElementById('langProfile');
+  LANGUAGES.forEach((l) => {
+    langSelect.appendChild(new Option(l, l));
+    langProfileSelect.appendChild(new Option(l, l));
+  });
+  const savedLang = localStorage.getItem('tabi_lang') || 'English';
+  langSelect.value = savedLang;
+  langProfileSelect.value = savedLang;
+  function syncLang(val) {
+    localStorage.setItem('tabi_lang', val);
+    langSelect.value = val;
+    langProfileSelect.value = val;
+  }
+  langSelect.addEventListener('change', (e) => syncLang(e.target.value));
+  langProfileSelect.addEventListener('change', (e) => syncLang(e.target.value));
+
+  // ---------- App UI language (EN/JA chrome) ----------
+  let currentAppLang = 'en';
+  function t(en, ja) { return currentAppLang === 'ja' ? ja : en; }
+  function setAppLang(lang) {
+    currentAppLang = lang;
+    localStorage.setItem('tabi_app_lang', lang);
+    document.querySelectorAll('[data-en]').forEach((el) => {
+      el.textContent = lang === 'ja' ? (el.dataset.ja || el.dataset.en) : el.dataset.en;
+    });
+    document.querySelectorAll('[data-placeholder-en]').forEach((el) => {
+      el.placeholder = lang === 'ja' ? (el.dataset.placeholderJa || el.dataset.placeholderEn) : el.dataset.placeholderEn;
+    });
+    document.querySelectorAll('.lang-toggle-btn').forEach((b) => b.classList.toggle('active', b.dataset.applang === lang));
+    if (document.getElementById('tab-saved').classList.contains('active')) renderSaved();
+  }
+  document.querySelectorAll('.lang-toggle-btn').forEach((b) => {
+    b.addEventListener('click', () => setAppLang(b.dataset.applang));
+  });
+
+  function showTab(id) {
+    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + id));
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.tab === id));
+    if (id === 'saved') renderSaved();
+  }
+  function goAssistant() { showTab('assistant'); }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ---------- Saved (localStorage) ----------
+  function getSaved() {
+    return JSON.parse(localStorage.getItem('tabi_saved') || '[]');
+  }
+  function isSaved(rec) {
+    return getSaved().some((s) => s.title === rec.title);
+  }
+  function toggleSaved(rec, btn) {
+    let list = getSaved();
+    if (list.some((s) => s.title === rec.title)) {
+      list = list.filter((s) => s.title !== rec.title);
+      showToast(t('Removed from Saved', 'お気に入りから削除しました'));
+    } else {
+      list.unshift(rec);
+      showToast(t('Saved', '保存しました'));
+    }
+    localStorage.setItem('tabi_saved', JSON.stringify(list));
+    if (btn) btn.classList.toggle('active', isSaved(rec));
+  }
+  function renderSaved() {
+    const el = document.getElementById('savedList');
+    const list = getSaved();
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state">${t('Nothing saved yet. Tap the heart on any suggestion from Tabi AI.', 'まだ何も保存されていません。Tabi AIの提案にあるハートマークをタップしてください。')}</div>`;
+      return;
+    }
+    el.innerHTML = '';
+    list.forEach((rec) => {
+      const row = document.createElement('div');
+      row.className = 'card saved-item';
+      row.innerHTML = `
+        <div style="flex:1;">
+          <div class="eyebrow">${rec.area || ''}</div>
+          <div style="font-size:0.9rem;font-weight:700;margin-top:2px;">${rec.title}</div>
+          <div style="font-size:0.8125rem;color:var(--muted);margin-top:2px;">${rec.description || ''}</div>
+        </div>
+      `;
+      el.appendChild(row);
+    });
+  }
+
+  function resetData() {
+    localStorage.removeItem('tabi_saved');
+    showToast(t('Cleared', '削除しました'));
+    if (document.getElementById('tab-saved').classList.contains('active')) renderSaved();
+  }
+
+  // ---------- Assistant chat ----------
+  const chatScroll = document.getElementById('chatScroll');
+  const chatIntro = document.getElementById('chatIntro');
+  const chatForm = document.getElementById('chatForm');
+  const chatInput = document.getElementById('chatInput');
+  const chatSend = document.getElementById('chatSend');
+
+  function scrollChatToBottom() { chatScroll.scrollTop = chatScroll.scrollHeight; }
+
+  function addUserMessage(text) {
+    if (chatIntro) chatIntro.remove();
+    const row = document.createElement('div');
+    row.className = 'row user';
+    row.innerHTML = '<div class="bubble-user"></div>';
+    row.querySelector('.bubble-user').textContent = text;
+    chatScroll.appendChild(row);
+    scrollChatToBottom();
+  }
+
+  function addAiStatus() {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = '<div class="ai-status"><span class="dots"><span></span><span></span><span></span></span></div>';
+    chatScroll.appendChild(row);
+    scrollChatToBottom();
+    return row;
+  }
+
+  function renderAiResult(row, data) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ai-wrap';
+    (data.recommendations || []).forEach((rec) => {
+      const card = document.createElement('div');
+      card.className = 'rec-card';
+      const prBadge = rec.type === 'affiliate'
+        ? `<span style="font-size:0.625rem;font-weight:700;color:#946200;background:#FFF6E5;padding:2px 7px;border-radius:999px;margin-left:6px;">PR</span>`
+        : '';
+      const actionBtn = rec.type === 'affiliate'
+        ? `<button class="book-btn">${t('Search on', '検索する:')} ${rec.provider || 'partner site'} ↗</button>`
+        : '';
+      card.innerHTML = `
+        <button class="save-heart ${isSaved(rec) ? 'active' : ''}"><svg class="icon-sm"><use href="#${isSaved(rec) ? 'i-heart-filled' : 'i-heart'}"></use></svg></button>
+        <div class="eyebrow">${rec.area || ''}${prBadge}</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-top:2px;">${rec.title}</div>
+        <p>${rec.description || ''}</p>
+        <div class="tip">💡 ${rec.tip || ''}</div>
+        ${actionBtn}
+      `;
+      card.querySelector('.save-heart').addEventListener('click', (e) => {
+        toggleSaved(rec, e.currentTarget);
+        e.currentTarget.querySelector('use').setAttribute('href', '#' + (isSaved(rec) ? 'i-heart-filled' : 'i-heart'));
+      });
+      if (rec.type === 'affiliate') {
+        card.querySelector('.book-btn').addEventListener('click', () => {
+          if (rec.contactUrl) window.open(rec.contactUrl, '_blank');
+        });
+      }
+      wrap.appendChild(card);
+    });
+    row.innerHTML = '';
+    row.appendChild(wrap);
+    scrollChatToBottom();
+  }
+
+  function renderAiError(row, message) {
+    row.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`;
+    scrollChatToBottom();
+  }
+
+  async function askAI(query) {
+    addUserMessage(query);
+    const statusRow = addAiStatus();
+    chatSend.disabled = true;
+    try {
+      const res = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, language: langSelect.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      renderAiResult(statusRow, data);
+    } catch (err) {
+      renderAiError(statusRow, err.message);
+    } finally {
+      chatSend.disabled = false;
+    }
+  }
+
+  function quickAction(prompt) {
+    showTab('assistant');
+    askAI(prompt);
+  }
+
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = chatInput.value.trim();
+    if (!q) return;
+    chatInput.value = '';
+    askAI(q);
+  });
+
+  setAppLang(localStorage.getItem('tabi_app_lang') || 'en');
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

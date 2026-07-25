@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Tabi — Japan AI Concierge</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --bg-2: #171a21;
+    --bubble-ai: #1c1f27;
+    --bubble-user: linear-gradient(135deg, #ff5da2, #ff8a5c);
+    --text: #f2f2f2;
+    --muted: #9aa0aa;
+    --accent: #ff5da2;
+    --border: #2a2d34;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff5da2, #ff8a5c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .header-text { flex: 1; min-width: 0; }
+  .header-text h1 {
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 700;
+  }
+  .header-text p {
+    font-size: 0.75rem;
+    margin: 0;
+    color: var(--muted);
+  }
+  select#lang {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    max-width: 92px;
+  }
+
+  /* ---------- Message area ---------- */
+  main {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .row { display: flex; }
+  .row.user { justify-content: flex-end; }
+  .row.ai { justify-content: flex-start; }
+
+  .bubble-user {
+    background: var(--bubble-user);
+    color: #1a0010;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 16px 16px 4px 16px;
+    max-width: 78%;
+    font-size: 0.94rem;
+    line-height: 1.4;
+  }
+
+  .ai-wrap { max-width: 88%; display: flex; flex-direction: column; gap: 8px; }
+  .ai-status {
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    background: var(--bubble-ai);
+    border-radius: 4px 16px 16px 16px;
+    display: inline-block;
+  }
+  .dots span {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    margin-right: 3px;
+    animation: blink 1.2s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+  .card {
+    background: var(--bubble-ai);
+    border: 1px solid var(--border);
+    border-radius: 4px 16px 16px 16px;
+    padding: 14px;
+  }
+  .card + .card { border-radius: 16px; }
+  .card .area {
+    color: var(--accent);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 1rem; }
+  .card p { margin: 0 0 8px; font-size: 0.88rem; line-height: 1.5; color: #d8d8d8; }
+  .card .tip {
+    font-size: 0.82rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+  .book-btn {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #1a0010;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .error-bubble {
+    background: rgba(255, 93, 93, 0.12);
+    border: 1px solid rgba(255, 93, 93, 0.35);
+    color: #ff9d9d;
+    padding: 10px 14px;
+    border-radius: 4px 16px 16px 16px;
+    font-size: 0.85rem;
+    max-width: 88%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* ---------- Suggestion chips (only shown before first message) ---------- */
+  .intro { text-align: center; padding: 24px 8px; color: var(--muted); }
+  .intro .logo { margin: 0 auto 12px; width: 52px; height: 52px; font-size: 26px; }
+  .intro h2 { color: var(--text); font-size: 1.2rem; margin: 0 0 6px; }
+  .intro p { font-size: 0.88rem; margin: 0; }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 18px;
+  }
+  .chip {
+    background: var(--bubble-ai);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); }
+
+  /* ---------- Input bar ---------- */
+  footer {
+    flex-shrink: 0;
+    padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+  }
+  form { display: flex; gap: 8px; }
+  input[type="text"] {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.95rem;
+    min-width: 0;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  button.send {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: #1a0010;
+    font-size: 1.1rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  button.send:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">🗺️</div>
+    <div class="header-text">
+      <h1>Tabi</h1>
+      <p>Japan AI Concierge</p>
+    </div>
+    <select id="lang">
+      <option value="English">English</option>
+      <option value="Chinese (Simplified)">中文（简体）</option>
+      <option value="Chinese (Traditional)">中文（繁體）</option>
+      <option value="Korean">한국어</option>
+      <option value="Thai">ภาษาไทย</option>
+      <option value="Vietnamese">Tiếng Việt</option>
+      <option value="Indonesian">Bahasa Indonesia</option>
+      <option value="Filipino (Tagalog)">Filipino</option>
+      <option value="Malay">Bahasa Melayu</option>
+      <option value="Hindi">हिन्दी</option>
+      <option value="French">Français</option>
+      <option value="German">Deutsch</option>
+      <option value="Spanish">Español</option>
+      <option value="Italian">Italiano</option>
+      <option value="Portuguese">Português</option>
+      <option value="Russian">Русский</option>
+      <option value="Arabic">العربية</option>
+    </select>
+  </header>
+
+  <main id="main">
+    <div class="intro" id="intro">
+      <div class="logo">🗺️</div>
+      <h2>Konnichiwa!</h2>
+      <p>Ask me anything about your trip to Japan — I'll give you real recommendations, not generic lists.</p>
+      <div class="chips">
+        <div class="chip" data-q="What should I do in Shinjuku tonight?">Shinjuku tonight</div>
+        <div class="chip" data-q="3 days in Kyoto, I love temples and food">3 days in Kyoto</div>
+        <div class="chip" data-q="Best things to do near Tokyo Tower">Near Tokyo Tower</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <form id="form">
+      <input type="text" id="query" placeholder="Ask about anywhere in Japan..." autocomplete="off" />
+      <button class="send" id="submitBtn" type="submit">➤</button>
+    </form>
+  </footer>
+
+<script>
+  const form = document.getElementById("form");
+  const queryInput = document.getElementById("query");
+  const submitBtn = document.getElementById("submitBtn");
+  const main = document.getElementById("main");
+  const intro = document.getElementById("intro");
+  const chips = document.querySelectorAll(".chip");
+  const langSelect = document.getElementById("lang");
+
+  function scrollToBottom() {
+    main.scrollTop = main.scrollHeight;
+  }
+
+  function addUserMessage(text) {
+    const row = document.createElement("div");
+    row.className = "row user";
+    row.innerHTML = `<div class="bubble-user"></div>`;
+    row.querySelector(".bubble-user").textContent = text;
+    main.appendChild(row);
+    scrollToBottom();
+  }
+
+  function addAiStatus() {
+    const row = document.createElement("div");
+    row.className = "row ai";
+    row.id = "ai-status-row";
+    row.innerHTML = `
+      <div class="ai-status">
+        <span class="dots"><span></span><span></span><span></span></span>
+      </div>
+    `;
+    main.appendChild(row);
+    scrollToBottom();
+    return row;
+  }
+
+  function renderAiResult(statusRow, data) {
+    const wrap = document.createElement("div");
+    wrap.className = "ai-wrap";
+
+    (data.recommendations || []).forEach((rec) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      const bookBtn = rec.type === "bookable"
+        ? `<button class="book-btn" onclick="window.open('${rec.contactUrl}', '_blank')">Book — ¥${rec.priceYen}</button>`
+        : "";
+      card.innerHTML = `
+        <div class="area">${rec.area || ""}</div>
+        <h3>${rec.title}</h3>
+        <p>${rec.description}</p>
+        <div class="tip">💡 ${rec.tip || ""}</div>
+        ${bookBtn}
+      `;
+      wrap.appendChild(card);
+    });
+
+    statusRow.innerHTML = "";
+    statusRow.appendChild(wrap);
+    scrollToBottom();
+  }
+
+  function renderAiError(statusRow, message) {
+    statusRow.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`;
+    scrollToBottom();
+  }
+
+  async function ask(query) {
+    if (intro) intro.remove();
+    addUserMessage(query);
+    const statusRow = addAiStatus();
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch("/api/concierge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, language: langSelect.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      renderAiResult(statusRow, data);
+    } catch (err) {
+      renderAiError(statusRow, err.message);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => ask(chip.dataset.q));
+  });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const query = queryInput.value.trim();
+    if (!query) return;
+    queryInput.value = "";
+    ask(query);
+  });
+</script>
+</body>
+</html>

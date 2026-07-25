@@ -1,0 +1,15 @@
+{
+  "name": "ufo-catcher-guide",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2"
+  }
+}

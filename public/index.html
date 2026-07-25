@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What Is This? — Japan Machine Guide</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --accent: #ff5da2;
+    --text: #f2f2f2;
+    --muted: #9aa0aa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #12141a, #1c1030);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 60px;
+  }
+  .app {
+    width: 100%;
+    max-width: 480px;
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+  }
+  p.subtitle {
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  select, input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #0f1115;
+    color: var(--text);
+    margin-bottom: 12px;
+    font-size: 1rem;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  #preview {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    display: none;
+    max-height: 300px;
+    object-fit: cover;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #1a0010;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #result {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    font-size: 0.98rem;
+  }
+  .status {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(255,93,162,0.15);
+    color: var(--accent);
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <span class="badge">Shinjuku Prototype</span>
+    <h1>What Is This? 📸</h1>
+    <p class="subtitle">Take a photo of a machine, sign, or arcade game in Japan — get an instant explanation and tips in your language.</p>
+
+    <div class="card">
+      <label for="lang">Your language</label>
+      <select id="lang">
+        <option value="English">English</option>
+        <option value="Chinese (Simplified)">中文（简体）</option>
+        <option value="Chinese (Traditional)">中文（繁體）</option>
+        <option value="Korean">한국어</option>
+        <option value="Thai">ภาษาไทย</option>
+        <option value="Vietnamese">Tiếng Việt</option>
+        <option value="Indonesian">Bahasa Indonesia</option>
+        <option value="Filipino (Tagalog)">Filipino</option>
+        <option value="Malay">Bahasa Melayu</option>
+        <option value="Hindi">हिन्दी</option>
+        <option value="French">Français</option>
+        <option value="German">Deutsch</option>
+        <option value="Spanish">Español</option>
+        <option value="Italian">Italiano</option>
+        <option value="Portuguese">Português</option>
+        <option value="Russian">Русский</option>
+        <option value="Arabic">العربية</option>
+      </select>
+
+      <label for="photo">Photo</label>
+      <input type="file" id="photo" accept="image/*" capture="environment" />
+      <img id="preview" alt="preview" />
+
+      <button id="analyzeBtn" disabled>Explain This</button>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+      <div class="status" id="status"></div>
+      <div id="result"></div>
+    </div>
+  </div>
+
+<script>
+  const photoInput = document.getElementById("photo");
+  const preview = document.getElementById("preview");
+  const analyzeBtn = document.getElementById("analyzeBtn");
+  const resultCard = document.getElementById("resultCard");
+  const resultEl = document.getElementById("result");
+  const statusEl = document.getElementById("status");
+  const langSelect = document.getElementById("lang");
+
+  let imageBase64 = null;
+  let mediaType = "image/jpeg";
+
+  photoInput.addEventListener("change", () => {
+    const file = photoInput.files[0];
+    if (!file) return;
+    mediaType = file.type || "image/jpeg";
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      preview.src = dataUrl;
+      preview.style.display = "block";
+      imageBase64 = dataUrl.split(",")[1];
+      analyzeBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  analyzeBtn.addEventListener("click", async () => {
+    if (!imageBase64) return;
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = "Thinking...";
+    resultCard.style.display = "block";
+    statusEl.textContent = "Analyzing photo...";
+    resultEl.textContent = "";
+
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64,
+          mediaType,
+          language: langSelect.value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      statusEl.textContent = "";
+      resultEl.textContent = data.result;
+    } catch (err) {
+      statusEl.textContent = "";
+      resultEl.textContent = "Error: " + err.message;
+    } finally {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = "Explain This";
+    }
+  });
+</script>
+</body>
+</html>

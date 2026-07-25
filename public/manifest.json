@@ -1,0 +1,14 @@
+{
+  "name": "Tabi — Japan AI Concierge",
+  "short_name": "Tabi",
+  "description": "Ask, book, and explore Japan with one AI concierge.",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#4F46E5",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
