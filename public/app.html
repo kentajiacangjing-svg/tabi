@@ -19,7 +19,8 @@
     --muted: #7A776F;
     --line: #E4E1DA;
     --surface: #FFFFFF;
-    --accent: #4285F4;
+    --accent: #1A73E8;
+    --accent-gradient: linear-gradient(135deg, #4285F4 0%, #9B72CB 55%, #D96A5A 100%);
     --accent-2: #5B7A63;
     --accent-2-bg: #EBF1EC;
     --accent-ink: #FFFFFF;
@@ -95,7 +96,7 @@
     text-decoration: none;
   }
   .btn:active { transform: scale(0.97); }
-  .btn-accent { background: var(--accent); color: var(--accent-ink); }
+  .btn-accent { background: var(--accent-gradient); color: var(--accent-ink); }
   .btn-ink { background: var(--ink); color: #fff; }
   .btn-ghost { background: var(--bg2); color: var(--ink); }
   .btn-sm { height: 46px; font-size: 0.85rem; border-radius: 13px; }
@@ -116,7 +117,7 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .ai-hero-input:focus-within {
-    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(66,133,244,0.16);
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,115,232,0.16);
   }
   .ai-hero-input input {
     border: none; background: none; outline: none; flex: 1; min-width: 0;
@@ -124,7 +125,7 @@
   }
   .ai-hero-input input::placeholder { color: var(--muted); font-weight: 500; }
   .ai-hero-send {
-    width: 44px; height: 44px; border-radius: 15px; border: none; background: var(--accent); color: #fff;
+    width: 44px; height: 44px; border-radius: 15px; border: none; background: var(--accent-gradient); color: #fff;
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
     transition: transform 0.15s ease;
   }
@@ -186,7 +187,7 @@
     border-top: 1px dashed var(--line); font-size: 0.78rem; color: var(--ink); font-weight: 600; line-height: 1.4;
   }
   .tabi-pick .tp-badge {
-    flex-shrink: 0; background: var(--accent); color: #fff; font-size: 0.62rem; font-weight: 800;
+    flex-shrink: 0; background: var(--accent-gradient); color: #fff; font-size: 0.62rem; font-weight: 800;
     padding: 2px 7px; border-radius: 999px; margin-top: 1px;
   }
 
@@ -278,7 +279,7 @@
   .chat-input-bar { padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
   .chat-input-row { display: flex; align-items: center; gap: 8px; background: var(--bg2); border-radius: 999px; padding: 6px 6px 6px 18px; }
   .chat-input-row input { flex: 1; border: none; background: none; font-size: 0.92rem; outline: none; min-width: 0; }
-  .send-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s ease; }
+  .send-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--accent-gradient); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s ease; }
   .send-btn:active { transform: scale(0.9); }
   .send-btn:disabled { opacity: 0.4; }
 
@@ -349,8 +350,8 @@
   .nav-item.active .dot { opacity: 1; }
   .nav-item span { font-size: 0.6rem; font-weight: 700; }
   .nav-item.center-item {
-    color: #fff; background: var(--accent); width: 44px; height: 44px; border-radius: 50%;
-    margin-top: -10px; box-shadow: 0 3px 8px -2px rgba(194,59,34,0.35); justify-content: center;
+    color: #fff; background: var(--accent-gradient); width: 44px; height: 44px; border-radius: 50%;
+    margin-top: -10px; box-shadow: 0 3px 8px -2px rgba(155,114,203,0.4); justify-content: center;
   }
   .nav-item.center-item .icon { width: 20px; height: 20px; }
   .nav-item.center-item span { display: none; }
@@ -477,7 +478,7 @@
   <!-- ASSISTANT -->
   <section class="tab-panel" id="tab-assistant">
     <div class="chat-header">
-      <span class="icon-btn" style="background:var(--accent);color:#fff;box-shadow:none;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+      <span class="icon-btn" style="background:var(--accent-gradient);color:#fff;box-shadow:none;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
       <div style="flex:1;">
         <div style="font-weight:800;font-size:0.95rem;">Tabi AI</div>
         <div style="font-size:0.7rem;color:var(--muted);font-weight:600;" data-en="Answers in your language" data-ja="あなたの言語で回答します">Answers in your language</div>
