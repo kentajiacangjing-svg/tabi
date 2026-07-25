@@ -119,41 +119,49 @@ app.post("/api/analyze", async (req, res) => {
 // ---------- AI concierge ----------
 function buildConciergeSystemPrompt() {
   return `You are Tabi, a knowledgeable, friendly AI travel concierge for tourists visiting Japan.
-Given a free-text question or request (e.g. "what should I do in Shinjuku tonight", "plan my afternoon", "3 days in Kyoto"), respond with 2-5 concrete recommendations, optionally as a rough time-ordered plan if the user asked for a plan/itinerary.
+Given a free-text question or request, respond helpfully. The conversation may include earlier turns — use them for context (e.g. "cheaper" refers to the places you just suggested).
 
 Always reply in the same language the user wrote in, unless they ask for a different language.
 
-There are three kinds of recommendations. Pick the right type for each one:
+Choose ONE of two response shapes:
 
-1. "place" — use for ANY specific real restaurant, cafe, attraction, shop, or venue. Do NOT invent the name, rating, price, or address yourself — just give a short "searchHint" (e.g. "sushi restaurant Shibuya" or "teamLab Borderless") describing what to look up, plus your reasoning in "tip". The server will look up the real place and attach real data. If suggesting a plan with multiple stops, you can suggest an approximate time of day in "suggestedTime" (e.g. "14:00", "Evening") — this is only a suggestion, never a guaranteed booking.
-
-2. "affiliate" — use when recommending restaurants/hotels in general (not one specific place). Title should be the category+area, e.g. "Restaurants in Shinjuku". Set "affiliateCategory" to "restaurant" or "hotel", and "area" to the neighborhood/city. Never include a contactUrl yourself.
-
-3. "info" — general, practical, non-place advice (transport tips, general area guidance, etiquette, weather-appropriate ideas, etc). No price/contactUrl.
-
-Never invent specific prices, ratings, or "available at X time" claims — only the server-verified "place" type carries real data.
-
-Respond ONLY with valid JSON matching this shape, no markdown fences, no extra text:
+A) Normal case — 2-5 recommendations:
 {
-  "recommendations": [
-    {
-      "title": "string",
-      "area": "string, neighborhood or city",
-      "description": "1-2 sentence description, practical and specific, not generic marketing text",
-      "tip": "one concrete practical tip or reasoning",
-      "type": "place, info, or affiliate",
-      "searchHint": "string, only if type is place",
-      "suggestedTime": "string, only if type is place and this is part of a plan",
-      "affiliateCategory": "restaurant or hotel, only if type is affiliate"
-    }
-  ]
-}`;
+  "recommendations": [ <recommendation object, see below> ]
 }
 
-async function enrichRecommendations(data, origin) {
-  if (!data || !Array.isArray(data.recommendations)) return data;
-  data.recommendations = await Promise.all(
-    data.recommendations.map(async (rec) => {
+B) The user is deciding between a few different ways to spend an evening/day, especially if they mention a budget or want options (e.g. "we have ¥20,000 and want something fun tonight") — propose 2-3 distinct, complete PLANS instead:
+{
+  "plans": [
+    {
+      "label": "string, short plan name, e.g. 'Night View + Dinner'",
+      "steps": [ <recommendation object with type "place" and a suggestedTime> ],
+      "estimatedBudget": "string — a ROUGH estimate only, clearly a guess, e.g. '~¥15,000–18,000 (rough estimate)'. Base it on typical costs for that category of place, not on real fetched prices — because you don't have real prices, always phrase it as an estimate, never as a fact."
+    }
+  ]
+}
+
+A single recommendation object:
+{
+  "title": "string",
+  "area": "string, neighborhood or city",
+  "description": "1-2 sentence description, practical and specific, not generic marketing text",
+  "tip": "one concrete practical tip or reasoning",
+  "type": "place, info, or affiliate",
+  "searchHint": "string, only if type is place — a short search phrase like 'sushi restaurant Shibuya' or 'teamLab Borderless'. Do NOT invent the name, rating, price, or address — the server looks up the real place.",
+  "suggestedTime": "string, only if type is place and this is part of a plan/itinerary, e.g. '14:00' — only ever a suggestion, never a guaranteed booking",
+  "affiliateCategory": "restaurant or hotel, only if type is affiliate — used for general (not one specific place) restaurant/hotel category recommendations, title should be like 'Restaurants in Shinjuku'",
+}
+"info" type = general, practical, non-place advice (transport tips, etiquette, weather-appropriate ideas). No price/contactUrl.
+
+Never invent specific prices, ratings, or "available at X time" claims for a "place" — only the server-verified place data (attached after your response) carries real facts. estimatedBudget is the one exception, and must always read as an estimate, not a fact.
+
+Respond ONLY with valid JSON, no markdown fences, no extra text.`;
+}
+
+async function enrichPlaceRecs(recs, origin) {
+  return Promise.all(
+    (recs || []).map(async (rec) => {
       if (rec.type === "affiliate") {
         const link = buildAffiliateUrl(rec.affiliateCategory, rec.area);
         if (!link) return { ...rec, type: "info" };
@@ -167,21 +175,40 @@ async function enrichRecommendations(data, origin) {
       return rec;
     })
   );
+}
+
+async function enrichRecommendations(data, origin) {
+  if (!data) return data;
+  if (Array.isArray(data.plans)) {
+    data.plans = await Promise.all(
+      data.plans.map(async (plan) => ({ ...plan, steps: await enrichPlaceRecs(plan.steps, origin) }))
+    );
+    return data;
+  }
+  if (Array.isArray(data.recommendations)) {
+    data.recommendations = await enrichPlaceRecs(data.recommendations, origin);
+    return data;
+  }
   return data;
 }
 
 app.post("/api/concierge", async (req, res) => {
   try {
-    const { query, language, lat, lng } = req.body;
+    const { query, language, lat, lng, history } = req.body;
     if (!query) {
       return res.status(400).json({ error: "query is required" });
     }
 
+    const priorTurns = Array.isArray(history)
+      ? history.slice(-8).map((h) => ({ role: h.role === "assistant" ? "assistant" : "user", content: h.content }))
+      : [];
+
     const message = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 1500,
+      max_tokens: 1800,
       system: buildConciergeSystemPrompt(),
       messages: [
+        ...priorTurns,
         {
           role: "user",
           content: `${query}\n\n(If replying in a specific language was requested by the app UI, prefer that language: ${language || "auto-detect from the user's message"}.)`,
@@ -196,7 +223,7 @@ app.post("/api/concierge", async (req, res) => {
 
     const origin = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null;
     const parsed = await enrichRecommendations(JSON.parse(text), origin);
-    res.json(parsed);
+    res.json({ ...parsed, _rawAssistantText: text });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Something went wrong" });

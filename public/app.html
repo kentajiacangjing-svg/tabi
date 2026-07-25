@@ -375,6 +375,8 @@
     <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M7 15a4.5 4.5 0 0 1 .5-9 5.5 5.5 0 0 1 10.4 1.8A3.8 3.8 0 0 1 17 15H7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><line x1="9" y1="18" x2="8" y2="21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="13" y1="18" x2="12" y2="21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="17" y1="18" x2="16" y2="21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/></g></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 11a6 6 0 0 0 12 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="21.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-mic-active" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="21.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
   </defs>
 </svg>
 
@@ -387,7 +389,7 @@
         <div class="greeting-row">
           <div>
             <div class="greeting-text" id="greetingText">Konnichiwa 👋</div>
-            <div class="location-row"><svg class="icon-xs"><use href="#i-pin"></use></svg><span id="locationLabel">Tokyo</span><span>·</span><span id="dateLabel"></span></div>
+            <div class="location-row"><svg class="icon-xs"><use href="#i-pin"></use></svg><span id="locationLabel">Tokyo</span><span id="tempLabel"></span><span>·</span><span id="dateLabel"></span></div>
           </div>
           <button class="icon-btn" onclick="showTab('profile')" aria-label="Profile"><svg class="icon-sm"><use href="#i-user"></use></svg></button>
         </div>
@@ -398,6 +400,7 @@
       <form class="ai-hero-input" id="homeSearchForm">
         <svg class="icon-sm" style="color:var(--accent);flex-shrink:0;"><use href="#i-sparkle"></use></svg>
         <input type="text" id="homeSearchInput" placeholder="Dinner in Shibuya for two" data-placeholder-en="Dinner in Shibuya for two" data-placeholder-ja="渋谷で2人分の夕食" autocomplete="off" />
+        <button type="button" class="icon-btn" id="homeMicBtn" style="display:none;box-shadow:none;background:var(--bg2);width:38px;height:38px;flex-shrink:0;"><svg class="icon-sm"><use href="#i-mic"></use></svg></button>
         <button type="submit" class="ai-hero-send"><svg class="icon-sm"><use href="#i-send"></use></svg></button>
       </form>
 
@@ -408,20 +411,20 @@
         <button class="quick-pill" onclick="showTab('search')"><svg class="icon-xs"><use href="#i-pin"></use></svg><span data-en="Nearby" data-ja="周辺">Nearby</span></button>
       </div>
 
+      <div class="section-block" id="nextPlanBlock" style="display:none;">
+        <div class="px section-head">
+          <h2 class="section-title" data-en="Your next plan" data-ja="次の予定">Your next plan</h2>
+          <button class="see-all" onclick="showTab('trip')" data-en="View trip" data-ja="旅程を見る">View trip</button>
+        </div>
+        <div class="px" id="nextPlanCard"></div>
+      </div>
+
       <div class="section-block">
         <div class="px section-head">
           <h2 class="section-title" id="dynamicSectionTitle">Popular near you</h2>
           <button class="see-all" onclick="showTab('search')" data-en="See all" data-ja="すべて見る">See all</button>
         </div>
         <div class="store-row" id="homeNearby"></div>
-      </div>
-
-      <div class="section-block" id="homeTripPreviewBlock" style="display:none;">
-        <div class="px section-head">
-          <h2 class="section-title" data-en="Your trip today" data-ja="今日の旅程">Your trip today</h2>
-          <button class="see-all" onclick="showTab('trip')" data-en="View" data-ja="見る">View</button>
-        </div>
-        <div class="px" id="homeTripPreview"></div>
       </div>
       <div style="height:12px;"></div>
     </div>
@@ -476,6 +479,7 @@
     <div class="chat-input-bar">
       <form id="chatForm" class="chat-input-row">
         <input type="text" id="chatInput" placeholder="Ask Tabi anything..." data-placeholder-en="Ask Tabi anything..." data-placeholder-ja="Tabiに何でも聞いてください..." autocomplete="off" />
+        <button type="button" class="icon-btn" id="chatMicBtn" style="display:none;box-shadow:none;background:transparent;width:34px;height:34px;flex-shrink:0;"><svg class="icon-sm"><use href="#i-mic"></use></svg></button>
         <button class="send-btn" id="chatSend" type="submit"><svg class="icon-sm"><use href="#i-send"></use></svg></button>
       </form>
     </div>
@@ -484,7 +488,8 @@
   <!-- MY TRIP -->
   <section class="tab-panel" id="tab-trip">
     <div class="topbar"><h1 data-en="My Trip" data-ja="マイ旅程">My Trip</h1></div>
-    <div class="screen-scroll px" id="tripList" style="padding-top:8px;"></div>
+    <div class="context-chips px" id="tripAskAi" style="padding-bottom:10px;"></div>
+    <div class="screen-scroll px" id="tripList" style="padding-top:0;"></div>
   </section>
 
   <!-- STORE DETAIL -->
@@ -613,6 +618,7 @@
   const TOKYO_STATION = { lat: 35.6812, lng: 139.7671 };
   let coords = TOKYO_STATION;
   let isRaining = false;
+  let currentTemp = null;
   function getCoords() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) return resolve(TOKYO_STATION);
@@ -625,12 +631,14 @@
   }
   async function checkWeather() {
     try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&current=precipitation,weather_code`);
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&current=precipitation,weather_code,temperature_2m`);
       const data = await r.json();
       const code = data.current?.weather_code ?? 0;
       const precip = data.current?.precipitation ?? 0;
       isRaining = precip > 0 || (code >= 51 && code <= 82);
-    } catch (e) { isRaining = false; }
+      currentTemp = typeof data.current?.temperature_2m === 'number' ? Math.round(data.current.temperature_2m) : null;
+      document.getElementById('tempLabel').textContent = currentTemp != null ? ` · ${currentTemp}°C` : '';
+    } catch (e) { isRaining = false; currentTemp = null; document.getElementById('tempLabel').textContent = ''; }
   }
   function getDaypart() {
     const h = new Date().getHours();
@@ -659,6 +667,31 @@
     else if (part === 'evening' || part === 'night') sectionTitle = t('Tonight in Tokyo', '今夜の東京');
     else sectionTitle = t('Popular near you', '現在地周辺のおすすめ');
     document.getElementById('dynamicSectionTitle').textContent = sectionTitle;
+  }
+
+  // ---------- Voice input (only shown if the browser actually supports it) ----------
+  const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function setupMic(btn, input, onResult) {
+    if (!SpeechRecognitionImpl || !btn) return;
+    btn.style.display = 'flex';
+    let recognizing = false;
+    let recognizer = null;
+    btn.addEventListener('click', () => {
+      if (recognizing) { recognizer?.stop(); return; }
+      recognizer = new SpeechRecognitionImpl();
+      recognizer.lang = currentAppLang === 'ja' ? 'ja-JP' : 'en-US';
+      recognizer.interimResults = false;
+      recognizer.maxAlternatives = 1;
+      recognizer.onstart = () => { recognizing = true; btn.querySelector('use').setAttribute('href', '#i-mic-active'); btn.style.color = 'var(--accent)'; };
+      recognizer.onend = () => { recognizing = false; btn.querySelector('use').setAttribute('href', '#i-mic'); btn.style.color = ''; };
+      recognizer.onerror = () => { recognizing = false; btn.querySelector('use').setAttribute('href', '#i-mic'); btn.style.color = ''; };
+      recognizer.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        input.value = text;
+        if (onResult) onResult(text);
+      };
+      recognizer.start();
+    });
   }
 
   // ---------- Place helpers ----------
@@ -818,18 +851,37 @@
     }
     renderHomeTripPreview();
   }
+  function leaveByTime(suggestedTime, distanceMeters) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(suggestedTime || '');
+    if (!m) return null;
+    const wm = walkMin(distanceMeters);
+    if (wm == null) return null;
+    const d = new Date();
+    d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+    d.setMinutes(d.getMinutes() - wm);
+    return d.toTimeString().slice(0, 5);
+  }
   function renderHomeTripPreview() {
     const trip = getBookings();
-    const block = document.getElementById('homeTripPreviewBlock');
+    const block = document.getElementById('nextPlanBlock');
     if (!trip.length) { block.style.display = 'none'; return; }
     block.style.display = '';
-    const el = document.getElementById('homeTripPreview');
-    el.innerHTML = trip.slice(0, 2).map((b) => `
-      <div class="card list-row">
-        <div class="photo-wrap">${b.photoRef ? `<img src="${photoUrl(b.photoRef)}" alt=""/>` : `<div class="art ${artClass(b.title)}"></div>`}</div>
-        <div style="flex:1;min-width:0;"><div class="store-name" style="white-space:normal;">${b.title}</div><div class="store-meta">${b.suggestedTime || ''} ${b.area || ''}</div></div>
+    const next = trip[0];
+    const el = document.getElementById('nextPlanCard');
+    const leaveBy = leaveByTime(next.suggestedTime, next.distanceMeters);
+    const wm = walkMin(next.distanceMeters);
+    el.innerHTML = `
+      <div class="card list-row" style="align-items:flex-start;">
+        <div class="photo-wrap">${next.photoRef ? `<img src="${photoUrl(next.photoRef)}" alt=""/>` : `<div class="art ${artClass(next.title)}"></div>`}</div>
+        <div style="flex:1;min-width:0;">
+          ${next.suggestedTime ? `<div class="eyebrow">${next.suggestedTime}</div>` : ''}
+          <div class="store-name" style="white-space:normal;">${next.title}</div>
+          <div class="store-meta">${next.area || ''}</div>
+          ${wm != null ? `<div class="store-meta" style="margin-top:4px;">🚶 ${t(`${wm} min away`, `徒歩${wm}分`)}${leaveBy ? ` <span class="dot"></span> ${t(`Leave by ${leaveBy}`, `${leaveBy}に出発`)}` : ''}</div>` : ''}
+        </div>
       </div>
-    `).join('');
+    `;
+    if (next.placeId) el.querySelector('.list-row').addEventListener('click', () => openDetail(next.placeId));
   }
 
   // ---------- Explore / Search ----------
@@ -980,17 +1032,29 @@
   function logBooking(place, action) {
     if (!place) return;
     const list = getBookings();
-    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, action, createdAt: new Date().toISOString() });
+    const status = action === 'call' || action === 'website' ? 'confirmed' : 'needs_booking';
+    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, action, status, createdAt: new Date().toISOString() });
     localStorage.setItem('tabi_bookings', JSON.stringify(list));
     showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
+    renderHomeTripPreview();
   }
   function addToTrip(place, suggestedTime) {
     const list = getBookings();
-    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, suggestedTime: suggestedTime || null, action: 'planned', createdAt: new Date().toISOString() });
+    list.push({ placeId: place.placeId, title: place.name, area: place.address, photoRef: place.photoRef, distanceMeters: place.distanceMeters, suggestedTime: suggestedTime || null, action: 'planned', status: 'needs_booking', createdAt: new Date().toISOString() });
     localStorage.setItem('tabi_bookings', JSON.stringify(list));
     showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
+    renderHomeTripPreview();
   }
+  const TRIP_ASK_CHIPS = [
+    { en: 'What should I do after this?', ja: 'このあと何をすればいい?' },
+    { en: 'Change dinner', ja: '夕食を変更したい' },
+    { en: 'Add a cafe', ja: 'カフェを追加したい' },
+  ];
   function renderTrip() {
+    const askEl = document.getElementById('tripAskAi');
+    askEl.innerHTML = TRIP_ASK_CHIPS.map((c) => `<span class="chip" data-q="${t(c.en, c.ja)}">${t(c.en, c.ja)}</span>`).join('');
+    askEl.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => quickAction(c.dataset.q)));
+
     const el = document.getElementById('tripList');
     const list = getBookings();
     if (list.length === 0) {
@@ -1003,12 +1067,17 @@
       const item = document.createElement('div');
       item.className = 'timeline-item';
       const img = photoUrl(b.photoRef);
+      const statusBadge = b.status === 'confirmed'
+        ? `<span class="status-badge status-open">${t('Confirmed', '確定')}</span>`
+        : b.status === 'needs_booking'
+        ? `<span class="status-badge" style="color:var(--warn);background:var(--warn-bg);">${t('Needs booking', '要予約')}</span>`
+        : '';
       item.innerHTML = `
         <div class="t-time">${b.suggestedTime || ''}</div>
         <div class="timeline-track"><div class="timeline-dot"></div>${i < list.length - 1 ? '<div class="timeline-line"></div>' : ''}</div>
         <div class="timeline-card card list-row" style="margin-bottom:0;">
           <div class="photo-wrap">${img ? `<img src="${img}" alt=""/>` : `<div class="art ${artClass(b.title)}"></div>`}</div>
-          <div style="flex:1;min-width:0;"><div class="store-name" style="white-space:normal;">${b.title}</div><div class="store-meta">${b.area || ''}</div></div>
+          <div style="flex:1;min-width:0;"><div class="store-name" style="white-space:normal;">${b.title}</div><div class="store-meta">${b.area || ''}</div><div style="margin-top:4px;">${statusBadge}</div></div>
         </div>
       `;
       if (b.placeId) item.querySelector('.timeline-card').addEventListener('click', () => openDetail(b.placeId));
@@ -1087,40 +1156,102 @@
     `;
   }
 
-  function renderAiResult(row, data) {
-    const wrap = document.createElement('div');
-    wrap.className = 'ai-wrap';
-    const recs = data.recommendations || [];
+  function buildRecCard(rec) {
+    const card = document.createElement('div');
+    card.className = 'rec-card' + (rec.place ? '' : ' plain');
+    card.style.position = 'relative';
+    card.innerHTML = recCardHtml(rec);
+    if (rec.place) {
+      card.querySelector('[data-fav]').addEventListener('click', () => {
+        toggleSaved(rec.place);
+        const btn = card.querySelector('[data-fav]');
+        btn.classList.toggle('active', isSaved(rec.place));
+        btn.querySelector('use').setAttribute('href', '#' + (isSaved(rec.place) ? 'i-heart-filled' : 'i-heart'));
+      });
+      card.querySelector('[data-view]').addEventListener('click', () => openDetail(rec.place.placeId));
+      card.querySelector('[data-reserve]').addEventListener('click', () => openReserveSheet(rec.place));
+    } else if (rec.type === 'affiliate') {
+      card.querySelector('[data-affiliate]')?.addEventListener('click', () => { if (rec.contactUrl) window.open(rec.contactUrl, '_blank'); });
+    }
+    return card;
+  }
+
+  function renderRecsInto(wrap, recs) {
     const hasTimes = recs.some((r) => r.suggestedTime);
     recs.forEach((rec, i) => {
-      const cardWrap = document.createElement('div');
-      const card = document.createElement('div');
-      card.className = 'rec-card' + (rec.place ? '' : ' plain');
-      card.style.position = 'relative';
-      card.innerHTML = recCardHtml(rec);
-
-      if (rec.place) {
-        card.querySelector('[data-fav]').addEventListener('click', () => {
-          toggleSaved(rec.place);
-          const btn = card.querySelector('[data-fav]');
-          btn.classList.toggle('active', isSaved(rec.place));
-          btn.querySelector('use').setAttribute('href', '#' + (isSaved(rec.place) ? 'i-heart-filled' : 'i-heart'));
-        });
-        card.querySelector('[data-view]').addEventListener('click', () => openDetail(rec.place.placeId));
-        card.querySelector('[data-reserve]').addEventListener('click', () => openReserveSheet(rec.place));
-      } else if (rec.type === 'affiliate') {
-        card.querySelector('[data-affiliate]')?.addEventListener('click', () => { if (rec.contactUrl) window.open(rec.contactUrl, '_blank'); });
-      }
-
+      const card = buildRecCard(rec);
       if (hasTimes && rec.place) {
+        const cardWrap = document.createElement('div');
         cardWrap.className = 'plan-item';
         cardWrap.innerHTML = `<div class="plan-time-col"><span class="plan-time">${rec.suggestedTime || ''}</span>${i < recs.length - 1 ? '<div class="plan-connector"></div>' : ''}</div>`;
         cardWrap.appendChild(card);
+        wrap.appendChild(cardWrap);
       } else {
-        cardWrap.appendChild(card);
+        wrap.appendChild(card);
       }
-      wrap.appendChild(cardWrap);
     });
+  }
+
+  const FOLLOWUP_CHIPS = [
+    { en: 'Cheaper', ja: 'もっと安く' },
+    { en: 'Closer', ja: 'もっと近く' },
+    { en: 'More romantic', ja: 'もっとロマンチックに' },
+    { en: 'Something Japanese', ja: '和風がいい' },
+    { en: 'Open later', ja: 'もっと遅くまで開いてる' },
+    { en: 'Less touristy', ja: '観光客が少ない場所' },
+  ];
+  function appendFollowupChips(wrap) {
+    const row = document.createElement('div');
+    row.className = 'context-chips';
+    row.style.overflowX = 'auto';
+    row.innerHTML = FOLLOWUP_CHIPS.map((c) => `<span class="chip" data-q="${t(c.en, c.ja)}">${t(c.en, c.ja)}</span>`).join('');
+    row.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => askAI(c.dataset.q)));
+    wrap.appendChild(row);
+  }
+
+  function renderAiResult(row, data) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ai-wrap';
+
+    if (Array.isArray(data.plans) && data.plans.length) {
+      data.plans.forEach((plan) => {
+        const planCard = document.createElement('div');
+        planCard.className = 'rec-card plain';
+        const header = document.createElement('div');
+        header.innerHTML = `<div style="font-weight:800;font-size:1rem;margin-bottom:10px;">${plan.label || ''}</div>`;
+        planCard.appendChild(header);
+        const stepsWrap = document.createElement('div');
+        stepsWrap.style.display = 'flex';
+        stepsWrap.style.flexDirection = 'column';
+        stepsWrap.style.gap = '8px';
+        renderRecsInto(stepsWrap, plan.steps || []);
+        planCard.appendChild(stepsWrap);
+        if (plan.estimatedBudget) {
+          const budget = document.createElement('div');
+          budget.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:0.85rem;font-weight:700;color:var(--muted);';
+          budget.textContent = t('Est. ', '概算 ') + plan.estimatedBudget;
+          planCard.appendChild(budget);
+        }
+        const chooseBtn = document.createElement('button');
+        chooseBtn.className = 'btn btn-accent btn-block';
+        chooseBtn.style.marginTop = '12px';
+        chooseBtn.textContent = t('Choose this plan', 'このプランを選ぶ');
+        chooseBtn.onclick = () => {
+          (plan.steps || []).filter((s) => s.place).forEach((s) => addToTrip(s.place, s.suggestedTime));
+          showToast(t('Added to My Trip', 'マイ旅程に追加しました'));
+        };
+        planCard.appendChild(chooseBtn);
+        wrap.appendChild(planCard);
+      });
+      appendFollowupChips(wrap);
+      row.innerHTML = '';
+      row.appendChild(wrap);
+      scrollChatToBottom();
+      return;
+    }
+
+    const recs = data.recommendations || [];
+    renderRecsInto(wrap, recs);
 
     if (recs.some((r) => r.place)) {
       const addAllBtn = document.createElement('button');
@@ -1129,6 +1260,7 @@
       addAllBtn.onclick = () => { recs.filter((r) => r.place).forEach((r) => addToTrip(r.place, r.suggestedTime)); showToast(t('Added to My Trip', 'マイ旅程に追加しました')); };
       wrap.appendChild(addAllBtn);
     }
+    if (recs.length) appendFollowupChips(wrap);
 
     row.innerHTML = '';
     row.appendChild(wrap);
@@ -1136,6 +1268,7 @@
   }
   function renderAiError(row, message) { row.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`; scrollChatToBottom(); }
 
+  let chatHistory = [];
   async function askAI(query) {
     addUserMessage(query);
     const statusRow = addAiStatus();
@@ -1144,11 +1277,14 @@
       await getCoords();
       const res = await fetch('/api/concierge', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, language: langSelect.value, lat: coords.lat, lng: coords.lng }),
+        body: JSON.stringify({ query, language: langSelect.value, lat: coords.lat, lng: coords.lng, history: chatHistory }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');
       renderAiResult(statusRow, data);
+      chatHistory.push({ role: 'user', content: query });
+      chatHistory.push({ role: 'assistant', content: data._rawAssistantText || JSON.stringify(data) });
+      chatHistory = chatHistory.slice(-12);
     } catch (err) {
       renderAiError(statusRow, err.message);
     } finally {
@@ -1169,6 +1305,8 @@
   // ---------- Init ----------
   setAppLang(localStorage.getItem('tabi_app_lang') || 'en');
   loadHomeNearby();
+  setupMic(document.getElementById('homeMicBtn'), homeSearchInput);
+  setupMic(document.getElementById('chatMicBtn'), chatInput, (text) => { chatInput.value = text; chatForm.requestSubmit(); });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
