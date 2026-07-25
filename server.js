@@ -316,6 +316,24 @@ app.get("/api/places/photo/:ref", async (req, res) => {
   }
 });
 
+app.get("/api/geocode", async (req, res) => {
+  try {
+    if (!PLACES_KEY) return res.status(500).json({ error: "GOOGLE_PLACES_API_KEY is not set" });
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: "lat and lng are required" });
+    const params = new URLSearchParams({ latlng: `${lat},${lng}`, key: PLACES_KEY, result_type: "locality" });
+    const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params}`);
+    const data = await r.json();
+    if (data.status !== "OK" || !data.results?.length) return res.json({ locality: null });
+    const comp = data.results[0].address_components.find((c) => c.types.includes("locality"))
+      || data.results[0].address_components.find((c) => c.types.includes("administrative_area_level_1"));
+    res.json({ locality: comp?.long_name || null });
+  } catch (err) {
+    console.error(err);
+    res.json({ locality: null });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Tabi running at http://localhost:${port}`);
 });

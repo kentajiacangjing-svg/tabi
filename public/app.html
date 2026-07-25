@@ -20,7 +20,6 @@
     --line: #E4E1DA;
     --surface: #FFFFFF;
     --accent: #4F6BF6;
-    --accent-gradient: linear-gradient(135deg, #4285F4 0%, #9B6BE0 55%, #E0668C 100%);
     --accent-ink: #FFFFFF;
     --good: #1C8A4B;
     --good-bg: #E9F6EE;
@@ -59,7 +58,7 @@
   .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 18px 8px; flex-shrink: 0; }
   .topbar h1 { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; flex: 1; }
   .icon-btn {
-    width: 40px; height: 40px; border-radius: 50%; border: none;
+    width: 44px; height: 44px; border-radius: 50%; border: none;
     background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(22,22,22,0.05);
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
     transition: transform 0.15s ease;
@@ -97,7 +96,7 @@
   .btn-accent { background: var(--accent); color: var(--accent-ink); }
   .btn-ink { background: var(--ink); color: #fff; }
   .btn-ghost { background: var(--bg2); color: var(--ink); }
-  .btn-sm { height: 42px; font-size: 0.85rem; border-radius: 13px; }
+  .btn-sm { height: 46px; font-size: 0.85rem; border-radius: 13px; }
   .btn-block { width: 100%; }
 
   /* ---- HOME ---- */
@@ -106,12 +105,16 @@
   .greeting-text { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
   .location-row { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.85rem; font-weight: 600; margin-top: 3px; }
 
-  .hero-question { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 18px 18px 14px; text-wrap: balance; }
+  .hero-question { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 20px 18px 16px; text-wrap: balance; }
 
   .ai-hero-input {
-    margin: 0 18px 16px; display: flex; align-items: center; gap: 10px;
-    background: var(--surface); border: 1.5px solid var(--ink); border-radius: 20px;
-    padding: 6px 8px 6px 18px; box-shadow: 0 4px 18px -10px rgba(22,22,22,0.25);
+    margin: 0 18px 18px; display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1.5px solid rgba(23,23,23,0.14); border-radius: 22px;
+    padding: 8px 8px 8px 18px; box-shadow: 0 2px 10px -6px rgba(22,22,22,0.15);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .ai-hero-input:focus-within {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,246,0.12);
   }
   .ai-hero-input input {
     border: none; background: none; outline: none; flex: 1; min-width: 0;
@@ -119,35 +122,44 @@
   }
   .ai-hero-input input::placeholder { color: var(--muted); font-weight: 500; }
   .ai-hero-send {
-    width: 42px; height: 42px; border-radius: 14px; border: none; background: var(--accent-gradient); color: #fff;
+    width: 44px; height: 44px; border-radius: 15px; border: none; background: var(--accent); color: #fff;
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
     transition: transform 0.15s ease;
   }
   .ai-hero-send:active { transform: scale(0.9); }
 
-  .quick-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 18px 22px; }
+  .quick-row { display: flex; gap: 6px; overflow-x: auto; padding: 0 18px 24px; }
   .quick-pill {
-    flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 11px 16px;
+    flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 13px;
     border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
-    font-size: 0.83rem; font-weight: 700; color: var(--ink); cursor: pointer;
-    transition: transform 0.15s ease;
+    font-size: 0.78rem; font-weight: 600; color: var(--ink); cursor: pointer;
+    transition: transform 0.15s ease; min-height: 44px;
   }
   .quick-pill:active { transform: scale(0.95); }
-  .quick-pill svg { color: var(--accent); }
+  .quick-pill svg { color: var(--muted); }
 
   .section-block { padding: 4px 0 22px; }
 
   /* ---- Store cards ---- */
   .store-row { display: flex; gap: 12px; overflow-x: auto; padding: 2px 18px 4px; scroll-snap-type: x proximity; }
   .store-card {
-    scroll-snap-align: start; flex-shrink: 0; width: 232px; overflow: hidden; cursor: pointer; padding: 0;
+    scroll-snap-align: start; flex-shrink: 0; width: 220px; overflow: hidden; cursor: pointer; padding: 0;
     transition: transform 0.15s ease;
   }
   .store-card:active { transform: scale(0.98); }
-  .store-card .photo-wrap { position: relative; height: 148px; background: var(--bg2); }
-  .store-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .store-card .photo-wrap { position: relative; aspect-ratio: 4 / 3; background: var(--bg2); }
+  .store-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s ease; }
+  .store-card .photo-wrap img.loaded { opacity: 1; }
   .store-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 18px 18px; }
   .store-list .store-card { width: 100%; }
+
+  .featured-wrap { padding: 2px 18px 16px; }
+  .featured-card { width: 100%; padding: 0; overflow: hidden; cursor: pointer; transition: transform 0.15s ease; }
+  .featured-card:active { transform: scale(0.99); }
+  .featured-card .photo-wrap { position: relative; aspect-ratio: 16 / 10; background: var(--bg2); }
+  .featured-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s ease; }
+  .featured-card .photo-wrap img.loaded { opacity: 1; }
+  .featured-card .store-name { font-size: 1.15rem; white-space: normal; }
   .store-list .store-card .photo-wrap { height: 150px; }
 
   .fav-btn {
@@ -261,7 +273,7 @@
   .chat-input-bar { padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
   .chat-input-row { display: flex; align-items: center; gap: 8px; background: var(--bg2); border-radius: 999px; padding: 6px 6px 6px 18px; }
   .chat-input-row input { flex: 1; border: none; background: none; font-size: 0.92rem; outline: none; min-width: 0; }
-  .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--accent-gradient); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s ease; }
+  .send-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s ease; }
   .send-btn:active { transform: scale(0.9); }
   .send-btn:disabled { opacity: 0.4; }
 
@@ -330,10 +342,10 @@
   .nav-item.active .dot { opacity: 1; }
   .nav-item span { font-size: 0.6rem; font-weight: 700; }
   .nav-item.center-item {
-    color: #fff; background: var(--accent-gradient); width: 50px; height: 50px; border-radius: 50%;
-    margin-top: -24px; box-shadow: 0 8px 18px -4px rgba(75,90,220,0.55); justify-content: center;
+    color: #fff; background: var(--accent); width: 44px; height: 44px; border-radius: 50%;
+    margin-top: -10px; box-shadow: 0 3px 8px -2px rgba(79,107,246,0.4); justify-content: center;
   }
-  .nav-item.center-item .icon { width: 23px; height: 23px; }
+  .nav-item.center-item .icon { width: 20px; height: 20px; }
   .nav-item.center-item span { display: none; }
 
   .toast {
@@ -458,7 +470,7 @@
   <!-- ASSISTANT -->
   <section class="tab-panel" id="tab-assistant">
     <div class="chat-header">
-      <span class="icon-btn" style="background:var(--accent-gradient);color:#fff;box-shadow:none;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
+      <span class="icon-btn" style="background:var(--accent);color:#fff;box-shadow:none;"><svg class="icon-sm"><use href="#i-sparkle"></use></svg></span>
       <div style="flex:1;">
         <div style="font-weight:800;font-size:0.95rem;">Tabi AI</div>
         <div style="font-size:0.7rem;color:var(--muted);font-weight:600;" data-en="Answers in your language" data-ja="あなたの言語で回答します">Answers in your language</div>
@@ -535,7 +547,7 @@
       <button class="btn btn-ghost btn-block" style="justify-content:flex-start;padding-left:16px;color:var(--danger);margin-top:10px;" onclick="resetData()" data-en="Clear saved &amp; trip" data-ja="お気に入り・旅程を削除">
         Clear saved &amp; trip
       </button>
-      <div style="text-align:center;color:#B7B4AB;font-size:0.75rem;margin-top:20px;">Tabi v0.3.0 — built with Claude</div>
+      <div style="text-align:center;color:#B7B4AB;font-size:0.75rem;margin-top:20px;">Tabi</div>
     </div>
   </section>
 
@@ -714,7 +726,7 @@
   function hashStr(s) { let h = 0; for (let i = 0; i < (s || '').length; i++) h = (h << 5) - h + s.charCodeAt(i); return h; }
   function photoOrArt(place) {
     const url = photoUrl(place.photoRef);
-    if (url) return `<img src="${url}" alt="" loading="lazy" />`;
+    if (url) return `<img src="${url}" alt="" loading="lazy" onload="this.classList.add('loaded')" />`;
     return `<div class="art ${artClass(place.name)}"><span class="art-icon"><svg class="icon"><use href="#i-cutlery"></use></svg></span></div>`;
   }
   function tabiPickReason(place) {
@@ -782,6 +794,19 @@
       </div>
     `).join('');
   }
+  function skeletonFeatured(container) {
+    container.className = '';
+    container.innerHTML = `
+      <div class="featured-wrap">
+        <div class="skel" style="aspect-ratio:16/10;border-radius:var(--r-lg);"></div>
+        <div class="skel skel-line w60" style="margin:12px 0 0;"></div>
+        <div class="skel skel-line w40" style="margin-bottom:0;"></div>
+      </div>
+      <div class="store-row">
+        ${Array.from({ length: 3 }).map(() => `<div class="skel-card"><div class="skel skel-photo"></div><div class="skel skel-line w60"></div><div class="skel skel-line w40"></div></div>`).join('')}
+      </div>
+    `;
+  }
   function skeletonList(container, count) {
     container.className = 'store-list skel-list';
     container.innerHTML = Array.from({ length: count || 3 }).map(() => `
@@ -792,7 +817,8 @@
   function renderStoreCards(container, places, layout, opts) {
     container.className = layout === 'list' ? 'store-list' : 'store-row';
     if (!places.length) {
-      container.innerHTML = `<div class="empty-state" style="padding:24px;">${t('No places found nearby.', '周辺にスポットが見つかりませんでした。')}</div>`;
+      container.className = '';
+      container.innerHTML = `<div class="empty-state"><span>${t('Nothing perfect here yet.', 'まだ良いスポットが見つかりません。')}</span><button class="btn btn-accent btn-sm" onclick="quickAction(t('Help me find something nearby', '近くで何かおすすめを探して'))">${t('Ask Tabi instead', 'Tabiに聞いてみる')}</button></div>`;
       return;
     }
     container.innerHTML = '';
@@ -803,6 +829,39 @@
       bindStoreCard(card, place);
       container.appendChild(card);
     });
+  }
+
+  function renderFeaturedRow(container, places) {
+    if (!places.length) {
+      container.className = '';
+      container.innerHTML = `<div class="empty-state"><span>${t('Nothing perfect here yet.', 'まだ良いスポットが見つかりません。')}</span><button class="btn btn-accent btn-sm" onclick="quickAction(t('Help me find something nearby', '近くで何かおすすめを探して'))">${t('Ask Tabi instead', 'Tabiに聞いてみる')}</button></div>`;
+      return;
+    }
+    container.className = '';
+    container.innerHTML = '';
+    const [first, ...rest] = places;
+
+    const featWrap = document.createElement('div');
+    featWrap.className = 'featured-wrap';
+    const featCard = document.createElement('div');
+    featCard.className = 'card featured-card';
+    featCard.innerHTML = storeCardHtml(first, { showActions: true });
+    bindStoreCard(featCard, first);
+    featWrap.appendChild(featCard);
+    container.appendChild(featWrap);
+
+    if (rest.length) {
+      const row = document.createElement('div');
+      row.className = 'store-row';
+      rest.forEach((place) => {
+        const card = document.createElement('div');
+        card.className = 'card store-card';
+        card.innerHTML = storeCardHtml(place, {});
+        bindStoreCard(card, place);
+        row.appendChild(card);
+      });
+      container.appendChild(row);
+    }
   }
 
   function openReserveSheet(place) {
@@ -835,9 +894,17 @@
   }
 
   // ---------- Home ----------
+  async function loadLocationLabel() {
+    try {
+      const r = await fetch(`/api/geocode?lat=${coords.lat}&lng=${coords.lng}`);
+      const data = await r.json();
+      if (data.locality) document.getElementById('locationLabel').textContent = data.locality;
+    } catch (e) { /* keep default label rather than show an error here */ }
+  }
   async function loadHomeNearby() {
-    skeletonRow(document.getElementById('homeNearby'), 4);
+    skeletonFeatured(document.getElementById('homeNearby'));
     await getCoords();
+    loadLocationLabel();
     await checkWeather();
     renderGreeting();
     try {
@@ -845,9 +912,12 @@
       const res = await fetch(`/api/places/nearby?lat=${coords.lat}&lng=${coords.lng}&type=${type}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      renderStoreCards(document.getElementById('homeNearby'), (data.results || []).slice(0, 10), 'row');
+      renderFeaturedRow(document.getElementById('homeNearby'), (data.results || []).slice(0, 8));
     } catch (err) {
-      document.getElementById('homeNearby').innerHTML = `<div class="empty-state" style="padding:24px;">${t('Could not load nearby places.', '周辺情報を取得できませんでした。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
+      console.error('loadHomeNearby failed:', err);
+      const nearbyEl = document.getElementById('homeNearby');
+      nearbyEl.className = '';
+      nearbyEl.innerHTML = `<div class="empty-state"><span>${t("Couldn't load places right now.", '周辺情報を取得できませんでした。')}</span><button class="btn btn-ghost btn-sm" onclick="loadHomeNearby()">${t('Try again', '再試行')}</button></div>`;
     }
     renderHomeTripPreview();
   }
@@ -910,7 +980,9 @@
       if (activeBudget) results = results.filter((p) => p.priceLevel == null || p.priceLevel <= 1);
       renderStoreCards(container, results, 'list', { showActions: true });
     } catch (err) {
-      container.innerHTML = `<div class="empty-state">${t('Search failed.', '検索に失敗しました。')}<br><span style="font-size:0.75rem;">${err.message || ''}</span></div>`;
+      console.error('runSearch failed:', err);
+      container.className = '';
+      container.innerHTML = `<div class="empty-state"><span>${t("Couldn't load places right now.", '検索に失敗しました。')}</span><button class="btn btn-ghost btn-sm" onclick="runSearch()">${t('Try again', '再試行')}</button></div>`;
     }
   }
   document.getElementById('searchChips').addEventListener('click', (e) => {
@@ -994,7 +1066,8 @@
         heartBtn.querySelector('use').setAttribute('href', '#' + (isSaved(p) ? 'i-heart-filled' : 'i-heart'));
       };
     } catch (err) {
-      body.innerHTML = `<div class="empty-state">${t('Could not load this place.', '情報を取得できませんでした。')}</div>`;
+      console.error('openDetail failed:', err);
+      body.innerHTML = `<div class="empty-state"><span>${t("Couldn't load this place.", '情報を取得できませんでした。')}</span><button class="btn btn-ghost btn-sm" onclick="openDetail('${placeId}')">${t('Try again', '再試行')}</button></div>`;
     }
   }
   function closeDetail() { showTab(previousTab); }
@@ -1013,7 +1086,7 @@
     const el = document.getElementById('savedList');
     const list = getSaved();
     if (list.length === 0) {
-      el.innerHTML = `<div class="empty-state"><span>${t('Nothing saved yet', 'まだ何も保存されていません')}</span><button class="btn btn-ink" onclick="showTab('search')">${t('Explore Tokyo', '東京を探す')}</button></div>`;
+      el.innerHTML = `<div class="empty-state"><span style="font-weight:800;color:var(--ink);">${t('Nothing here yet.', 'まだ何もありません。')}</span><span>${t('Save places you want to remember.', '覚えておきたい場所を保存しましょう。')}</span><button class="btn btn-ink" onclick="showTab('search')">${t('Explore', '探す')}</button></div>`;
       return;
     }
     el.innerHTML = '';
@@ -1058,7 +1131,7 @@
     const el = document.getElementById('tripList');
     const list = getBookings();
     if (list.length === 0) {
-      el.innerHTML = `<div class="empty-state"><span>${t('No plans yet.', 'まだ予定がありません。')}</span><span style="font-weight:800;color:var(--ink);">${t('Let Tabi plan your day.', 'Tabiに今日の計画を立ててもらいましょう。')}</span><button class="btn btn-accent" onclick="showTab('assistant')">${t('Plan my day', '今日の計画を立てる')}</button></div>`;
+      el.innerHTML = `<div class="empty-state"><span style="font-weight:800;color:var(--ink);">${t('Your day is wide open.', 'まだ何も予定がありません。')}</span><span>${t('Ask Tabi to plan something.', 'Tabiに計画を立ててもらいましょう。')}</span><button class="btn btn-accent" onclick="showTab('assistant')">${t('Plan my day', '今日の計画を立てる')}</button></div>`;
       return;
     }
     el.innerHTML = `<div class="trip-date-label">${t('Today', '今日')}</div><div class="timeline" id="timelineWrap"></div>`;
@@ -1266,7 +1339,16 @@
     row.appendChild(wrap);
     scrollChatToBottom();
   }
-  function renderAiError(row, message) { row.innerHTML = `<div class="error-bubble">⚠️ ${message}</div>`; scrollChatToBottom(); }
+  function renderAiError(row, retryQuery) {
+    row.innerHTML = `<div class="error-bubble">${t("Something went wrong.", '何か問題が発生しました。')}</div>`;
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'btn btn-ghost btn-sm';
+    retryBtn.style.marginTop = '8px';
+    retryBtn.textContent = t('Try again', '再試行');
+    retryBtn.onclick = () => askAI(retryQuery);
+    row.appendChild(retryBtn);
+    scrollChatToBottom();
+  }
 
   let chatHistory = [];
   async function askAI(query) {
@@ -1286,7 +1368,8 @@
       chatHistory.push({ role: 'assistant', content: data._rawAssistantText || JSON.stringify(data) });
       chatHistory = chatHistory.slice(-12);
     } catch (err) {
-      renderAiError(statusRow, err.message);
+      console.error('askAI failed:', err);
+      renderAiError(statusRow, query);
     } finally {
       chatSend.disabled = false;
     }
