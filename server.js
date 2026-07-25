@@ -256,7 +256,11 @@ app.get("/api/places/nearby", async (req, res) => {
       return res.status(502).json({ error: data.error_message || data.status });
     }
     const origin = { lat: parseFloat(lat), lng: parseFloat(lng) };
-    const results = (data.results || []).map((p) => simplifyPlace(p, origin));
+    let results = (data.results || []).map((p) => simplifyPlace(p, origin));
+    // Google's Nearby Search `type` param is a ranking bias, not a strict filter, and can
+    // surface places (e.g. hotels with an in-house restaurant) that only loosely match.
+    // Enforce it as a hard filter so results actually match the requested category.
+    if (type) results = results.filter((p) => p.types.includes(type));
     res.json({ results });
   } catch (err) {
     console.error(err);

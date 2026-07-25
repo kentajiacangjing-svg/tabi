@@ -19,7 +19,7 @@
     --muted: #7A776F;
     --line: #E4E1DA;
     --surface: #FFFFFF;
-    --accent: #C23B22;
+    --accent: #4285F4;
     --accent-2: #5B7A63;
     --accent-2-bg: #EBF1EC;
     --accent-ink: #FFFFFF;
@@ -116,7 +116,7 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .ai-hero-input:focus-within {
-    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(194,59,34,0.14);
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(66,133,244,0.16);
   }
   .ai-hero-input input {
     border: none; background: none; outline: none; flex: 1; min-width: 0;
@@ -162,7 +162,6 @@
   .featured-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s ease; }
   .featured-card .photo-wrap img.loaded { opacity: 1; }
   .featured-card .store-name { font-size: 1.15rem; white-space: normal; }
-  .store-list .store-card .photo-wrap { height: 150px; }
 
   .fav-btn {
     position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%;
@@ -215,7 +214,11 @@
   .empty-state .btn { width: auto; padding: 0 22px; }
 
   /* ---- Chips ---- */
-  .chips-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 18px 12px; flex-shrink: 0; }
+  .chips-row {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 18px 12px; flex-shrink: 0;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 18px, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 18px, black calc(100% - 28px), transparent 100%);
+  }
   .chip {
     flex-shrink: 0; padding: 9px 15px; border-radius: 999px; background: var(--surface);
     border: 1px solid var(--line); font-size: 0.8rem; font-weight: 700; color: var(--ink); cursor: pointer;
@@ -725,7 +728,8 @@
     museum: { en: "Museum", ja: "美術館・博物館" }, park: { en: "Park", ja: "公園" },
   };
   function typeLabel(types) {
-    const hit = (types || []).find((ty) => TYPE_LABELS[ty]);
+    const set = new Set(types || []);
+    const hit = Object.keys(TYPE_LABELS).find((ty) => set.has(ty));
     const l = TYPE_LABELS[hit];
     return l ? t(l.en, l.ja) : t("Place", "スポット");
   }
@@ -743,14 +747,34 @@
   function hashStr(s) { let h = 0; for (let i = 0; i < (s || '').length; i++) h = (h << 5) - h + s.charCodeAt(i); return h; }
   function photoOrArt(place) {
     const url = photoUrl(place.photoRef);
-    if (url) return `<img src="${url}" alt="" loading="lazy" onload="this.classList.add('loaded')" />`;
+    if (url) {
+      const safeName = (place.name || '').replace(/"/g, '&quot;');
+      return `<img src="${url}" alt="" loading="lazy" data-fallback-name="${safeName}" onload="this.classList.add('loaded')" onerror="imgFallback(this)" />`;
+    }
     return `<div class="art ${artClass(place.name)}"><span class="art-icon"><svg class="icon"><use href="#i-cutlery"></use></svg></span></div>`;
   }
+  function imgFallback(img) {
+    const div = document.createElement('div');
+    div.className = `art ${artClass(img.dataset.fallbackName || '')}`;
+    div.innerHTML = '<span class="art-icon"><svg class="icon"><use href="#i-cutlery"></use></svg></span>';
+    img.replaceWith(div);
+  }
+  function priceLevelWord(level) {
+    if (level === 0 || level === 1) return t('budget-friendly', 'リーズナブル');
+    if (level === 2) return t('mid-range', '中価格帯');
+    if (level === 3 || level === 4) return t('upscale', '高級');
+    return '';
+  }
+  // Avoid repeating the rating/distance/open-status badges already shown above this
+  // line — surface a different, still-real signal (review volume, price tier).
   function tabiPickReason(place) {
     const bits = [];
-    if (place.distanceMeters != null) bits.push(t(`${distStr(place.distanceMeters)} away`, `現在地から${distStr(place.distanceMeters)}`));
-    if (place.rating) bits.push(t(`rated ${place.rating.toFixed(1)}★`, `評価${place.rating.toFixed(1)}`));
-    if (place.openNow === true) bits.push(t('open now', '営業中'));
+    if (place.userRatingsTotal && place.userRatingsTotal >= 100) {
+      bits.push(t(`${place.userRatingsTotal.toLocaleString()}+ reviews`, `口コミ${place.userRatingsTotal.toLocaleString()}件`));
+    }
+    const priceWord = priceLevelWord(place.priceLevel);
+    if (priceWord) bits.push(priceWord);
+    if (!bits.length) bits.push(t('Recommended nearby', 'おすすめのスポット'));
     return bits.join(t(', ', '、'));
   }
 
