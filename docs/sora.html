@@ -1,0 +1,277 @@
+<title>Sora Weather</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  /* Layout: fixed full-screen particle sky behind five full-height sections, one per weather. */
+  :root {
+    --bg: #0b0f1a;
+    --fg: #f4f6fb;
+    --muted: rgba(244,246,251,.68);
+    --accent: #ffb347;
+    --accent2: #ff5e3a;
+    --line: rgba(255,255,255,.16);
+    --display: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+    --mono: "DM Mono", ui-monospace, Menlo, monospace;
+    color-scheme: dark;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:#0b0f1a; scroll-behavior:smooth; }
+  body { background:#0b0f1a; color:var(--fg); font-family:var(--display); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  canvas#gl { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
+  .shade { position:fixed; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(90deg, rgba(8,11,20,.72) 0%, rgba(8,11,20,.25) 55%, transparent 100%); }
+  nav { position:fixed; top:0; left:0; right:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
+    padding:calc(18px + env(safe-area-inset-top,0px)) max(16px,4vw) 18px; }
+  .logo { font-weight:900; font-size:1.35rem; letter-spacing:.02em; display:flex; align-items:center; gap:.5rem; }
+  .logo i { width:14px; height:14px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); box-shadow:0 0 14px var(--accent); }
+  .navr { display:flex; align-items:center; gap:1.6rem; font-size:.85rem; color:var(--muted); }
+  .navr a { color:inherit; text-decoration:none; }
+  .btn { display:inline-flex; align-items:center; gap:.5rem; padding:.85rem 1.5rem; border-radius:999px; border:0; cursor:pointer;
+    font:700 .95rem var(--display); color:#10131c; text-decoration:none;
+    background:linear-gradient(120deg,var(--accent),var(--accent2)); transition:transform .25s, box-shadow .25s; }
+  .btn:hover { transform:translateY(-2px); box-shadow:0 10px 30px -8px var(--accent); }
+  .btn.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  .btn:focus-visible, a:focus-visible { outline:2px solid var(--fg); outline-offset:3px; }
+  main { position:relative; z-index:2; }
+  section { min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:12vh max(16px,6vw); }
+  .wrap { max-width:min(46rem,100%); }
+  .lead { max-width:34rem; }
+  .eyebrow { font:500 .75rem var(--mono); letter-spacing:.22em; text-transform:uppercase; color:var(--accent); margin-bottom:1.4rem; display:flex; gap:.8rem; align-items:center; }
+  .eyebrow::before { content:""; width:2.2rem; height:1px; background:var(--accent); }
+  h1,h2 { font-weight:900; line-height:1.12; letter-spacing:-.01em; text-wrap:balance; }
+  h1 { font-size:clamp(2.4rem,6vw,5.2rem); }
+  h2 { font-size:clamp(2rem,4.4vw,3.8rem); }
+  h1 em, h2 em { font-style:normal; background:linear-gradient(110deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lead { margin-top:1.6rem; font-size:clamp(1rem,1.5vw,1.2rem); line-height:1.9; color:var(--muted); }
+  .ctas { margin-top:2.2rem; display:flex; gap:.8rem; flex-wrap:wrap; }
+  .stats { margin-top:2.2rem; display:flex; gap:2.2rem; flex-wrap:wrap; }
+  .stat b { display:block; font:500 1.9rem var(--mono); font-variant-numeric:tabular-nums; }
+  .stat span { font-size:.78rem; color:var(--muted); letter-spacing:.06em; }
+  .note { margin-top:1.6rem; font:400 .7rem var(--mono); color:var(--muted); opacity:.7; }
+  section.right { align-items:flex-end; }
+  section.right .wrap { text-align:left; }
+  .cta-sec { align-items:center; text-align:center; }
+  .cta-sec .wrap { max-width:42rem; display:flex; flex-direction:column; align-items:center; }
+  .cta-sec .ctas { justify-content:center; }
+  footer { margin-top:10vh; font:400 .72rem var(--mono); color:var(--muted); display:flex; gap:1.5rem; flex-wrap:wrap; justify-content:center; }
+  .rv { opacity:0; transform:translateY(30px); transition:opacity .9s cubic-bezier(.2,.8,.2,1), transform .9s cubic-bezier(.2,.8,.2,1); }
+  section.in .rv { opacity:1; transform:none; }
+  section.in .rv:nth-child(2) { transition-delay:.1s; } section.in .rv:nth-child(3) { transition-delay:.2s; } section.in .rv:nth-child(4) { transition-delay:.3s; }
+  .tick { position:fixed; right:max(16px,2.4vw); top:50%; transform:translateY(-50%); z-index:10; display:flex; flex-direction:column; gap:18px; }
+  .tick a { font:500 .68rem var(--mono); letter-spacing:.12em; color:var(--muted); text-decoration:none; display:flex; align-items:center; justify-content:flex-end; gap:.6rem; opacity:.55; transition:opacity .3s; }
+  .tick a::after { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .tick a.on { opacity:1; color:var(--fg); }
+  .tick a.on::after { background:var(--accent); box-shadow:0 0 10px var(--accent); }
+  @media (max-width:700px) {
+    .navr a.t { display:none; } .tick span { display:none; }
+    section.right { align-items:flex-start; }
+    .shade { background:linear-gradient(180deg, rgba(8,11,20,.15) 0%, rgba(8,11,20,.75) 100%); }
+  }
+  @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .rv { transition:none; opacity:1; transform:none; } }
+</style>
+
+<canvas id="gl"></canvas>
+<div class="shade"></div>
+<nav>
+  <div class="logo"><i></i>Sora</div>
+  <div class="navr"><a class="t" href="#sun">晴れ</a><a class="t" href="#rain">雨</a><a class="t" href="#snow">雪</a><a class="t" href="#storm">嵐</a><a class="btn" href="#get" style="padding:.6rem 1.2rem;font-size:.85rem">ダウンロード</a></div>
+</nav>
+<div class="tick" id="tick">
+  <a href="#sun" class="on"><span>SUN</span></a><a href="#rain"><span>RAIN</span></a><a href="#snow"><span>SNOW</span></a><a href="#storm"><span>STORM</span></a><a href="#get"><span>GET</span></a>
+</div>
+
+<main>
+  <section id="sun" class="in">
+    <div class="wrap">
+      <div class="eyebrow rv">天気アプリ Sora</div>
+      <h1 class="rv">空の気分を、<br><em>見て</em>、感じる。</h1>
+      <p class="lead rv">数字とアイコンだけの天気予報をやめました。Soraは、いまの空を光の粒で描きます。晴れなら光があふれ、雨なら粒が降り、雪ならゆっくり漂います。家を出る前の3秒で、天気が体に入ります。</p>
+      <div class="ctas rv"><a class="btn" href="#get">無料でダウンロード</a><a class="btn ghost" href="#rain">天気ごとの見え方</a></div>
+    </div>
+  </section>
+
+  <section id="rain" class="right">
+    <div class="wrap">
+      <div class="eyebrow rv">雨 / RAIN</div>
+      <h2 class="rv">傘が要るのは、<br><em>何時から何時まで</em>。</h2>
+      <p class="lead rv">降り始めと降り止みを1分単位で通知します。雨雲の動きから、あなたの現在地だけを予測。降っていない時間帯は、粒が止まって見えます。</p>
+      <div class="stats rv"><div class="stat"><b>17:40</b><span>降り始め</span></div><div class="stat"><b>18:25</b><span>降り止み</span></div><div class="stat"><b>2.4mm</b><span>1時間の雨量</span></div></div>
+      <p class="note rv">※ 表示は例です</p>
+    </div>
+  </section>
+
+  <section id="snow">
+    <div class="wrap">
+      <div class="eyebrow rv">雪 / SNOW</div>
+      <h2 class="rv">積もるのか、<br>溶けるのか、<br><em>その先まで</em>。</h2>
+      <p class="lead rv">気温と路面温度から、積雪か凍結かを区別して知らせます。通勤時間帯の路面が凍る見込みなら、前の晩にお知らせします。</p>
+      <div class="stats rv"><div class="stat"><b>-2°</b><span>路面温度</span></div><div class="stat"><b>6cm</b><span>積雪予想</span></div><div class="stat"><b>21:00</b><span>凍結の注意</span></div></div>
+      <p class="note rv">※ 表示は例です</p>
+    </div>
+  </section>
+
+  <section id="storm" class="right">
+    <div class="wrap">
+      <div class="eyebrow rv">嵐 / STORM</div>
+      <h2 class="rv">荒れる空は、<br>先に<em>うねり</em>で知る。</h2>
+      <p class="lead rv">強風や雷の接近を、渦の速さと大きさで見せます。警報が出る前に、帰宅時間を早めるかどうかを決められます。</p>
+      <div class="stats rv"><div class="stat"><b>18m/s</b><span>最大瞬間風速</span></div><div class="stat"><b>30分後</b><span>雷雲の接近</span></div></div>
+      <p class="note rv">※ 表示は例です</p>
+    </div>
+  </section>
+
+  <section id="get" class="cta-sec">
+    <div class="wrap">
+      <div class="eyebrow rv">GET SORA</div>
+      <h2 class="rv">今日の空、<br><em>見に行こう</em>。</h2>
+      <p class="lead rv">iPhoneとAndroidに対応。基本機能はずっと無料です。</p>
+      <div class="ctas rv"><a class="btn" href="#get">App Storeからダウンロード</a><a class="btn ghost" href="#get">Google Playで手に入れる</a></div>
+      <footer><span>© 2026 Sora</span><span>プライバシー</span><span>利用規約</span><span>お問い合わせ</span></footer>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById("gl");
+  if (typeof THREE === "undefined") return;
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias:false }); } catch (e) { return; }
+  const mobile = matchMedia("(max-width:700px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const N = mobile ? 24000 : 56000;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+  camera.position.z = 8;
+
+  // targets: A sun (shell + rays), B rain box, C snow box, D storm vortex
+  const A = new Float32Array(N*3), B = new Float32Array(N*3), C = new Float32Array(N*3), D = new Float32Array(N*3);
+  const rnd = new Float32Array(N), seed = new Float32Array(N);
+  const gold = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < N; i++) {
+    const k = i*3; rnd[i] = Math.random(); seed[i] = Math.random();
+    const y = 1 - (i/(N-1))*2, r = Math.sqrt(1 - y*y), th = gold*i;
+    const dx = Math.cos(th)*r, dy = y, dz = Math.sin(th)*r;
+    const rad = (i % 5 === 0) ? 1.7 + Math.random()*Math.random()*3.2 : 1.7 + Math.random()*0.06;
+    A[k] = dx*rad; A[k+1] = dy*rad; A[k+2] = dz*rad;
+    B[k] = (Math.random()-.5)*16; B[k+1] = (Math.random()-.5)*10; B[k+2] = (Math.random()-.5)*8;
+    C[k] = (Math.random()-.5)*16; C[k+1] = (Math.random()-.5)*10; C[k+2] = (Math.random()-.5)*8;
+    const h = Math.random()*2 - 1, rr = 0.35 + (h+1)*1.25 + Math.random()*0.5, a = Math.random()*Math.PI*2;
+    D[k] = Math.cos(a)*rr; D[k+1] = h*3.6; D[k+2] = Math.sin(a)*rr;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(A,3));
+  geo.setAttribute("aB", new THREE.BufferAttribute(B,3));
+  geo.setAttribute("aC", new THREE.BufferAttribute(C,3));
+  geo.setAttribute("aD", new THREE.BufferAttribute(D,3));
+  geo.setAttribute("aRand", new THREE.BufferAttribute(rnd,1));
+  geo.setAttribute("aSeed", new THREE.BufferAttribute(seed,1));
+
+  const U = {
+    uT:{value:0}, uTime:{value:0}, uMouse:{value:new THREE.Vector3(999,999,0)},
+    uSize:{value:1}, uPx:{value:renderer.getPixelRatio()},
+    c1:{value:new THREE.Color()}, c2:{value:new THREE.Color()},
+  };
+  const mat = new THREE.ShaderMaterial({
+    uniforms:U, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+    vertexShader:`
+      attribute vec3 aB; attribute vec3 aC; attribute vec3 aD; attribute float aRand; attribute float aSeed;
+      uniform float uT, uTime, uSize, uPx; uniform vec3 uMouse; uniform vec3 c1, c2;
+      varying vec3 vCol; varying float vAlpha;
+      float seg(float k){ float t = clamp(uT - k, 0.0, 1.0); return smoothstep(0.0, 1.0, clamp((t - aRand*0.4)/0.6, 0.0, 1.0)); }
+      float burst(float k){ float t = clamp(uT - k, 0.0, 1.0); return sin(t*3.14159); }
+      void main(){
+        // sun: slow shimmer; rays pulse
+        vec3 pA = position * (1.0 + 0.035*sin(uTime*1.6 + aSeed*25.0));
+        // rain: fast fall, wrap
+        vec3 pB = aB; pB.y = mod(aB.y + 5.0 - uTime*(7.0 + aSeed*5.0), 10.0) - 5.0; pB.x += pB.y*0.12;
+        // snow: slow fall with sway
+        vec3 pC = aC; pC.y = mod(aC.y + 5.0 - uTime*(0.5 + aSeed*0.7), 10.0) - 5.0;
+        pC.x += sin(uTime*0.6 + aSeed*30.0)*0.5; pC.z += cos(uTime*0.5 + aSeed*20.0)*0.4;
+        // storm: spinning vortex, inner faster
+        vec3 pD = aD; float rr = length(pD.xz); float ang = uTime*(2.4/(0.5 + rr)) + aSeed*0.3;
+        float cs = cos(ang), sn = sin(ang); pD.xz = mat2(cs,-sn,sn,cs)*pD.xz;
+        pD.x += sin(uTime*0.7 + pD.y)*0.25;
+        vec3 p = mix(pA, pB, seg(0.0)); p = mix(p, pC, seg(1.0)); p = mix(p, pD, seg(2.0));
+        float b = max(burst(0.0), max(burst(1.0), burst(2.0)));
+        vec3 dir = normalize(vec3(sin(aSeed*40.0), cos(aSeed*31.0), sin(aSeed*17.0)) + 0.001);
+        p += dir * b * (1.0 + aSeed*2.0);
+        vec4 w = modelMatrix * vec4(p,1.0);
+        vec2 d = w.xy - uMouse.xy; float dist = length(d); float push = smoothstep(2.0, 0.0, dist);
+        w.xy += normalize(d + 0.0001) * push * 0.9; w.z += push * 0.6;
+        vec4 mv = viewMatrix * w; gl_Position = projectionMatrix * mv;
+        float rainW = seg(0.0) * (1.0 - seg(1.0));
+        float depth = clamp(1.0 - (-mv.z - 3.0)/12.0, 0.2, 1.0);
+        gl_PointSize = (1.5 + aSeed*1.7 + push*2.5) * (1.0 + seg(0.0)*(1.0-seg(2.0))*1.1) * uSize * uPx * (6.5 / -mv.z);
+        float m = fract(aSeed*2.0 + w.y*0.05);
+        vCol = mix(c1, c2, m) + vec3(push*0.5);
+        vAlpha = depth * (0.5 + 0.5*aSeed) * (1.0 + (1.0 - seg(0.0))*0.9);
+      }`,
+    fragmentShader:`
+      varying vec3 vCol; varying float vAlpha;
+      void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); a *= a; gl_FragColor = vec4(vCol, a*vAlpha); }`,
+  });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; scene.add(pts);
+
+  const pal = [ ["#ffd27a","#ff5e3a","#1a1022"], ["#7fd1ff","#4f8bff","#08111f"], ["#ffffff","#9ec5ff","#0d1626"], ["#c9a0ff","#ff6bd6","#120a22"] ].map(r => r.map(h => new THREE.Color(h)));
+  const tmp = new THREE.Color(), bgc = new THREE.Color();
+  const root = document.documentElement;
+  function applyPalette(t) {
+    const i = Math.min(2, Math.floor(t)), f = t - i, s = f*f*(3-2*f);
+    U.c1.value.copy(pal[i][0]).lerp(pal[i+1][0], s);
+    U.c2.value.copy(pal[i][1]).lerp(pal[i+1][1], s);
+    bgc.copy(pal[i][2]).lerp(pal[i+1][2], s);
+    renderer.setClearColor(bgc);
+    root.style.setProperty("--accent", "#" + U.c1.value.getHexString());
+    root.style.setProperty("--accent2", "#" + U.c2.value.getHexString());
+    document.body.style.background = "#" + bgc.getHexString();
+  }
+
+  function resize() {
+    const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false);
+    camera.aspect = w/h; camera.position.z = w/h < 0.8 ? 12 : 8.5; camera.updateProjectionMatrix();
+    U.uSize.value = Math.max(0.7, Math.min(1.4, h/800));
+  }
+  addEventListener("resize", resize); resize();
+
+  const mt = new THREE.Vector2(), ms = new THREE.Vector2(); let hasP = false;
+  addEventListener("pointermove", e => { hasP = true; mt.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1); });
+  addEventListener("pointerleave", () => { hasP = false; U.uMouse.value.set(999,999,0); });
+  function toWorld(nx, ny) {
+    const v = new THREE.Vector3(nx, ny, 0.5).unproject(camera); const d = v.sub(camera.position).normalize();
+    return camera.position.clone().add(d.multiplyScalar(-camera.position.z/d.z));
+  }
+
+  const secs = [...document.querySelectorAll("section")], ticks = [...document.querySelectorAll("#tick a")];
+  let target = 0;
+  function onScroll() {
+    target = Math.max(0, Math.min(3, scrollY / innerHeight));
+    const idx = Math.min(4, Math.round(scrollY / innerHeight)); ticks.forEach((t,i) => t.classList.toggle("on", i === idx));
+  }
+  addEventListener("scroll", onScroll, {passive:true}); onScroll();
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add("in"); }), {threshold:0.35});
+  secs.forEach(s => io.observe(s));
+
+  const clock = new THREE.Clock(); let rx = 0, ry = 0;
+  function frame() {
+    const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+    U.uTime.value = reduce ? 0 : t;
+    U.uT.value += (target - U.uT.value) * (1 - Math.exp(-dt*3.5));
+    applyPalette(U.uT.value);
+    ms.lerp(mt, 1 - Math.exp(-dt*10));
+    if (hasP) { const w = toWorld(ms.x, ms.y); U.uMouse.value.set(w.x, w.y, 0); }
+    const calm = U.uT.value > 0.15;
+    ry += ((ms.x*0.25 + (calm ? 0 : t*0.15)) - ry) * (1 - Math.exp(-dt*3));
+    rx += ((-ms.y*0.2) - rx) * (1 - Math.exp(-dt*3));
+    pts.rotation.set(rx, ry, 0);
+    // sun sits right of the text on desktop
+    pts.position.x += (((U.uT.value < 0.5 && innerWidth > 800) ? 2.6 : 0) - pts.position.x) * (1 - Math.exp(-dt*3));
+    renderer.render(scene, camera); requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>

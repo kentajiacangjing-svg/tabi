@@ -1,0 +1,440 @@
+<title>FRAGMENT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Hanken+Grotesk:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one fixed WebGL canvas; ~2,400 instanced marble shards are placed on the GPU from a single progress value; 1200vh of scroll is the timeline. */
+  :root{--black:#080808;--white:#F1EFEA;--stone:#A7A39E;--gold:#C6A878;--line:rgba(241,239,234,.22);
+    --serif:"Cormorant Garamond","Hiragino Mincho ProN","Yu Mincho",Georgia,serif;--sans:"Hanken Grotesk","Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;color-scheme:dark}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--black)}
+  body{background:var(--black);color:var(--white);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.lock{overflow:hidden}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:pan-y;cursor:default}
+  #gl.grab{cursor:grabbing}
+  #spacer{height:1200vh}
+  .vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(8,8,8,.7) 100%)}
+  #flash{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;background:#fff}
+  header{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;justify-content:space-between;align-items:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,3.2vw) 16px;color:var(--white)}
+  .logo{font:500 .85rem var(--sans);letter-spacing:.5em;background:none;border:0;color:inherit;cursor:pointer}
+  .cn{position:absolute;left:50%;transform:translateX(-50%);font:300 .62rem var(--sans);letter-spacing:.34em;opacity:.8}
+  .tools{display:flex;gap:1.4rem;align-items:center}
+  .tl{font:400 .6rem var(--sans);letter-spacing:.28em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid transparent;color:inherit;cursor:pointer;padding:.4rem 0}
+  .tl:hover,.tl[aria-pressed="true"]{border-bottom-color:currentColor}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .ch{position:fixed;z-index:10;pointer-events:none;visibility:hidden;left:max(16px,4.5vw);right:max(16px,4.5vw);text-shadow:0 0 30px rgba(0,0,0,.5)}
+  .ch.r{text-align:right}.ch.c{text-align:center}
+  .ch .lab{font:400 .6rem var(--sans);letter-spacing:.42em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:1.1rem}
+  .ch .big{font:300 clamp(2.2rem,7.2vw,7.4rem)/.98 var(--serif);letter-spacing:.02em;text-transform:uppercase;display:block}
+  .ch .big i{font-style:italic}
+  .ch .sm{font:300 clamp(.7rem,1vw,.9rem)/1.9 var(--sans);letter-spacing:.32em;text-transform:uppercase;opacity:.75;display:block;margin-top:1.3rem}
+  .ch .l{display:inline-block;will-change:transform,opacity,filter}.ch .w{display:inline-block;white-space:nowrap}
+  .c1{bottom:11vh}.c2{top:20vh}.c3{bottom:13vh}.c4{top:18vh}.c5{bottom:14vh}.c6{top:18vh}.c7{bottom:13vh}.c8{top:18vh}.c9{bottom:13vh}.c10{top:18vh}.c11{bottom:13vh}.c12{bottom:9vh}
+  .navs{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-top:1.8rem;pointer-events:auto}
+  .btn{font:500 .62rem var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--white);background:transparent;border:1px solid var(--white);padding:.95rem 1.4rem;cursor:pointer;pointer-events:auto;transition:background .25s,color .25s}
+  .btn:hover{background:var(--white);color:var(--black)}
+  .hint{position:fixed;right:max(24px,4vw);bottom:calc(34px + env(safe-area-inset-bottom,0px));z-index:20;font:400 .58rem var(--sans);letter-spacing:.4em;text-transform:uppercase;opacity:.7;pointer-events:none;transition:opacity .5s}
+  .hint::after{content:"";display:block;width:1px;height:30px;margin:10px auto 0;background:var(--white);animation:dr 1.8s ease-in infinite}
+  @keyframes dr{0%{transform:scaleY(0);transform-origin:top}60%{transform:scaleY(1);transform-origin:top}61%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+  .tip{position:fixed;left:50%;bottom:calc(46px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;font:400 .6rem var(--sans);letter-spacing:.34em;text-transform:uppercase;opacity:0;pointer-events:none;transition:opacity .4s;white-space:nowrap}
+  nav.idx{position:fixed;right:max(10px,1.6vw);top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:2px}
+  nav.idx button{background:none;border:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:.6rem;color:var(--white);opacity:.45;font:400 .56rem var(--sans);letter-spacing:.2em;padding:5px 2px}
+  nav.idx button i{display:block;width:12px;height:1px;background:currentColor;transition:width .3s}
+  nav.idx button span{pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+  nav.idx button:hover span,nav.idx button.on span{opacity:1}nav.idx button.on{opacity:1}nav.idx button.on i{width:28px;background:var(--gold)}
+  .rail{position:fixed;left:max(16px,3.2vw);right:max(16px,3.2vw);bottom:calc(12px + env(safe-area-inset-bottom,0px));height:1px;background:var(--line);z-index:20;pointer-events:none}
+  .rail i{position:absolute;left:0;top:0;height:1px;width:0;background:var(--gold)}
+  .notice{position:fixed;left:max(16px,3.2vw);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;font:400 .54rem var(--sans);letter-spacing:.28em;text-transform:uppercase;opacity:.5;pointer-events:none}
+  .ov{position:fixed;inset:0;z-index:200;background:rgba(8,8,8,.97);display:none;overflow:auto;padding:calc(84px + env(safe-area-inset-top,0px)) max(16px,4vw) 48px}
+  .ov.open{display:block}.ov .x{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:max(16px,3.2vw)}
+  .mg{max-width:64rem;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:3rem}
+  .mg h4{font:500 .6rem var(--sans);letter-spacing:.38em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+  .mg h2{font:300 clamp(2rem,5vw,4rem)/1 var(--serif);text-transform:uppercase;margin-bottom:1.4rem}
+  .mg p{font:300 1rem/1.9 var(--sans);color:rgba(241,239,234,.78);margin-bottom:1rem;max-width:34rem}
+  .cl{list-style:none}.cl button{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--white);font:300 clamp(1.1rem,2vw,1.6rem) var(--serif);letter-spacing:.04em;text-transform:uppercase;padding:.6rem 0;display:flex;gap:1.2rem;cursor:pointer}
+  .cl button:hover{padding-left:.5rem;color:var(--gold)}.cl small{font:500 .58rem var(--sans);letter-spacing:.2em;opacity:.6;align-self:center;min-width:1.8rem}
+  .wk{list-style:none}.wk li{display:grid;grid-template-columns:3rem 1fr auto;gap:1rem;border-bottom:1px solid var(--line);padding:1rem 0;align-items:baseline}
+  .wk b{font:300 1.5rem var(--serif);letter-spacing:.04em;text-transform:uppercase}.wk span{font:300 .85rem var(--sans);opacity:.7}.wk small{font:500 .6rem var(--sans);letter-spacing:.2em;opacity:.6}
+  .mail{font:300 1.2rem var(--sans);border:1px solid var(--white);padding:1rem;display:flex;justify-content:space-between;gap:1rem;align-items:center;max-width:30rem;user-select:all}
+  #veil{position:fixed;inset:0;z-index:90;background:var(--black);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;transition:opacity 1s,visibility 1s;font:400 .62rem var(--sans);letter-spacing:.5em;text-transform:uppercase;color:#888}
+  #veil.off{opacity:0;visibility:hidden;pointer-events:none}#veil b{font:300 1.8rem var(--serif);letter-spacing:.4em;color:var(--white)}
+  #nogl{position:fixed;inset:0;z-index:99;background:#080808;display:none;align-items:center;justify-content:center;flex-direction:column;gap:2rem;text-align:center;padding:2rem}
+  #nogl i{display:block;width:90px;height:120px;background:linear-gradient(135deg,#F1EFEA,#A7A39E);clip-path:polygon(10% 0,100% 20%,80% 100%,0 70%)}
+  #nogl p{font:300 .95rem/1.9 var(--sans);color:#ccc}
+  @media (max-width:820px){.mg{grid-template-columns:1fr;gap:2rem}nav.idx button span{display:none}.wk li{grid-template-columns:2rem 1fr}.wk small{display:none}.tools .tl.x,.tools [data-open=work],.tools [data-open=contact]{display:none}.tools{gap:1rem}.cn{display:none}.tools .tl{white-space:nowrap;font-size:.54rem;letter-spacing:.18em}}
+  @media (prefers-reduced-motion:reduce){#veil{transition:none}.hint::after{animation:none}}
+</style>
+
+<canvas id="gl" role="img" aria-label="大理石の顔が砕け、破片が別の彫刻や建築へ再構築される3D映像。スクロールで進みます。"></canvas>
+<div class="vig"></div><div id="flash"></div>
+<div id="veil"><b>FRAGMENT</b><span id="veilTxt">Carving</span></div>
+<div id="nogl"><i></i><p><b>FRAGMENT</b><br>WebGL に対応したブラウザで開くと、大理石の彫刻が砕けて、別の形に組み上がります。<br>Please open this page in a WebGL-capable browser.</p></div>
+
+<header>
+  <button class="logo" id="logo" aria-label="先頭へ">FRAGMENT</button><div class="cn" id="cn">01 / 12</div>
+  <div class="tools"><button class="tl" data-open="work">Work</button><button class="tl" data-open="about">About</button><button class="tl" data-open="contact">Contact</button><button class="tl x" data-open="index">Index</button><button class="tl" id="snd" aria-pressed="false">Sound off</button></div>
+</header>
+<nav class="idx" id="idx" aria-label="章"></nav>
+<div class="hint" id="hint">Scroll</div>
+<div class="tip" id="tip"></div>
+
+<section class="ch c1" data-a="-1" data-b="0.066"><span class="lab">01 / Silence</span><span class="big" data-t="Destruction is creation."></span></section>
+<section class="ch c2 r" data-a="0.078" data-b="0.142"><span class="lab">02 / First crack</span><span class="big" data-t="First crack."></span><span class="sm">Move the cursor over the stone.</span></section>
+<section class="ch c3" data-a="0.158" data-b="0.222"><span class="lab">03 / Shatter</span><span class="big" data-t="Shatter."></span></section>
+<section class="ch c4 r" data-a="0.238" data-b="0.302"><span class="lab">04 / Suspension</span><span class="big" data-t="Suspension."></span><span class="sm">Push the fragments aside with the cursor.</span></section>
+<section class="ch c5" data-a="0.318" data-b="0.382"><span class="lab">05 / Inner matter</span><span class="big" data-t="Inner matter."></span></section>
+<section class="ch c6 r" data-a="0.398" data-b="0.462"><span class="lab">06 / Reassembly</span><span class="big" data-t="Reassembly."></span></section>
+<section class="ch c7" data-a="0.478" data-b="0.542"><span class="lab">07 / The arch</span><span class="big" data-t="The arch."></span></section>
+<section class="ch c8 r" data-a="0.558" data-b="0.622"><span class="lab">08 / Gravity</span><span class="big" data-t="Gravity."></span></section>
+<section class="ch c9" data-a="0.638" data-b="0.702"><span class="lab">09 / The human form</span><span class="big" data-t="The human form."></span></section>
+<section class="ch c10 r" data-a="0.718" data-b="0.792"><span class="lab">10 / Touch to break</span><span class="big" data-t="Touch to break."></span><span class="sm">Drag the figure. Let go.</span></section>
+<section class="ch c11 c" data-a="0.812" data-b="0.9"><span class="lab">11 / The impossible rebuild</span><span class="big" data-t="The impossible rebuild."></span></section>
+<section class="ch c12 c" data-a="0.945" data-b="2"><span class="lab">12 / Creation</span><span class="big" data-t="Destruction is creation."></span><div class="navs"><button class="btn" id="again">Restart experience</button><button class="btn" data-open="work">Work</button><button class="btn" data-open="about">About</button><button class="btn" data-open="contact">Contact</button></div></section>
+
+<div class="rail"><i id="railFill"></i></div>
+<div class="notice">Fictional studio · Fragment</div>
+
+<div id="ov-index" class="ov" role="dialog" aria-modal="true" aria-label="Index"><button class="btn x">Close</button><div class="mg"><div><h4>Index</h4></div><div><ul class="cl" id="chl"></ul></div></div></div>
+<div id="ov-about" class="ov" role="dialog" aria-modal="true" aria-label="About"><button class="btn x">Close</button><div class="mg"><div><h4>About</h4><h2>Destruction<br>is creation.</h2></div><div><p><b>FRAGMENT は架空のアート＆デザイン・スタジオです。</b>このサイトは、大理石の彫刻が砕けて、別の形に組み上がるまでを、ひとつの映像作品として作った実験です。</p><p>彫刻はすべてコードで生成した形状で、約2,400個の破片をGPUで動かしています。実在する彫刻の高品質なスキャンではありません。顔や人体の造形は、コードで作れる範囲の簡略化です。</p><p>音はSound onを押したときだけ鳴ります。</p></div></div></div>
+<div id="ov-work" class="ov" role="dialog" aria-modal="true" aria-label="Work"><button class="btn x">Close</button><div class="mg"><div><h4>Work</h4><h2>Selected<br>fragments.</h2></div><div><ul class="wk">
+<li><small>01</small><div><b>Broken Hours</b><br><span>A marble clock that loses a piece every hour.</span></div><small>2025</small></li>
+<li><small>02</small><div><b>The Long Arch</b><br><span>A colonnade rebuilt from the rubble of its own demolition.</span></div><small>2025</small></li>
+<li><small>03</small><div><b>Touch Study</b><br><span>A figure that comes apart where it is touched and heals when let go.</span></div><small>2024</small></li>
+<li><small>04</small><div><b>Dust Archive</b><br><span>Four tonnes of stone powder, sorted by the day it fell.</span></div><small>2024</small></li>
+<li><small>05</small><div><b>One White Stone</b><br><span>Everything from the studio's first ten years, compressed into a single pebble.</span></div><small>2023</small></li>
+</ul><p style="margin-top:1.4rem;font-size:.8rem;opacity:.6">Fictional projects.</p></div></div></div>
+<div id="ov-contact" class="ov" role="dialog" aria-modal="true" aria-label="Contact"><button class="btn x">Close</button><div class="mg"><div><h4>Contact</h4><h2>Say<br>something.</h2></div><div><p>これは架空のスタジオで、このデモには送信先がありません。フォームは置いていません（送信されたように見せないため）。</p><div class="mail"><span id="mailTxt">hello@fragment.example</span><button class="btn" id="copyMail">Copy</button></div><p id="copyMsg" style="margin-top:.8rem;font-size:.85rem;min-height:1.4em"></p></div></div></div>
+<div id="spacer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobile = matchMedia("(max-width:820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x)), mix = (a, b, t) => a + (b - a) * t;
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const canvas = $("#gl"); let renderer;
+function noGL() { $("#nogl").style.display = "flex"; $("#veil").classList.add("off"); }
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" }); } catch (e) { noGL(); return; }
+if (!renderer.capabilities.isWebGL2) { noGL(); return; }
+renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1; renderer.setClearColor(0x080808);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x080808); scene.fog = new THREE.FogExp2(0x080808, .028);
+const camera = new THREE.PerspectiveCamera(36, 1, .05, 160);
+const FLOOR = -2.45;
+const N = mobile ? 1100 : 2400;
+const TS = [[.15, .23], [.39, .47], [.47, .55], [.63, .71], [.80, .89], [.91, .98]];
+
+// ================================================================ math helpers for SDFs (JS)
+const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * .25; }, smax = (a, b, k) => -smin(-a, -b, k);
+const sdEll = (x, y, z, cx, cy, cz, rx, ry, rz) => { const px = (x - cx) / rx, py = (y - cy) / ry, pz = (z - cz) / rz; const k0 = Math.hypot(px, py, pz), k1 = Math.hypot(px / rx, py / ry, pz / rz); return k0 * (k0 - 1) / Math.max(k1, 1e-6); };
+const sdCap = (x, y, z, ax, ay, az, bx, by, bz, r) => { const pax = x - ax, pay = y - ay, paz = z - az, bax = bx - ax, bay = by - ay, baz = bz - az; const h = clamp((pax * bax + pay * bay + paz * baz) / (bax * bax + bay * bay + baz * baz), 0, 1); return Math.hypot(pax - bax * h, pay - bay * h, paz - baz * h) - r; };
+const sdBox = (x, y, z, hx, hy, hz) => { const qx = Math.abs(x) - hx, qy = Math.abs(y) - hy, qz = Math.abs(z) - hz; return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, Math.max(qy, qz)), 0); };
+const sdTorusX = (x, y, z, R, r) => Math.hypot(Math.hypot(y, z) - R, x) - r;
+function sdFace(x, y, z) {
+  let d = sdEll(x, y, z, 0, .15, -.1, .78, .98, .9);
+  d = smin(d, sdEll(x, y, z, 0, -.55, .15, .6, .55, .62), .3); d = smin(d, Math.hypot(x, y + .98, z - .5) - .22, .2);
+  d = smin(d, sdCap(x, y, z, 0, .3, .7, 0, -.02, .82, .075), .1); d = smin(d, sdCap(x, y, z, 0, -.02, .82, 0, -.28, 1., .1), .08);
+  const ax = Math.abs(x); d = smin(d, Math.hypot(ax - .13, y + .3, z - .98) - .06, .05); d = smin(d, sdCap(x, y, z, -.45, .34, .74, .45, .34, .74, .09), .12);
+  d = smax(d, -(Math.hypot(ax - .3, y - .18, z - .88) - .15), .05); d = smin(d, Math.hypot(ax - .3, y - .18, z - .77) - .115, .03);
+  d = smin(d, Math.hypot(ax - .44, y + .18, z - .6) - .2, .22); d = smin(d, sdEll(x, y, z, 0, -.5, .88, .2, .07, .09), .06); d = smax(d, -sdEll(x, y, z, 0, -.54, .93, .17, .012, .07), .02);
+  d = smin(d, sdCap(x, y, z, 0, -1., -.05, 0, -1.9, -.1, .4), .3); d = smin(d, sdEll(x, y, z, 0, -2.05, -.1, 1.25, .38, .62), .3); d = smin(d, sdEll(x, y, z, Math.sign(x) * .78, .05, -.05, .07, .2, .14), .08);
+  const H = [[0, 1.05, -.1, .52], [-.5, .85, .1, .3], [.5, .85, .1, .3], [-.7, .55, -.2, .3], [.7, .55, -.2, .3], [-.35, 1.0, .4, .26], [.35, 1.0, .4, .26], [0, .9, .45, .24], [-.4, .5, -.65, .38], [.4, .5, -.65, .38], [0, 0, -.8, .45], [0, .6, -.75, .4]];
+  for (const h of H) d = smin(d, Math.hypot(x - h[0], y - h[1], z - h[2]) - h[3], .12);
+  return d;
+}
+const wp = (x, y, z, a, f) => [x + a * Math.sin(y * 2.3 * f + 1.2), y + a * Math.sin(z * 2.1 * f + .4), z + a * Math.sin(x * 2.5 * f + 2.)];
+function sdSculpt(x, y, z) { const s = 2.2; const q = wp(x / s, y / s, z / s, .22, 1); const a = sdTorusX(q[1], q[0], q[2], 1.05, .36), b = sdTorusX(q[2], q[1], q[0], .7, .18); return smin(a, b, .25) * s; }
+function sdArch1(x, y, z) { const cy = 3.2, R = 2.9; const pil = smin(sdBox(Math.abs(x) - R, y - (FLOOR + cy + .1) / 2 - .0, z, .75, (cy - FLOOR) / 2 + .1, .95), 1e5, .1); const px = Math.abs(x) - R; const pillar = sdBox(px, y - (FLOOR + cy) / 2, z, .75, (cy - FLOOR) / 2, .95);
+  const ring = Math.abs(Math.hypot(x, y - cy) - R) - .75; const arc = Math.max(Math.max(ring, -(y - cy)) * -1 * -1, Math.abs(z) - .95); const arcTop = Math.max(Math.max(ring, cy - y - 0) , Math.abs(z) - .95); const keystone = sdBox(x, y - (cy + R), z, .5, .7, 1.1);
+  const base = sdBox(Math.abs(x) - R, y - FLOOR - .25, z, 1.1, .3, 1.3); return Math.min(Math.min(pillar, arcTop), Math.min(keystone, base)); }
+function sdArch(x, y, z) { const per = 10; const zi = Math.round(z / per); const zc = clamp(zi, -2, 0); return sdArch1(x, y, z - zc * per); }
+function sdHuman(x, y, z) {
+  const Y = y - FLOOR; const rr = Math.hypot(x, z); const th = Math.atan2(z, x); const rp = mix(1.75, .62, clamp(Y / 5.4, 0, 1)); const fold = 1 + .09 * Math.sin(9 * th + Y * 1.8) * (1 - clamp(Y / 6, 0, 1)) + .05 * Math.sin(5 * th - Y * 2.6);
+  let d = Math.max(Math.max(rr - rp * fold, Y - 5.3), -Y + .15); const base = sdBox(x, Y - .08, z, 1.9, .12, 1.9); d = Math.min(d, base);
+  d = smin(d, sdEll(x, Y, z, 0, 5.35, 0, 1.0, .42, .52), .3); d = smin(d, sdCap(x, Y, z, 0, 5.6, 0, 0, 6.05, .05, .24), .15);
+  d = smin(d, sdEll(x, Y, z, 0, 6.5, .05, .42, .55, .46), .1); d = smin(d, sdEll(x, Y, z, 0, 6.3, .42, .09, .22, .1), .06);
+  d = smin(d, sdCap(x, Y, z, .95, 5.3, 0, 1.15, 3.6, .55, .22), .2); d = smin(d, sdCap(x, Y, z, 1.15, 3.6, .55, 1.0, 3.0, .85, .17), .1); d = smin(d, Math.hypot(x - 1.0, Y - 2.85, z - .9) - .2, .05);
+  d = smin(d, sdCap(x, Y, z, -.95, 5.3, 0, -1.4, 4.8, .9, .21), .2); d = smin(d, sdCap(x, Y, z, -1.4, 4.8, .9, -.9, 5.7, 1.5, .17), .1); d = smin(d, Math.hypot(x + .85, Y - 5.85, z - 1.55) - .19, .05);
+  d = smin(d, sdCap(x, Y, z, -.55, 5.15, .4, .6, 3.2, .75, .14), .3);
+  return d;
+}
+function sdStone(x, y, z) { return Math.hypot(x * 1., y * 1.15, z * .95) - .62 + .06 * Math.sin(x * 9) * Math.sin(y * 8) * Math.sin(z * 7); }
+// deterministic RNG
+function rngf(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const grad = (f, x, y, z) => { const e = .004; const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e); const l = Math.hypot(gx, gy, gz) || 1; return [gx / l, gy / l, gz / l]; };
+// dart-throwing sampler on an SDF surface: returns {pts:[x,y,z,nx,ny,nz]*N, size}
+function sampleSDF(f, bb, count, seed) {
+  const R = rngf(seed); const V = (bb[3] - bb[0]) * (bb[4] - bb[1]) * (bb[5] - bb[2]); let hits = 0; const M = 14000, h = .06;
+  for (let i = 0; i < M; i++) { if (Math.abs(f(bb[0] + R() * (bb[3] - bb[0]), bb[1] + R() * (bb[4] - bb[1]), bb[2] + R() * (bb[5] - bb[2]))) < h) hits++; }
+  const area = Math.max(.05, V * hits / M / (2 * h)); let r = .86 * Math.sqrt(area / count); const out = []; let tries = 0;
+  while (out.length < count && tries < 60) { const cell = r; const grid = new Map(); out.length = 0; let c = 0;
+    while (out.length < count && c < count * 60) { c++; let x = bb[0] + R() * (bb[3] - bb[0]), y = bb[1] + R() * (bb[4] - bb[1]), z = bb[2] + R() * (bb[5] - bb[2]);
+      for (let k = 0; k < 7; k++) { const d = f(x, y, z), g = grad(f, x, y, z); x -= g[0] * d; y -= g[1] * d; z -= g[2] * d; } if (Math.abs(f(x, y, z)) > .01) continue;
+      const kx = Math.floor(x / cell), ky = Math.floor(y / cell), kz = Math.floor(z / cell); let ok = true;
+      for (let a = -1; a <= 1 && ok; a++) for (let b = -1; b <= 1 && ok; b++) for (let e = -1; e <= 1 && ok; e++) { const l = grid.get((kx + a) + "," + (ky + b) + "," + (kz + e)); if (l) for (const q of l) if ((q[0] - x) ** 2 + (q[1] - y) ** 2 + (q[2] - z) ** 2 < r * r) { ok = false; break; } }
+      if (!ok) continue; const g = grad(f, x, y, z); const p = [x, y, z, g[0], g[1], g[2]]; out.push(p); const key = kx + "," + ky + "," + kz; if (!grid.has(key)) grid.set(key, []); grid.get(key).push(p); }
+    if (out.length < count) r *= .93; tries++; }
+  while (out.length < count) { const o = out[(out.length * 7) % Math.max(out.length, 1)] || [0, 0, 0, 0, 1, 0]; out.push(o.slice()); }
+  return { pts: out, size: Math.sqrt(area / count) };
+}
+// surface nets: smooth mesh from an SDF (for the intact face)
+function surfaceNets(f, bb, vox) {
+  const nx = Math.ceil((bb[3] - bb[0]) / vox) + 1, ny = Math.ceil((bb[4] - bb[1]) / vox) + 1, nz = Math.ceil((bb[5] - bb[2]) / vox) + 1; const F = new Float32Array(nx * ny * nz); let i = 0;
+  for (let z = 0; z < nz; z++) for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) F[x + nx * (y + ny * z)] = f(bb[0] + x * vox, bb[1] + y * vox, bb[2] + z * vox);
+  const idx = new Int32Array((nx - 1) * (ny - 1) * (nz - 1)).fill(-1); const pos = [], nrm = [], ind = []; const cid = (x, y, z) => x + (nx - 1) * (y + (ny - 1) * z);
+  const C = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]]; const E = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  for (let z = 0; z < nz - 1; z++) for (let y = 0; y < ny - 1; y++) for (let x = 0; x < nx - 1; x++) {
+    const v = []; let mask = 0; for (let k = 0; k < 8; k++) { const c = C[k]; const val = F[(x + c[0]) + nx * ((y + c[1]) + ny * (z + c[2]))]; v.push(val); if (val < 0) mask |= 1 << k; } if (mask === 0 || mask === 255) continue;
+    let sx = 0, sy = 0, sz = 0, n = 0; for (const e of E) { const a = v[e[0]], b = v[e[1]]; if ((a < 0) === (b < 0)) continue; const t = a / (a - b); const ca = C[e[0]], cb = C[e[1]]; sx += ca[0] + (cb[0] - ca[0]) * t; sy += ca[1] + (cb[1] - ca[1]) * t; sz += ca[2] + (cb[2] - ca[2]) * t; n++; }
+    const px = bb[0] + (x + sx / n) * vox, py = bb[1] + (y + sy / n) * vox, pz = bb[2] + (z + sz / n) * vox; idx[cid(x, y, z)] = pos.length / 3; pos.push(px, py, pz); const g = grad(f, px, py, pz); nrm.push(g[0], g[1], g[2]); }
+  const S = (x, y, z) => F[x + nx * (y + ny * z)];
+  for (let z = 1; z < nz - 1; z++) for (let y = 1; y < ny - 1; y++) for (let x = 1; x < nx - 1; x++) { const a = S(x, y, z) < 0;
+    const dirs = [[1, 0, 0, 0, 1, 0, 0, 0, 1], [0, 1, 0, 0, 0, 1, 1, 0, 0], [0, 0, 1, 1, 0, 0, 0, 1, 0]];
+    for (let d = 0; d < 3; d++) { const q = dirs[d]; const b = S(x + q[0], y + q[1], z + q[2]) < 0; if (a === b) continue;
+      const u = [q[3], q[4], q[5]], w = [q[6], q[7], q[8]]; const c0 = idx[cid(x - u[0] - w[0], y - u[1] - w[1], z - u[2] - w[2])], c1 = idx[cid(x - w[0], y - w[1], z - w[2])], c2 = idx[cid(x, y, z)], c3 = idx[cid(x - u[0], y - u[1], z - u[2])];
+      if (c0 < 0 || c1 < 0 || c2 < 0 || c3 < 0) continue; if (a) ind.push(c0, c1, c2, c0, c2, c3); else ind.push(c0, c2, c1, c0, c3, c2); } }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(nrm, 3)); g.setIndex(ind); return g;
+}
+
+// ================================================================ environment + lights
+const pmrem = new THREE.PMREMGenerator(renderer);
+function buildEnv() { const s = new THREE.Scene(); s.background = new THREE.Color(0x050505);
+  const box = (w, h, p, col, k, rx, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(...p); m.rotation.x = rx || 0; m.rotation.y = ry || 0; s.add(m); };
+  box(14, 1.4, [0, 8, 0], 0xffffff, 7, Math.PI / 2); box(14, .5, [0, 7.6, -4], 0xffffff, 4, Math.PI / 2); box(10, 7, [-10, 3, 4], 0xfff1dc, 3.2, 0, Math.PI / 2); box(12, 1.2, [0, 2, -9], 0xcfe0ff, 3.5); box(7, 4, [10, 2, 2], 0xffffff, 1.0, 0, Math.PI / 2);
+  const t = pmrem.fromScene(s, 0).texture; s.traverse(o => { if (o.geometry) o.geometry.dispose(); }); return t; }
+const key = new THREE.DirectionalLight(0xfff0dc, 1.7); key.position.set(4, 7, 5); scene.add(key);
+const rim = new THREE.DirectionalLight(0xbcd0ff, 1.1); rim.position.set(-5, 3.5, -6); scene.add(rim); scene.add(new THREE.AmbientLight(0x1a1a1c, .6));
+
+// ================================================================ shared GLSL (stone)
+const STONE_GLSL = `
+float h3(vec3 p){ p=fract(p*.3183099+.1); p*=17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float n3(vec3 p){ vec3 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }
+float fb3(vec3 p){ float s=0.,a=.5; for(int i=0;i<4;i++){ s+=a*n3(p); p=p*2.03+7.1; a*=.5; } return s; }
+vec3 marble(vec3 q){ vec3 base=vec3(.62,.61,.59); float v=abs(sin((q.x+q.z*.6+q.y*.3)*4.+fb3(q*2.2)*7.)); float vein=1.-smoothstep(0.,.14,v); float g=n3(q*38.);
+  vec3 c=mix(base,vec3(.3,.29,.27),vein*.5*fb3(q*3.)*2.); c*=.93+.07*g; c=mix(c,vec3(.5,.49,.47),smoothstep(.6,.9,fb3(q*1.3))*.3); return c; }
+`;
+// ================================================================ targets
+const TG = {}; let tex = null; const setMsg = t => { $("#veilTxt").textContent = t; };
+const shardGeo = (() => { const ico = new THREE.IcosahedronGeometry(1, 0); const g = new THREE.InstancedBufferGeometry(); g.index = ico.index; g.setAttribute("position", ico.attributes.position); g.setAttribute("normal", ico.attributes.normal); g.instanceCount = N; g._maxInstanceCount = N; return g; })();
+function buildTargets(done) {
+  const stages = [];
+  stages.push(() => { setMsg("Carving the face"); TG.face = sampleSDF(sdFace, [-1.5, -2.7, -1.2, 1.5, 1.6, 1.4], N, 11); });
+  stages.push(() => { setMsg("Shaping the sculpture"); TG.sculpt = sampleSDF(sdSculpt, [-3.6, -3.6, -3.6, 3.6, 3.6, 3.6], N, 22); });
+  stages.push(() => { setMsg("Raising the arch"); TG.arch = sampleSDF(sdArch, [-5, FLOOR - .2, -22, 5, 8.5, 2.6], N, 33); });
+  stages.push(() => { setMsg("Draping the figure"); TG.human = sampleSDF(sdHuman, [-2.3, FLOOR - .2, -2.3, 2.3, 4.5, 2.3], N, 44); });
+  stages.push(() => { setMsg("Setting the letters"); const c = document.createElement("canvas"); c.width = 2048; c.height = 512; const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, 2048, 512); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+    const fam = '"Hanken Grotesk","Arial Black",Arial,sans-serif'; let fs = 400; g.font = `800 ${fs}px ${fam}`; fs *= 1960 / g.measureText("FRAGMENT").width; g.font = `800 ${fs}px ${fam}`; const m = g.measureText("FRAGMENT"); g.fillText("FRAGMENT", 1024, 256 + (m.actualBoundingBoxAscent || fs * .72) / 2);
+    const id = g.getImageData(0, 0, 2048, 512).data; const px = []; for (let y = 0; y < 512; y += 2) for (let x = 0; x < 2048; x += 2) if (id[(y * 2048 + x) * 4] > 128) px.push([x, y]); const R = rngf(55); let cnt = 0; for (const p of px) cnt++;
+    const wW = 11.2, sc = wW / 2048; const area = cnt * 4 * sc * sc * 2; let r = .8 * Math.sqrt(area / N); const out = []; let tries = 0;
+    while (out.length < N && tries < 40) { const grid = new Map(); out.length = 0; for (let c2 = 0; c2 < N * 50 && out.length < N; c2++) { const q = px[(R() * px.length) | 0]; const x = (q[0] - 1024) * sc + (R() - .5) * 2 * sc, y = (256 - q[1]) * sc + 1.6 + (R() - .5) * 2 * sc; const side = out.length % 2 ? 1 : -1; const z = side * (.16 + R() * .02); const kx = Math.floor(x / r), ky = Math.floor(y / r), kz = side; let ok = true;
+        for (let a = -1; a <= 1 && ok; a++) for (let b = -1; b <= 1 && ok; b++) { const l = grid.get((kx + a) + "," + (ky + b) + "," + kz); if (l) for (const o of l) if ((o[0] - x) ** 2 + (o[1] - y) ** 2 < r * r) { ok = false; break; } } if (!ok) continue; const p = [x, y, z, 0, 0, side]; out.push(p); const k = kx + "," + ky + "," + kz; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(p); }
+      if (out.length < N) r *= .93; tries++; } while (out.length < N) out.push(out[out.length % Math.max(1, out.length)].slice()); TG.letters = { pts: out, size: Math.sqrt(area / N) }; });
+  stages.push(() => { setMsg("Polishing the stone"); TG.stone = sampleSDF((x, y, z) => sdStone(x, y - .6, z), [-.9, -.4, -.9, .9, 1.8, .9], N, 66); });
+  stages.push(() => { setMsg("Breaking it all"); packTexture(); });
+  let i = 0; const step = () => { if (i >= stages.length) { done(); return; } const f = stages[i++]; setTimeout(() => { f(); $("#veil b").style.opacity = .5 + .5 * (i / stages.length); step(); }, 16); }; step();
+}
+let shardPos = null; // exploded positions (for the cinematography)
+function packTexture() {
+  const ROWS = 15, data = new Float32Array(N * ROWS * 4); const R = rngf(777); const q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), qa = new THREE.Quaternion(), zz = new THREE.Vector3(0, 0, 1), nn = new THREE.Vector3();
+  const perm = (seed) => { const a = Array.from({ length: N }, (_, i) => i); const r = rngf(seed); for (let i = N - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const order = [null, null, perm(101), perm(202), perm(303), perm(404), perm(505)];
+  const put = (i, s, p, n, size, rand) => { const base = (1 + 2 * s); let o = (base * N + i) * 4; data[o] = p[0]; data[o + 1] = p[1]; data[o + 2] = p[2]; data[o + 3] = size;
+    if (rand) { q.set(R() - .5, R() - .5, R() - .5, R() - .5).normalize(); } else { nn.set(n[0], n[1], n[2]).normalize(); if (nn.lengthSq() < .5) nn.set(0, 1, 0); q.setFromUnitVectors(zz, nn); qa.setFromAxisAngle(nn, R() * 6.283); q.premultiply(qa); }
+    o = ((base + 1) * N + i) * 4; data[o] = q.x; data[o + 1] = q.y; data[o + 2] = q.z; data[o + 3] = q.w; };
+  shardPos = new Float32Array(N * 3); const tgts = [TG.face, null, TG.sculpt, TG.arch, TG.human, TG.letters, TG.stone];
+  for (let i = 0; i < N; i++) { let o = i * 4; data[o] = R(); data[o + 1] = R(); data[o + 2] = R(); data[o + 3] = R(); }
+  for (let i = 0; i < N; i++) { const p = TG.face.pts[i]; put(i, 0, p, [p[3], p[4], p[5]], TG.face.size * 1.5, false);
+    const l = Math.hypot(p[0], p[1] + .3, p[2] + .6) || 1; const R1 = R(), R2 = R(), R3 = R(); const dist = 1 + 10 * Math.pow(R1, 1.4); let ex = p[0] + (p[0] / l) * dist + (R2 - .5) * 3.2, ey = p[1] + ((p[1] + .3) / l) * dist * .8 + (R3 - .3) * 2.8 + .6, ez = p[2] + ((p[2] + .6) / l) * dist + (R(0) - .3) * 2.5; ez += (R() - .55) * 6;
+    ey = Math.max(ey, FLOOR + .3 + R() * .4); put(i, 1, [ex, ey, ez], null, TG.face.size * 2.2 * (.6 + R() * .9), true); shardPos[i * 3] = ex; shardPos[i * 3 + 1] = ey; shardPos[i * 3 + 2] = ez;
+    for (let s = 2; s <= 6; s++) { const T = tgts[s]; const p2 = T.pts[order[s][i]]; put(i, s, p2, [p2[3], p2[4], p2[5]], T.size * (s === 6 ? 1.5 : 1.45), false); } }
+  tex = new THREE.DataTexture(data, N, ROWS, THREE.RGBAFormat, THREE.FloatType); tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.needsUpdate = true;
+}
+
+// ================================================================ uniforms + materials
+const U = { uData: { value: null }, uTg: { value: new Float32Array(6) }, uTime: { value: 0 }, uP: { value: 0 }, uMetal: { value: 0 }, uGold: { value: 0 }, uG: { value: new THREE.Vector3(0, -1, 0) }, uFloat: { value: 0 }, uSpin: { value: 0 }, uVortex: { value: 0 },
+  uField: { value: 0 }, uRayO: { value: new THREE.Vector3() }, uRayD: { value: new THREE.Vector3(0, 0, -1) }, uPullO: { value: new THREE.Vector3() }, uPullV: { value: new THREE.Vector3() }, uPull: { value: 0 }, uPeel: { value: 0 }, uShow: { value: 1 }, uMirror: { value: 0 }, uFloorY: { value: FLOOR }, uVel: { value: 0 } };
+function shardMaterial(mirror) {
+  const m = new THREE.MeshStandardMaterial({ color: 0xd6d3cd, roughness: .5, metalness: .0, flatShading: true, envMapIntensity: .55, side: mirror ? THREE.DoubleSide : THREE.FrontSide });
+  m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.uniforms.uMirrorF = { value: mirror ? 1 : 0 };
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>
+      uniform sampler2D uData; uniform float uTg[6]; uniform float uTime,uFloat,uSpin,uVortex,uField,uPull,uPeel,uMirrorF,uFloorY,uShow,uVel; uniform vec3 uG,uRayO,uRayD,uPullO,uPullV;
+      varying vec3 vLoc; varying float vInner; varying float vSeed; varying float vH;
+      vec3 qrot(vec4 q,vec3 v){ return v+2.*cross(q.xyz,cross(q.xyz,v)+q.w*v); }
+      vec4 qmul(vec4 a,vec4 b){ return vec4(a.w*b.xyz+b.w*a.xyz+cross(a.xyz,b.xyz),a.w*b.w-dot(a.xyz,b.xyz)); }
+      vec4 qnl(vec4 a,vec4 b,float t){ if(dot(a,b)<0.) b=-b; return normalize(mix(a,b,t)); }
+      float hsh(float n){ return fract(sin(n)*43758.5453); }`)
+    .replace("#include <begin_vertex>", `
+      int ii=gl_InstanceID; vec4 rnd=texelFetch(uData,ivec2(ii,0),0); float fi=float(ii);
+      vec4 d0=texelFetch(uData,ivec2(ii,1),0); vec4 e0=texelFetch(uData,ivec2(ii,2),0); vec3 p=d0.xyz; float sz=d0.w; vec4 q=e0;
+      for(int k=0;k<6;k++){ float t=clamp(uTg[k]*1.75-rnd.w*.75,0.,1.); float te=(k==0)?1.-pow(1.-t,3.):t*t*(3.-2.*t);
+        vec4 dn=texelFetch(uData,ivec2(ii,3+2*k),0); vec4 en=texelFetch(uData,ivec2(ii,4+2*k),0); vec3 dir=dn.xyz-p; vec3 side=normalize(cross(dir,vec3(0.,1.,.001))+1e-4)*sin(3.14159*te)*length(dir)*.22*(rnd.x-.5)*2.;
+        p=mix(p,dn.xyz,te)+side; q=qnl(q,en,te); sz=mix(sz,dn.w,te); if(k==0) q=qnl(q,normalize(vec4(rnd.xyz-.5,.3+rnd.y)),0.); }
+      float hs=hsh(fi*1.31); vec3 ssc=vec3(1.,.55+.7*hs,.28+.34*hsh(fi*2.7));
+      p+=normalize(vec3(sin(fi*1.7),cos(fi*2.3),sin(fi*3.1)))*.03*sin(uTime*.6+rnd.x*30.)*(1.+uSpin*3.);
+      float rr=length(p.xz); if(uVortex>0.){ float ang=uVortex*(3.2/(rr*.35+.8))+uVortex*.4*sin(rnd.x*6.28); float c=cos(ang),s=sin(ang); p.xz=mat2(c,-s,s,c)*p.xz; p.y+=uVortex*sin(rr*.8+rnd.y*6.)*1.4; }
+      if(rnd.z<.22){ p-=uG*uFloat*(.6+rnd.x*1.6); }
+      if(uPeel>0.){ vec3 c=vec3(0.,1.5,0.); p+=normalize(p-c+1e-4)*(.05+.12*sin(uTime*.9+rnd.x*20.))*uPeel; }
+      if(uField>0.){ float t=dot(p-uRayO,uRayD); vec3 cl=uRayO+uRayD*t; float dd=distance(p,cl); float push=exp(-dd*dd/1.9)*uField; p+=normalize(p-cl+1e-4)*push*2.1; q=normalize(qmul(vec4(normalize(vec3(rnd.y-.5,rnd.z-.5,rnd.x-.5)+1e-3)*sin(push*1.5),cos(push*1.5)),q)); }
+      if(uPull>0.){ vec3 dp=p-uPullO; float w=exp(-dot(dp,dp)/1.5); p+=uPullV*w*uPull; float a=w*uPull*length(uPullV)*.5; q=normalize(qmul(vec4(normalize(vec3(rnd.x-.5,rnd.y-.5,rnd.z-.5)+1e-3)*sin(a),cos(a)),q)); }
+      if(uSpin>0.){ float a=uTime*(rnd.x-.5)*.5*uSpin; q=normalize(qmul(vec4(normalize(rnd.yzx-.5+1e-3)*sin(a),cos(a)),q)); }
+      vec3 transformed=p+qrot(q,position*ssc*sz*.6)*step(.5,uShow);
+      if(uMirrorF>.5) transformed.y=2.*uFloorY-transformed.y;
+      vLoc=position*ssc+rnd.xyz*13.; vInner=smoothstep(.15,-.45,position.z/length(position)); vSeed=rnd.y; vH=hs;`)
+    .replace("#include <beginnormal_vertex>","vec3 objectNormal=vec3(0.,1.,0.);");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>\nuniform float uMetal,uGold,uMirrorF; varying vec3 vLoc; varying float vInner; varying float vSeed; varying float vH;\n${STONE_GLSL}`)
+      .replace("#include <color_fragment>", `#include <color_fragment>
+        vec3 mcol=marble(vLoc*1.1); float th=fb3(vLoc*1.7+vSeed*9.); float reveal=smoothstep(th-.08,th+.08,uMetal*1.35-.2+vInner*.45);
+        float cr=step(.58,fb3(vLoc*5.5)); vec3 mt=mix(vec3(.022),vec3(.78,.65,.46),cr*.85); vec3 col2=mix(mcol,mt,reveal); col2=mix(col2,vec3(.78,.66,.47),uGold*.55);
+        diffuseColor.rgb=col2*mix(1.,.5,uMirrorF*0.);`)
+      .replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nroughnessFactor=mix(.5,mix(.16,.3,1.-cr),reveal);")
+      .replace("#include <metalnessmap_fragment>","#include <metalnessmap_fragment>\nmetalnessFactor=reveal*mix(.55,.95,cr);");
+  };
+  m.customProgramCacheKey = () => "shard" + (mirror ? "m" : "n"); return m;
+}
+const shards = new THREE.Mesh(shardGeo, shardMaterial(false)); shards.frustumCulled = false; shards.renderOrder = 2; shards.visible = false; scene.add(shards);
+const shardsM = new THREE.Mesh(shardGeo, shardMaterial(true)); shardsM.frustumCulled = false; shardsM.renderOrder = 1; shardsM.visible = false; scene.add(shardsM);
+// intact face (smooth mesh) with cracks
+const CU = { uCrack: { value: 0 }, uCr0: { value: new THREE.Vector3(-.5, -.1, .7) }, uM3: { value: new THREE.Vector3(0, 0, 9) }, uMOn: { value: 0 }, uTime: U.uTime };
+const faceMat = new THREE.MeshStandardMaterial({ color: 0xd6d3cd, roughness: .5, metalness: 0, envMapIntensity: .6 });
+faceMat.onBeforeCompile = sh => { Object.assign(sh.uniforms, CU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vObj;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvObj=position;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>\nuniform float uCrack,uMOn; uniform vec3 uCr0,uM3; varying vec3 vObj;\n${STONE_GLSL}
+    vec3 vh(vec3 p){ return fract(sin(vec3(dot(p,vec3(127.1,311.7,74.7)),dot(p,vec3(269.5,183.3,246.1)),dot(p,vec3(113.5,271.9,124.6))))*43758.5453); }
+    float vedge(vec3 p){ vec3 g=floor(p),f=fract(p); float d1=8.,d2=8.; for(int k=-1;k<=1;k++)for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){ vec3 o=vec3(float(i),float(j),float(k)); vec3 r=o+vh(g+o)-f; float d=dot(r,r); if(d<d1){ d2=d1; d1=d; } else if(d<d2){ d2=d; } } return sqrt(d2)-sqrt(d1); }`)
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      vec3 mc=marble(vObj*1.3); float e=vedge(vObj*3.6+fb3(vObj*6.)*.35); float reach=1.-smoothstep(uCrack*3.2-.6,uCrack*3.2,length(vObj-uCr0)+fb3(vObj*4.)*.5);
+      float reachM=uMOn*(1.-smoothstep(.05,.55,length(vObj-uM3))); float wdt=.025+.05*uCrack; float line=(1.-smoothstep(0.,wdt,e))*max(reach,reachM*.8)*step(.0001,uCrack+uMOn);
+      diffuseColor.rgb=mc*(1.-line*.88);`)
+    .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor=mix(.42,.9,line);"); };
+faceMat.customProgramCacheKey = () => "face";
+let face = null;
+// floor, text plane behind the head, dust
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshStandardMaterial({ color: 0x030303, roughness: .35, metalness: .7, transparent: true, opacity: .85, envMapIntensity: .3 })); floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR; floor.renderOrder = 5; scene.add(floor);
+const tc = document.createElement("canvas"); tc.width = 2048; tc.height = 512; const TT = new THREE.CanvasTexture(tc);
+function drawTitle() { const g = tc.getContext("2d"); g.clearRect(0, 0, 2048, 512); g.fillStyle = "#F1EFEA"; g.textAlign = "center"; g.textBaseline = "alphabetic"; const fam = '"Cormorant Garamond","Hiragino Mincho ProN",Georgia,serif'; let fs = 400; g.font = `300 ${fs}px ${fam}`; fs *= 1950 / g.measureText("FRAGMENT").width; g.font = `300 ${fs}px ${fam}`; const m = g.measureText("FRAGMENT"); g.fillText("FRAGMENT", 1024, 256 + (m.actualBoundingBoxAscent || fs * .7) / 2); TT.needsUpdate = true; }
+drawTitle(); try { document.fonts.load('300 200px "Cormorant Garamond"').then(drawTitle).catch(() => {}); document.fonts.ready.then(drawTitle); } catch (e) {}
+const titleM = new THREE.Mesh(new THREE.PlaneGeometry(11, 2.75), new THREE.MeshBasicMaterial({ map: TT, transparent: true, opacity: .9, depthWrite: false, fog: false })); titleM.position.set(0, .15, -1.9); titleM.renderOrder = 3; scene.add(titleM);
+const ND = mobile ? 3500 : 9000; const dg = new THREE.BufferGeometry(); { const r = new Float32Array(ND * 4); for (let i = 0; i < ND * 4; i++) r[i] = Math.random(); dg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(ND * 3), 3)); dg.setAttribute("aR", new THREE.BufferAttribute(r, 4)); }
+const DU = { uTime: U.uTime, uG: U.uG, uDust: { value: 0 }, uPx: { value: 1 }, uSizeD: { value: 1 } };
+const dust = new THREE.Points(dg, new THREE.ShaderMaterial({ uniforms: DU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+  vertexShader: `uniform float uTime,uDust,uPx,uSizeD; uniform vec3 uG; attribute vec4 aR; varying float vA;
+    void main(){ vec3 box=vec3(36.,18.,40.); vec3 base=(aR.xyz-.5)*box; vec3 p=base+uG*uTime*(.35+aR.w*.5)+vec3(sin(uTime*.3+aR.x*20.),cos(uTime*.25+aR.y*20.),sin(uTime*.2+aR.z*20.))*.4; p=mod(p+box*.5,box)-box*.5; p.y+=2.;
+      vec4 mv=viewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uSizeD*uPx*(1.2+aR.w*1.8)*(5./max(-mv.z,.5)); vA=uDust*(.25+.6*aR.w)*smoothstep(40.,4.,-mv.z)*smoothstep(.3,1.,-mv.z); }`,
+  fragmentShader: `precision highp float; varying float vA; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,d); gl_FragColor=vec4(vec3(.85,.82,.76),a*a*vA); }` }));
+dust.frustumCulled = false; dust.renderOrder = 6; scene.add(dust);
+
+// ================================================================ camera keys
+let S0 = [0, 0, 0]; const KEYS = [];
+function buildKeys() {
+  let bi = 0, bd = 1e9; const tp = [0., .4, 1.6]; for (let i = 0; i < N; i++) { const x = shardPos[i * 3], y = shardPos[i * 3 + 1], z = shardPos[i * 3 + 2]; const d = Math.hypot(x - tp[0], y - tp[1], z - tp[2]); if (d < bd) { bd = d; bi = i; } } S0 = [shardPos[bi * 3], shardPos[bi * 3 + 1], shardPos[bi * 3 + 2]];
+  const A = (p, px, py, pz, tx, ty, tz, fov, roll, stop) => KEYS.push([p, px, py, pz, tx, ty, tz, fov, roll || 0, stop ? 1 : 0]);
+  A(0, .12, .12, 1.75, 0, .05, .9, 27, 0); A(.035, .55, .2, 2.5, 0, .0, .4, 32, 0); A(.07, 3.2, .5, 4.8, 0, -.3, 0, 38, 0);
+  A(.11, 2.1, .0, 2.8, -.3, -.15, .7, 34, 0); A(.145, .9, .0, 2.4, -.1, -.1, .5, 34, 0); A(.165, .45, .15, 1.5, 0, 0, -1, 40, .0);
+  A(.20, -1.4, .9, -2.4, 0, .4, -8, 54, .12); A(.23, .6, 1.4, -6., 0, .5, 0, 48, 0);
+  A(.27, 3.4, 1.6, 4., 0, .6, 0, 42, 0); A(.31, S0[0] + 1.5, S0[1] + .7, S0[2] + 2.4, S0[0], S0[1], S0[2], 34, 0); A(.35, S0[0] + .14, S0[1] + .07, S0[2] + .42, S0[0], S0[1], S0[2], 24, 0);
+  A(.385, S0[0] + 1.2, S0[1] + .5, S0[2] + 2.2, 0, .5, 0, 34, 0); A(.43, 5.2, 2.4, 6.8, 0, .4, 0, 42, 0); A(.47, -5.8, 2.2, 6., 0, .6, 0, 44, 0);
+  A(.51, 0, 1.8, 11, 0, 1.8, -8, 48, 0); A(.55, 0, 1.9, -1.5, 0, 2.6, -16, 54, 0); A(.59, 0, 1.8, -10, 0, 2.6, -28, 56, Math.PI * .25); A(.63, 0, 1.8, -12, 0, 2.6, -30, 56, Math.PI * .5);
+  A(.67, 3.4, 2.4, 11, 0, 1.6, 0, 38, 0); A(.71, -3.6, 2.4, 9, 0, 2.2, 0, 38, 0); A(.75, 0, 2.2, 10, 0, 1.8, 0, 40, 0); A(.80, 3.6, 2.0, 8.4, 0, 1.8, 0, 40, 0);
+  A(.84, 0, 3.6, 15, 0, 1.8, 0, 52, 0); A(.88, 0, 1.9, 10, 0, 1.7, 0, 44, 0); A(.905, 0, 1.7, 2.6, 0, 1.6, -9, 50, 0); A(.935, 0, 8.6, 13, 0, 1.2, 0, 44, 0); A(.97, 0, 1.4, 5., 0, .6, 0, 34, 0); A(1., 0, 1.2, 4.2, 0, .6, 0, 32, 0);
+}
+function camAt(p, o) {
+  let i = 0; while (i < KEYS.length - 2 && p > KEYS[i + 1][0]) i++;
+  const a = KEYS[i], b = KEYS[i + 1], h = b[0] - a[0], s = clamp((p - a[0]) / h, 0, 1), s2 = s * s, s3 = s2 * s, pv = KEYS[Math.max(0, i - 1)], nx = KEYS[Math.min(KEYS.length - 1, i + 2)];
+  for (let k = 1; k <= 8; k++) { const m0 = i === 0 ? 0 : (b[k] - pv[k]) / (b[0] - pv[0]), m1 = i + 1 === KEYS.length - 1 ? 0 : (nx[k] - a[k]) / (nx[0] - a[0]); o[k - 1] = (2 * s3 - 3 * s2 + 1) * a[k] + (s3 - 2 * s2 + s) * h * m0 + (-2 * s3 + 3 * s2) * b[k] + (s3 - s2) * h * m1; }
+  return o;
+}
+
+// ================================================================ UI / input / sound
+const CH = ["Silence", "First crack", "Shatter", "Suspension", "Inner matter", "Reassembly", "The arch", "Gravity", "The human form", "Touch to break", "The impossible rebuild", "Creation"];
+const B = [0, .07, .15, .23, .31, .39, .47, .55, .63, .71, .80, .91, 1];
+const chOf = p => { let i = 0; while (i < 11 && p >= B[i + 1]) i++; return i; }; const chMid = i => (B[i] + B[i + 1]) / 2;
+const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
+let P = 0, targetP = 0, tm = 0, vel = 0, lastP = 0; addEventListener("scroll", () => { targetP = clamp(scrollY / maxScroll(), 0, 1); $("#hint").style.opacity = scrollY > 30 ? 0 : .7; }, { passive: true });
+let anim = null; const E3 = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const stepAnim = now => { if (!anim) return; const k = clamp((now - anim.t0) / anim.dur, 0, 1); scrollTo(0, anim.from + (anim.to - anim.from) * E3(k)); if (k >= 1) anim = null; };
+addEventListener("wheel", () => { anim = null; }, { passive: true }); addEventListener("touchstart", () => { anim = null; }, { passive: true });
+const goTo = (p, dur) => { const to = p * maxScroll(); if (reduce) scrollTo(0, to); else anim = { from: scrollY, to, t0: performance.now(), dur: dur || 1700 + Math.abs(p - targetP) * 2600 }; };
+const idx = $("#idx"), chl = $("#chl"); CH.forEach((n, i) => { const b = document.createElement("button"); b.innerHTML = `<span>${String(i + 1).padStart(2, "0")} ${n}</span><i></i>`; b.setAttribute("aria-label", `${i + 1}章 ${n}`); b.addEventListener("click", () => goTo(i === 0 ? .004 : chMid(i))); idx.appendChild(b);
+  const li = document.createElement("li"); li.innerHTML = `<button><small>${String(i + 1).padStart(2, "0")}</small>${n}</button>`; li.firstChild.addEventListener("click", () => { closeOv(); goTo(i === 0 ? .004 : chMid(i)); }); chl.appendChild(li); });
+const idxBtns = $$("button", idx); $("#logo").addEventListener("click", () => goTo(0)); $("#again").addEventListener("click", () => goTo(0, 5200));
+let lastFocus = null; function openOv(n) { closeOv(true); const el = $("#ov-" + n); lastFocus = document.activeElement; el.classList.add("open"); document.body.classList.add("lock"); $(".x", el).focus(); } function closeOv(k) { $$(".ov.open").forEach(e => e.classList.remove("open")); document.body.classList.remove("lock"); if (!k && lastFocus) lastFocus.focus(); }
+$$("[data-open]").forEach(b => b.addEventListener("click", () => openOv(b.dataset.open))); $$(".ov .x").forEach(b => b.addEventListener("click", () => closeOv()));
+addEventListener("keydown", e => { if ($$(".ov.open").length) { if (e.key === "Escape") closeOv(); return; } if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); goTo(chMid(Math.min(11, chOf(targetP) + 1))); } if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); goTo(Math.max(.004, chMid(Math.max(0, chOf(targetP) - 1)))); } });
+$("#copyMail").addEventListener("click", async () => { const t = $("#mailTxt").textContent; try { await navigator.clipboard.writeText(t); $("#copyMsg").textContent = "コピーしました。"; } catch (e) { const r = document.createRange(); r.selectNodeContents($("#mailTxt")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copyMsg").textContent = "選択しました。コピーしてください。"; } });
+const chs = $$(".ch").map(el => ({ el, a: +el.dataset.a, b: +el.dataset.b, letters: [] }));
+chs.forEach(c => { $$(".big", c.el).forEach(big => { const t = big.dataset.t; big.textContent = ""; t.split(" ").forEach((w, wi, arr) => { const ws = document.createElement("span"); ws.className = "w"; [...w].forEach(ch => { const s = document.createElement("span"); s.className = "l"; s.textContent = ch; ws.appendChild(s); c.letters.push(s); }); big.appendChild(ws); if (wi < arr.length - 1) big.appendChild(document.createTextNode(" ")); }); }); c.letters.forEach((s, i) => s.dataset.i = i / Math.max(1, c.letters.length - 1)); });
+// pointer: Fracture Field ray, face crack hover, sculpture drag
+const ptr = { x: 0, y: 0, seen: false, down: false, sx: 0, sy: 0 }; const pull = { v: new THREE.Vector3(), vel: new THREE.Vector3(), tgt: new THREE.Vector3(), amt: 0 }; let grabO = new THREE.Vector3();
+addEventListener("pointermove", e => { ptr.x = e.clientX / innerWidth * 2 - 1; ptr.y = -(e.clientY / innerHeight) * 2 + 1; ptr.seen = true; if (ptr.down) { const dx = ptr.x - ptr.sx, dy = ptr.y - ptr.sy; const d = camera.position.distanceTo(new THREE.Vector3(0, 1.5, 0)); const r = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), u = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1); pull.tgt.copy(r.multiplyScalar(dx * d * .55)).add(u.multiplyScalar(dy * d * .45)); } });
+addEventListener("pointerleave", () => { ptr.seen = false; ptr.down = false; pull.tgt.set(0, 0, 0); });
+const inTouch = () => P >= .72 && P <= .80;
+canvas.addEventListener("pointerdown", e => { if (!inTouch()) return; ptr.down = true; ptr.sx = ptr.x = e.clientX / innerWidth * 2 - 1; ptr.sy = ptr.y = -(e.clientY / innerHeight) * 2 + 1; canvas.setPointerCapture(e.pointerId); canvas.classList.add("grab");
+  const f = new THREE.Vector3(); camera.getWorldDirection(f); const o = camera.position.clone(); const d = new THREE.Vector3(ptr.x, ptr.y, .5).unproject(camera).sub(o).normalize(); const c = new THREE.Vector3(0, 1.5, 0); const t = c.clone().sub(o).dot(f) / d.dot(f); grabO.copy(o.addScaledVector(d, t)); pull.tgt.set(0, 0, 0); });
+const endDrag = () => { ptr.down = false; pull.tgt.set(0, 0, 0); canvas.classList.remove("grab"); }; canvas.addEventListener("pointerup", endDrag); canvas.addEventListener("pointercancel", endDrag);
+const aud = { ctx: null, g: null, on: false };
+function setSound(on) { if (on && !aud.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const c = aud.ctx = new AC(); aud.g = c.createGain(); aud.g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 240; [49, 73.4, 98.2].forEach((f, i) => { const o = c.createOscillator(); o.type = i ? "sine" : "triangle"; o.frequency.value = f; const g = c.createGain(); g.gain.value = .06 / (i + 1); o.connect(g); g.connect(lp); o.start(); }); lp.connect(aud.g); aud.g.connect(c.destination); }
+  aud.on = on; if (aud.ctx) { if (on) aud.ctx.resume(); aud.g.gain.setTargetAtTime(on ? .5 : 0, aud.ctx.currentTime, .1); } $("#snd").setAttribute("aria-pressed", String(on)); $("#snd").textContent = on ? "Sound on" : "Sound off"; }
+function thud() { if (!aud.ctx || !aud.on) return; const c = aud.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(30, t + .5); g.gain.setValueAtTime(.8, t); g.gain.exponentialRampToValueAtTime(.0001, t + .8); o.connect(g); g.connect(aud.g); o.start(t); o.stop(t + .9);
+  const nb = c.createBuffer(1, c.sampleRate * .6, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); const s = c.createBufferSource(); s.buffer = nb; const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1200; const g2 = c.createGain(); g2.gain.value = .4; s.connect(hp); hp.connect(g2); g2.connect(aud.g); s.start(t); }
+function chime(f) { if (!aud.ctx || !aud.on) return; const c = aud.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(.2, t); g.gain.exponentialRampToValueAtTime(.0001, t + 1.6); o.connect(g); g.connect(aud.g); o.start(t); o.stop(t + 1.7); }
+$("#snd").addEventListener("click", () => setSound(!aud.on)); addEventListener("pagehide", () => { try { aud.ctx && aud.ctx.close(); } catch (e) {} });
+let prevEv = 0; const EVENTS = [[.15, thud], [.88, () => chime(660)], [.95, () => chime(440)]];
+let dprBase = Math.min(devicePixelRatio, mobile ? 1.5 : 1.75), qual = mobile ? .75 : 1;
+function applyRes() { const r = dprBase * qual; renderer.setPixelRatio(r); renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); DU.uPx.value = r; }
+addEventListener("resize", applyRes); applyRes();
+
+// ================================================================ director
+const cv = new Array(8), tP = new THREE.Vector3(), tL = new THREE.Vector3(), upv = new THREE.Vector3(); const railFill = $("#railFill"), cnEl = $("#cn"), flash = $("#flash"), tip = $("#tip"); const dts = []; let first = true;
+function update(dt) {
+  if (!reduce) tm += dt;
+  P += (targetP - P) * (1 - Math.exp(-dt * (reduce ? 25 : 6))); vel += ((P - lastP) / Math.max(dt, .001) - vel) * (1 - Math.exp(-dt * 8)); lastP = P; const p = P;
+  for (let k = 0; k < 6; k++) U.uTg.value[k] = ss(TS[k][0], TS[k][1], p);
+  U.uTime.value = tm; U.uVel.value = vel;
+  U.uMetal.value = ss(.31, .39, p) * (1 - ss(.47, .55, p)); U.uGold.value = ss(.84, .88, p) * (1 - ss(.9, .94, p));
+  U.uSpin.value = ss(.19, .25, p) * (1 - ss(.38, .42, p)); U.uFloat.value = ss(.55, .6, p) * (1 - ss(.66, .7, p)) * 2.4; U.uVortex.value = ss(.80, .84, p) * (1 - ss(.88, .9, p)) * 1.0; U.uPeel.value = ss(.71, .73, p) * (1 - ss(.79, .81, p));
+  // gravity direction follows the camera roll
+  camAt(p, cv); const roll = cv[7]; U.uG.value.set(-Math.sin(roll) * 0 + Math.sin(roll), -Math.cos(roll), 0).normalize();
+  // visibility: smooth face before the break, instanced shards after
+  const brk = p >= .147; shards.visible = shardsM.visible = brk && !!tex; if (face) face.visible = p < .153;
+  const gold = U.uGold.value; key.color.setRGB(1, mix(.94, .8, gold), mix(.86, .55, gold)); key.intensity = 1.7 + 1.2 * gold; renderer.toneMappingExposure = (.12 + .88 * ss(0, .06, p)) * (1 + .25 * gold);
+  // face cracks
+  const crack = ss(.075, .15, p); CU.uCrack.value = crack; const mOn = (p > .07 && p < .152 && ptr.seen) ? 1 : 0;
+  if (ptr.seen) { const d = new THREE.Vector3(ptr.x, ptr.y, .5).unproject(camera).sub(camera.position).normalize(); const t = (.85 - camera.position.z) / d.z; const hp = camera.position.clone().addScaledVector(d, t > 0 ? t : 0); CU.uM3.value.lerp(hp, .25); } CU.uMOn.value += (mOn * ss(.075, .1, p) - CU.uMOn.value) * .1;
+  titleM.material.opacity = .9 * (1 - ss(.03, .1, p)); titleM.visible = titleM.material.opacity > .01;
+  // camera
+  tP.set(cv[0], cv[1], cv[2]); tL.set(cv[3], cv[4], cv[5]); const par = (1 - ss(0, .1, p)) * .5 + .25; if (ptr.seen && !ptr.down) { tP.x += ptr.x * .25 * par; tP.y += ptr.y * .15 * par; }
+  if (inTouch()) { const a = (p - .72) / .08 * .5 - .1; const r = Math.hypot(tP.x, tP.z); tP.x = Math.sin(a) * r * .5 + tP.x * .5; }
+  if (camera.aspect < 1.1) { const f = 1 + Math.min(1, (1.1 - camera.aspect) / .7) * .5; tP.sub(tL).multiplyScalar(f).add(tL); }
+  camera.position.copy(tP); camera.up.set(Math.sin(roll), Math.cos(roll), 0); camera.lookAt(tL); if (Math.abs(camera.fov - cv[6]) > .01) { camera.fov = cv[6]; camera.updateProjectionMatrix(); } camera.updateMatrixWorld(true);
+  // Fracture Field (cursor pushes fragments), Sculpture Touch (drag)
+  const field = ss(.2, .24, p) * (1 - ss(.37, .4, p)); if (ptr.seen && field > 0) { const o = camera.position; const d = new THREE.Vector3(ptr.x, ptr.y, .5).unproject(camera).sub(o).normalize(); U.uRayO.value.copy(o); U.uRayD.value.copy(d); U.uField.value += (field - U.uField.value) * .15; } else U.uField.value += (0 - U.uField.value) * .1;
+  const k = 90, c = 9; pull.vel.addScaledVector(pull.tgt.clone().sub(pull.v), k * dt).multiplyScalar(Math.exp(-c * dt)); pull.v.addScaledVector(pull.vel, dt); const act = ss(.71, .73, p) * (1 - ss(.8, .82, p)); U.uPullV.value.copy(pull.v); U.uPullO.value.copy(grabO); U.uPull.value = act * (pull.v.lengthSq() > 1e-5 ? 1 : 0);
+  DU.uDust.value = (.25 + .6 * ss(.15, .22, p)) * (1 - ss(.88, .95, p)) + .6 * U.uFloat.value / 2.4; flash.style.opacity = String(Math.max(.95 * Math.exp(-Math.pow((p - .153) / .008, 2)), .55 * Math.exp(-Math.pow((p - .88) / .012, 2)) * 0)); flash.style.background = "#fff";
+  floor.visible = true; floor.material.opacity = .8 * (1 - .7 * ss(.93, .99, p)); light(p);
+  // DOM
+  for (const c2 of chs) { const f = ss(c2.a, c2.a + .014, p) * (1 - ss(c2.b - .014, c2.b, p)); c2.el.style.visibility = f > .005 ? "visible" : "hidden"; if (f <= .005) continue; c2.el.style.opacity = Math.min(1, f * 1.4);
+    for (const s of c2.letters) { const d = +s.dataset.i * .45; const lf = clamp((f - d * .6) / .55, 0, 1); const e = lf * lf * (3 - 2 * lf); s.style.opacity = e; s.style.transform = `translate3d(0,${(1 - e) * 36}px,0)`; s.style.filter = e < .98 ? `blur(${(1 - e) * 9}px)` : "none"; } }
+  railFill.style.width = (p * 100).toFixed(2) + "%"; const ci = chOf(p); idxBtns.forEach((b, i) => b.classList.toggle("on", i === ci)); cnEl.textContent = `${String(ci + 1).padStart(2, "0")} / 12`;
+  const tt = ci === 3 ? "Move the cursor" : ci === 9 ? "Drag the sculpture" : ""; tip.textContent = tt; tip.style.opacity = tt ? .7 : 0;
+  if (aud.on) for (const [t, fn] of EVENTS) if (prevEv < t && p >= t) fn(); prevEv = p;
+}
+function light(p) { rim.intensity = 1.1 * (1 - .5 * ss(.9, 1, p)); }
+const render = () => renderer.render(scene, camera);
+let lastT = performance.now(), saveT = 0;
+function loop(now) { requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, .05); lastT = now; if (document.hidden) return; stepAnim(now); update(dt); render();
+  dts.push(dt); if (dts.length > 45) { const avg = dts.reduce((a, b) => a + b) / dts.length; dts.length = 0; if (avg > .036 && qual > .5) { qual = Math.max(.5, qual - .1); applyRes(); } else if (avg < .019 && qual < (mobile ? .85 : 1)) { qual = Math.min(mobile ? .85 : 1, qual + .05); applyRes(); } }
+  if (first) { first = false; setTimeout(() => $("#veil").classList.add("off"), 300); } if (now - saveT > 800) { saveT = now; try { sessionStorage.setItem("frag_p", String(targetP)); } catch (e) {} } }
+// ================================================================ boot
+scene.environment = buildEnv();
+buildTargets(() => {
+  U.uData.value = tex; buildKeys(); setMsg("Lighting");
+  const g = surfaceNets(sdFace, [-1.5, -2.7, -1.2, 1.5, 1.6, 1.4], mobile ? .045 : .034); face = new THREE.Mesh(g, faceMat); scene.add(face);
+  let sp = 0; try { sp = parseFloat(sessionStorage.getItem("frag_p") || "0") || 0; } catch (e) {}
+  requestAnimationFrame(() => { if (sp > .001) { scrollTo(0, sp * maxScroll()); targetP = sp; P = sp; lastP = sp; prevEv = sp; } });
+  window.__frag = { renderAt(p) { targetP = P = lastP = prevEv = p; update(.016); render(); }, state: () => ({ P, qual, N }), setQ(q) { qual = q; applyRes(); }, setSound, S0: () => S0, setPtr(x, y) { ptr.x = x; ptr.y = y; ptr.seen = true; } };
+  if (!window.__fragManual) requestAnimationFrame(loop); else $("#veil").classList.add("off");
+});
+})();
+</script>

@@ -1,0 +1,252 @@
+<title>Particle Wow</title>
+<style>
+  :root { --a:#4f8bff; --b:#a05cff; --c:#ff6b6b; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:#05060d; }
+  :root { color-scheme: dark; }
+  body { background:#05060d; color:#fff; font-family:"Helvetica Neue",Arial,"Hiragino Sans",sans-serif; overflow-x:hidden; }
+  canvas#gl { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
+  .vignette { position:fixed; inset:0; pointer-events:none; z-index:1;
+    background:radial-gradient(ellipse at center, transparent 40%, rgba(5,6,13,.85) 100%); }
+  section { position:relative; z-index:2; height:100vh; display:flex; flex-direction:column;
+    justify-content:flex-end; padding:0 6vw 12vh; pointer-events:none; }
+  section.mid { align-items:flex-end; text-align:right; }
+  h1,h2 { font-weight:800; letter-spacing:-.04em; line-height:.92;
+    font-size:clamp(3rem,13vw,11rem);
+    background:linear-gradient(100deg,var(--a),var(--b) 50%,var(--c));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    background-size:200% 100%; animation:flow 6s ease-in-out infinite alternate; }
+  h2 { font-size:clamp(2.6rem,10vw,8rem); }
+  @keyframes flow { to { background-position:100% 0; } }
+  p { text-shadow:0 0 18px #05060d,0 0 6px #05060d; margin-top:2vh; font-size:clamp(.9rem,1.6vw,1.25rem); color:rgba(255,255,255,.7); max-width:32em; letter-spacing:.04em; line-height:1.7; }
+  .reveal { opacity:0; transform:translateY(40px); filter:blur(12px); transition:all 1.1s cubic-bezier(.2,.8,.2,1); }
+  section.in .reveal { opacity:1; transform:none; filter:none; }
+  section.in .reveal:nth-child(2) { transition-delay:.15s; }
+  .hint { position:fixed; left:50%; bottom:3vh; transform:translateX(-50%); z-index:3; font-size:.7rem;
+    letter-spacing:.4em; color:rgba(255,255,255,.55); transition:opacity .6s; pointer-events:none; }
+  .hint::after { content:""; display:block; width:1px; height:34px; margin:10px auto 0;
+    background:linear-gradient(#fff,transparent); animation:drop 1.6s infinite; }
+  @keyframes drop { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+  .dots { position:fixed; right:3vw; top:50%; transform:translateY(-50%); z-index:3; display:flex; flex-direction:column; gap:14px; }
+  .dots i { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.25); transition:all .4s; }
+  .dots i.on { background:#fff; transform:scale(1.7); box-shadow:0 0 12px var(--b); }
+  .glow { position:fixed; width:340px; height:340px; margin:-170px 0 0 -170px; border-radius:50%; z-index:1; pointer-events:none;
+    background:radial-gradient(circle, rgba(160,92,255,.18), transparent 65%); mix-blend-mode:screen; will-change:transform; }
+  #fallback { display:none; position:fixed; inset:0; z-index:5; align-items:center; justify-content:center; text-align:center; padding:2rem; background:#05060d; }
+</style>
+
+<canvas id="gl"></canvas>
+<div class="vignette"></div>
+<div class="glow" id="glow"></div>
+<div class="hint" id="hint">SCROLL</div>
+<div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i></div>
+<div id="fallback"><p>WebGL に対応したブラウザで開いてください。</p></div>
+
+<section class="in">
+  <h1 class="reveal">WOW.</h1>
+  <p class="reveal">60,000個の光の粒でできた、ひとつの生き物。マウスを動かすと、粒が逃げて、戻ってくる。</p>
+</section>
+<section class="mid">
+  <h2 class="reveal">Twist.</h2>
+  <p class="reveal">球がほどけて、結び目になる。粒はそれぞれ違うタイミングで、自分の行き先へ飛んでいく。</p>
+</section>
+<section>
+  <h2 class="reveal">Ripple.</h2>
+  <p class="reveal">静かな波。カーソルの下だけ、水面みたいに揺れる。</p>
+</section>
+<section class="mid">
+  <h2 class="reveal">Galaxy.</h2>
+  <p class="reveal">最後は銀河。ゆっくり回り続ける。クリックすると、衝撃波が走る。</p>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById("gl");
+  if (typeof THREE === "undefined") { document.getElementById("fallback").style.display = "flex"; return; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false }); }
+  catch (e) { document.getElementById("fallback").style.display = "flex"; return; }
+
+  const isMobile = matchMedia("(max-width: 700px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+  const N = isMobile ? 26000 : 60000;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
+  renderer.setClearColor(0x05060d);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+  camera.position.z = 7;
+
+  // ---- target shapes ----
+  const A = new Float32Array(N * 3), B = new Float32Array(N * 3), C = new Float32Array(N * 3), D = new Float32Array(N * 3);
+  const rnd = new Float32Array(N), seed = new Float32Array(N);
+  const gold = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < N; i++) {
+    const k = i * 3;
+    rnd[i] = Math.random(); seed[i] = Math.random();
+    // A: sphere (fibonacci)
+    const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = gold * i;
+    A[k] = Math.cos(th) * r * 2.2; A[k + 1] = y * 2.2; A[k + 2] = Math.sin(th) * r * 2.2;
+    // B: torus knot (3,2) with thickness
+    const t = (i / N) * Math.PI * 2 * 3;
+    const cx = (2 + Math.cos(t * 2 / 3)) * Math.cos(t), cy = (2 + Math.cos(t * 2 / 3)) * Math.sin(t), cz = Math.sin(t * 2 / 3) * 2;
+    const jx = (Math.random() - .5) * .55, jy = (Math.random() - .5) * .55, jz = (Math.random() - .5) * .55;
+    B[k] = cx * .95 + jx; B[k + 1] = cz * .95 + jy; B[k + 2] = cy * .95 + jz;
+    // C: flat wave sheet (z animated in shader)
+    const side = Math.ceil(Math.sqrt(N)), gx = i % side, gz = Math.floor(i / side);
+    C[k] = (gx / side - .5) * 8.5; C[k + 1] = -0.4; C[k + 2] = (gz / side - .5) * 8.5;
+    // D: galaxy spiral
+    const arm = i % 3, rad = Math.pow(Math.random(), .6) * 5.2, ang = rad * 1.5 + arm * (Math.PI * 2 / 3);
+    D[k] = Math.cos(ang) * rad + (Math.random() - .5) * .5 * (rad * .3 + .3);
+    D[k + 1] = (Math.random() - .5) * .4 * (1.2 - rad / 6);
+    D[k + 2] = Math.sin(ang) * rad + (Math.random() - .5) * .5 * (rad * .3 + .3);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(A, 3));
+  geo.setAttribute("aB", new THREE.BufferAttribute(B, 3));
+  geo.setAttribute("aC", new THREE.BufferAttribute(C, 3));
+  geo.setAttribute("aD", new THREE.BufferAttribute(D, 3));
+  geo.setAttribute("aRand", new THREE.BufferAttribute(rnd, 1));
+  geo.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
+
+  const uniforms = {
+    uT: { value: 0 }, uTime: { value: 0 },
+    uMouse: { value: new THREE.Vector3(999, 999, 0) },
+    uShock: { value: 0 }, uShockPos: { value: new THREE.Vector2() },
+    uSize: { value: 1 }, uPx: { value: renderer.getPixelRatio() },
+    cA: { value: new THREE.Color("#4f8bff") }, cB: { value: new THREE.Color("#a05cff") }, cC: { value: new THREE.Color("#ff6b6b") },
+  };
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `
+      attribute vec3 aB; attribute vec3 aC; attribute vec3 aD; attribute float aRand; attribute float aSeed;
+      uniform float uT, uTime, uShock, uSize, uPx; uniform vec3 uMouse; uniform vec2 uShockPos;
+      uniform vec3 cA, cB, cC;
+      varying vec3 vCol; varying float vAlpha;
+      float seg(float k){ float t = clamp(uT - k, 0.0, 1.0); return smoothstep(0.0, 1.0, clamp((t - aRand * 0.45) / 0.55, 0.0, 1.0)); }
+      float burst(float k){ float t = clamp(uT - k, 0.0, 1.0); return sin(t * 3.14159); }
+      void main(){
+        vec3 pC = aC; pC.y += sin(pC.x * 0.9 + uTime * 1.2) * 0.35 + cos(pC.z * 0.8 + uTime * 0.9) * 0.35;
+        vec3 p = mix(position, aB, seg(0.0));
+        p = mix(p, pC, seg(1.0));
+        p = mix(p, aD, seg(2.0));
+        // swirl noise during transitions
+        float b = max(burst(0.0), max(burst(1.0), burst(2.0)));
+        vec3 dir = normalize(vec3(sin(aSeed * 40.0), cos(aSeed * 31.0), sin(aSeed * 17.0)) + 0.001);
+        p += dir * b * (1.5 + aSeed * 2.5);
+        // idle breathing
+        p += dir * sin(uTime * 1.5 + aSeed * 30.0) * 0.04;
+        // galaxy rotation weight
+        float g = smoothstep(2.0, 3.0, uT);
+        float a = uTime * 0.15 * g; float cs = cos(a), sn = sin(a);
+        p.xz = mat2(cs, -sn, sn, cs) * p.xz;
+        vec4 w = modelMatrix * vec4(p, 1.0);
+        // mouse repel (world space xy)
+        vec2 d = w.xy - uMouse.xy; float dist = length(d);
+        float push = smoothstep(2.2, 0.0, dist);
+        w.xy += normalize(d + 0.0001) * push * 1.1;
+        w.z += push * 0.8;
+        // shockwave ring
+        float sd = length(w.xy - uShockPos); float ring = exp(-pow((sd - uShock * 9.0) * 1.4, 2.0)) * (1.0 - uShock) * step(0.0001, uShock);
+        w.xyz += normalize(vec3(w.xy - uShockPos, 0.6) + 0.0001) * ring * 1.6;
+        vec4 mv = viewMatrix * w;
+        gl_Position = projectionMatrix * mv;
+        float depth = clamp(1.0 - (-mv.z - 3.0) / 12.0, 0.15, 1.0);
+        gl_PointSize = (1.6 + aSeed * 1.8 + push * 3.0 + ring * 4.0) * uSize * uPx * (6.0 / -mv.z) ;
+        float m = fract(aSeed * 3.0 + uTime * 0.04 + w.y * 0.06);
+        vCol = m < 0.5 ? mix(cA, cB, m * 2.0) : mix(cB, cC, (m - 0.5) * 2.0);
+        vCol += vec3(push * 0.6 + ring * 0.8);
+        vAlpha = depth * (0.55 + 0.45 * aSeed);
+      }`,
+    fragmentShader: `
+      varying vec3 vCol; varying float vAlpha;
+      void main(){
+        float d = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.0, d); a *= a;
+        gl_FragColor = vec4(vCol, a * vAlpha);
+      }`,
+  });
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  scene.add(points);
+
+  // ---- sizing ----
+  function resize() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.position.z = w / h < 0.8 ? 11 : 7.5;
+    camera.updateProjectionMatrix();
+    uniforms.uSize.value = Math.max(0.7, Math.min(1.4, h / 800));
+  }
+  addEventListener("resize", resize); resize();
+
+  // ---- input ----
+  const glow = document.getElementById("glow");
+  const mouseTarget = new THREE.Vector2(0, 0), mouseSmooth = new THREE.Vector2(0, 0);
+  let gx = 0, gy = 0, hasPointer = false;
+  function setPointer(cx, cy) {
+    hasPointer = true;
+    mouseTarget.set((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1);
+    glow.style.transform = `translate(${cx}px,${cy}px)`;
+  }
+  addEventListener("pointermove", (e) => setPointer(e.clientX, e.clientY));
+  addEventListener("pointerdown", (e) => {
+    setPointer(e.clientX, e.clientY);
+    const v = ndcToWorld(mouseTarget.x, mouseTarget.y);
+    uniforms.uShockPos.value.set(v.x, v.y); shock = 0.001;
+  });
+  addEventListener("pointerleave", () => { uniforms.uMouse.value.set(999, 999, 0); hasPointer = false; });
+  addEventListener("deviceorientation", (e) => {
+    if (hasPointer || e.gamma == null) return;
+    gx = Math.max(-1, Math.min(1, e.gamma / 30)); gy = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
+    mouseTarget.set(gx, -gy);
+  });
+  function ndcToWorld(nx, ny) {
+    const v = new THREE.Vector3(nx, ny, 0.5).unproject(camera);
+    const dir = v.sub(camera.position).normalize();
+    const t = -camera.position.z / dir.z;
+    return camera.position.clone().add(dir.multiplyScalar(t));
+  }
+  let shock = 0;
+
+  // ---- scroll ----
+  const sections = [...document.querySelectorAll("section")];
+  const dots = [...document.querySelectorAll(".dots i")];
+  const hint = document.getElementById("hint");
+  let targetT = 0;
+  function onScroll() {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const p = max > 0 ? scrollY / max : 0;
+    targetT = p * 3;
+    hint.style.opacity = scrollY > 40 ? 0 : 1;
+    const idx = Math.round(targetT);
+    dots.forEach((d, i) => d.classList.toggle("on", i === idx));
+  }
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle("in", e.isIntersecting)), { threshold: 0.45 });
+  sections.forEach((s) => io.observe(s));
+
+  // ---- loop ----
+  const clock = new THREE.Clock();
+  let rotX = 0, rotY = 0;
+  function frame() {
+    const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+    uniforms.uTime.value = t;
+    uniforms.uT.value += (targetT - uniforms.uT.value) * (1 - Math.exp(-dt * 3.2));
+    mouseSmooth.lerp(mouseTarget, 1 - Math.exp(-dt * 10));
+    if (hasPointer) { const w = ndcToWorld(mouseSmooth.x, mouseSmooth.y); uniforms.uMouse.value.set(w.x, w.y, 0); }
+    // parallax tilt
+    rotY += ((mouseSmooth.x * 0.35 + t * (uniforms.uT.value < 2 ? 0.12 : 0.02)) - rotY) * (1 - Math.exp(-dt * 3));
+    rotX += ((-mouseSmooth.y * 0.25 + (uniforms.uT.value > 1 && uniforms.uT.value < 2.6 ? 0.95 : 0.1)) - rotX) * (1 - Math.exp(-dt * 2));
+    points.rotation.set(rotX, rotY, 0);
+    if (shock > 0) { shock += dt * 0.7; if (shock >= 1) shock = 0; }
+    uniforms.uShock.value = shock;
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>

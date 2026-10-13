@@ -1,0 +1,479 @@
+<title>INK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;300;400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one fixed WebGL canvas; a fragment shader paints all 12 scenes from a single progress value; 1200vh of scroll is the timeline. */
+  :root{--paper:#F4F2ED;--ink:#090909;--grey:#777;--fg:#090909;--line:rgba(9,9,9,.2);
+    --sans:"Hanken Grotesk","Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;color-scheme:light}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--paper)}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.lock{overflow:hidden}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:pan-y}
+  #spacer{height:1200vh}
+  header{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;justify-content:space-between;align-items:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,3.2vw) 16px;mix-blend-mode:difference;color:#fff}
+  .logo{font:800 1.15rem var(--sans);letter-spacing:.06em;background:none;border:0;color:inherit;cursor:pointer}
+  .tools{display:flex;gap:1.5rem;align-items:center}
+  .tl{font:500 .62rem var(--sans);letter-spacing:.28em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid transparent;color:inherit;cursor:pointer;padding:.4rem 0}
+  .tl:hover,.tl[aria-pressed="true"]{border-bottom-color:currentColor}
+  button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #888;outline-offset:3px}
+  .ch{position:fixed;z-index:10;pointer-events:none;visibility:hidden;color:var(--fg);left:max(16px,4.5vw);right:max(16px,4.5vw)}
+  .ch.r{text-align:right}.ch.c{text-align:center}
+  .ch .lab{font:500 .62rem var(--sans);letter-spacing:.4em;text-transform:uppercase;opacity:.65;display:block;margin-bottom:1rem}
+  .ch .big{font:300 clamp(2.4rem,8vw,8rem)/.95 var(--sans);letter-spacing:-.045em;display:block}
+  .ch .big b{font-weight:600}
+  .ch .sm{font:300 clamp(.78rem,1.1vw,.98rem)/1.8 var(--sans);letter-spacing:.06em;opacity:.7;display:block;margin-top:1.2rem;max-width:30rem}
+  .ch.r .sm{margin-left:auto}.ch.c .sm{margin-left:auto;margin-right:auto}
+  .ch .l{display:inline-block;will-change:transform,opacity,filter}.ch .w{display:inline-block;white-space:nowrap}
+  .c1{bottom:11vh}.c2{top:20vh}.c3{bottom:12vh}.c4{top:16vh}.c5{bottom:14vh}.c6{top:18vh}.c7{bottom:13vh}.c8{top:18vh}.c9{bottom:12vh}.c10{top:16vh}.c11{bottom:13vh}.c12{bottom:9vh}
+  .navs{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1.4rem;pointer-events:auto}
+  .btn{font:500 .66rem var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--ink);background:transparent;border:1px solid var(--ink);padding:.9rem 1.5rem;cursor:pointer;pointer-events:auto;transition:background .25s,color .25s}
+  .btn:hover{background:var(--ink);color:var(--paper)}
+  .hint{position:fixed;right:max(24px,4vw);bottom:calc(34px + env(safe-area-inset-bottom,0px));z-index:20;font:500 .6rem var(--sans);letter-spacing:.4em;text-transform:uppercase;color:var(--ink);opacity:.6;pointer-events:none;transition:opacity .5s}
+  .hint::after{content:"";display:block;width:1px;height:30px;margin:10px auto 0;background:var(--ink);animation:dr 1.8s ease-in infinite}
+  @keyframes dr{0%{transform:scaleY(0);transform-origin:top}60%{transform:scaleY(1);transform-origin:top}61%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+  nav.idx{position:fixed;right:max(10px,1.6vw);top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:2px;mix-blend-mode:difference;color:#fff}
+  nav.idx button{background:none;border:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:.6rem;color:inherit;opacity:.5;font:500 .56rem var(--sans);letter-spacing:.2em;padding:5px 2px}
+  nav.idx button i{display:block;width:12px;height:1px;background:currentColor;transition:width .3s}
+  nav.idx button span{pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+  nav.idx button:hover span,nav.idx button.on span{opacity:1}nav.idx button.on{opacity:1}nav.idx button.on i{width:28px}
+  .rail{position:fixed;left:max(16px,3.2vw);right:max(16px,3.2vw);bottom:calc(12px + env(safe-area-inset-bottom,0px));height:1px;background:rgba(127,127,127,.35);z-index:20;pointer-events:none;mix-blend-mode:difference}
+  .rail i{position:absolute;left:0;top:0;height:1px;width:0;background:#fff}
+  .notice{position:fixed;left:max(16px,3.2vw);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;font:400 .54rem var(--sans);letter-spacing:.28em;text-transform:uppercase;color:#fff;mix-blend-mode:difference;opacity:.6;pointer-events:none}
+  #dot{position:fixed;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;mix-blend-mode:difference;z-index:50;pointer-events:none;opacity:0;will-change:transform}
+  #clear{position:fixed;right:max(16px,3.2vw);bottom:calc(46px + env(safe-area-inset-bottom,0px));z-index:35;opacity:0;visibility:hidden;font:500 .6rem var(--sans);letter-spacing:.28em;text-transform:uppercase;background:var(--paper);border:1px solid var(--ink);padding:.7rem 1rem;cursor:pointer;color:var(--ink)}
+  .ov{position:fixed;inset:0;z-index:200;background:var(--paper);color:var(--ink);display:none;overflow:auto;padding:calc(84px + env(safe-area-inset-top,0px)) max(16px,4vw) 48px}
+  .ov.open{display:block}.ov .x{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:max(16px,3.2vw)}
+  .mg{max-width:64rem;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:3rem}
+  .mg h4{font:500 .6rem var(--sans);letter-spacing:.38em;text-transform:uppercase;color:var(--grey);margin-bottom:1rem}
+  .mg h2{font:300 clamp(2rem,5vw,4rem)/1 var(--sans);letter-spacing:-.04em;margin-bottom:1.4rem}
+  .mg p{font:300 1rem/1.9 var(--sans);color:#333;margin-bottom:1rem;max-width:34rem}
+  .cl{list-style:none}.cl button{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font:300 clamp(1rem,2vw,1.4rem) var(--sans);padding:.6rem 0;display:flex;gap:1.2rem;cursor:pointer;letter-spacing:-.01em}
+  .cl button:hover{padding-left:.5rem}.cl small{font:500 .58rem var(--sans);letter-spacing:.2em;color:var(--grey);align-self:center;min-width:1.8rem}
+  .wk{list-style:none}.wk li{display:grid;grid-template-columns:3rem 1fr auto;gap:1rem;border-bottom:1px solid var(--line);padding:1rem 0;align-items:baseline}
+  .wk b{font:400 1.3rem var(--sans);letter-spacing:-.02em}.wk span{font:300 .85rem var(--sans);color:#555}.wk small{font:500 .6rem var(--sans);letter-spacing:.2em;color:var(--grey)}
+  .mail{font:400 1.2rem var(--sans);border:1px solid var(--ink);padding:1rem;display:flex;justify-content:space-between;gap:1rem;align-items:center;max-width:30rem;user-select:all}
+  #veil{position:fixed;inset:0;z-index:90;background:var(--paper);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;transition:opacity 1s,visibility 1s;font:500 .64rem var(--sans);letter-spacing:.5em;text-transform:uppercase;color:#777}
+  #veil.off{opacity:0;visibility:hidden;pointer-events:none}#veil b{font:800 1.4rem var(--sans);letter-spacing:.1em;color:var(--ink)}
+  #nogl{position:fixed;inset:0;z-index:99;background:var(--paper);display:none;align-items:center;justify-content:center;flex-direction:column;gap:2rem;text-align:center;padding:2rem}
+  #nogl i{display:block;width:60px;height:78px;background:#090909;border-radius:50% 50% 50% 50%/62% 62% 38% 38%;animation:fl 3s ease-in-out infinite alternate}
+  @keyframes fl{to{transform:translateY(24px) scaleY(1.1)}}
+  #nogl p{font:300 .95rem/1.9 var(--sans);color:#444}
+  @media (max-width:820px){.mg{grid-template-columns:1fr;gap:2rem}nav.idx button span{display:none}.wk li{grid-template-columns:2rem 1fr}.wk small{display:none}.tools .tl.x{display:none}.tools{gap:1rem}#clear{bottom:calc(52px + env(safe-area-inset-bottom,0px))}}
+  @media (prefers-reduced-motion:reduce){#veil{transition:none}.hint::after{animation:none}}
+</style>
+
+<canvas id="gl" role="img" aria-label="一滴の黒インクが広がり、文字、彫刻、トンネルになり、また一滴に戻る映像表現。スクロールで進みます。"></canvas>
+<div id="veil"><b>INK</b><span>Mixing</span></div>
+<div id="nogl"><i></i><p><b>INK</b><br>WebGL に対応したブラウザで開くと、一滴のインクがスクロールで形を変えます。<br>Please open this page in a WebGL-capable browser.</p></div>
+<div id="dot"></div>
+
+<header>
+  <button class="logo" id="logo" aria-label="先頭へ">INK</button>
+  <div class="tools"><button class="tl" data-open="about">About</button><button class="tl" data-open="work">Work</button><button class="tl" data-open="contact">Contact</button><button class="tl x" data-open="index">Index</button><button class="tl" id="snd" aria-pressed="false">Sound off</button></div>
+</header>
+<nav class="idx" id="idx" aria-label="章"></nav>
+<div class="hint" id="hint">Scroll</div>
+
+<section class="ch c1" data-a="-1" data-b="0.074"><span class="lab">01 / The drop</span><span class="big" data-t="Everything begins with a mark."></span></section>
+<section class="ch c2 r" data-a="0.092" data-b="0.158"><span class="lab">02 / Bloom</span><span class="big" data-t="It spreads."></span></section>
+<section class="ch c3" data-a="0.175" data-b="0.241"><span class="lab">03 / Tendrils</span><span class="big" data-t="It reaches."></span><span class="sm">Move the cursor. They follow.</span></section>
+<section class="ch c4 r" data-a="0.258" data-b="0.324"><span class="lab">04 / The letter</span><span class="big" data-t="It becomes language."></span></section>
+<section class="ch c5" data-a="0.342" data-b="0.408"><span class="lab">05 / Imprint</span><span class="big" data-t="It stays."></span></section>
+<section class="ch c6 r" data-a="0.425" data-b="0.491"><span class="lab">06 / Sculpt</span><span class="big" data-t="It holds still."></span></section>
+<section class="ch c7" data-a="0.508" data-b="0.574"><span class="lab">07 / Fracture</span><span class="big" data-t="It breaks."></span></section>
+<section class="ch c8 r" data-a="0.592" data-b="0.658"><span class="lab">08 / Flow</span><span class="big" data-t="It never stops."></span></section>
+<section class="ch c9" data-a="0.675" data-b="0.741"><span class="lab">09 / Contrast</span><span class="big" data-t="Or the other way round."></span></section>
+<section class="ch c10 r" data-a="0.758" data-b="0.824"><span class="lab">10 / The canvas</span><span class="big" data-t="Make your mark."></span><span class="sm">Everything you saw is one picture. Move over it to add ink.</span></section>
+<section class="ch c11 c" data-a="0.842" data-b="0.905"><span class="lab">11 / Dissolve</span><span class="big" data-t="It lets go."></span></section>
+<section class="ch c12 c" data-a="0.945" data-b="2"><span class="lab">12 / The mark</span><span class="big" style="font-size:clamp(1.3rem,3.2vw,2.8rem);font-weight:300;letter-spacing:-.02em" data-t="Everything begins with a mark."></span><div class="navs"><button class="btn" data-open="work">Work</button><button class="btn" data-open="about">About</button><button class="btn" data-open="contact">Contact</button><button class="btn" id="again">Again</button></div></section>
+
+<button id="clear">Clear marks</button>
+<div class="rail"><i id="railFill"></i></div>
+<div class="notice">Fictional studio · INK</div>
+
+<div id="ov-index" class="ov" role="dialog" aria-modal="true" aria-label="Index"><button class="btn x">Close</button><div class="mg"><div><h4>Index</h4></div><div><ul class="cl" id="chl"></ul></div></div></div>
+<div id="ov-about" class="ov" role="dialog" aria-modal="true" aria-label="About"><button class="btn x">Close</button><div class="mg"><div><h4>About</h4><h2>A mark<br>is a decision.</h2></div><div><p><b>INK は架空のデザインスタジオです。</b>このサイトは、一滴の黒インクが世界になるまでを、ひとつの映像作品として作った実験です。</p><p>白、黒、グレーだけを使います。液体の動きは、ノイズとドメインワープで描いたリアルタイムのシェーダーです。流体の物理シミュレーション（ナビエ・ストークス）ではありません。</p><p>音はSound onを押したときだけ鳴ります。</p></div></div></div>
+<div id="ov-work" class="ov" role="dialog" aria-modal="true" aria-label="Work"><button class="btn x">Close</button><div class="mg"><div><h4>Work</h4><h2>Selected<br>marks.</h2></div><div><ul class="wk">
+<li><small>01</small><div><b>Tide Alphabet</b><br><span>A typeface drawn from the shape of settling ink.</span></div><small>2025</small></li>
+<li><small>02</small><div><b>One Drop Gallery</b><br><span>Identity for a gallery that shows a single work at a time.</span></div><small>2025</small></li>
+<li><small>03</small><div><b>Monsoon Paper</b><br><span>Packaging printed with ink that bleeds when it gets wet.</span></div><small>2024</small></li>
+<li><small>04</small><div><b>Slow Press</b><br><span>A magazine set entirely in negative space.</span></div><small>2024</small></li>
+<li><small>05</small><div><b>Origin Mark</b><br><span>A logo that is redrawn by hand every year.</span></div><small>2023</small></li>
+</ul><p style="margin-top:1.4rem;font-size:.8rem;color:#777">Fictional projects.</p></div></div></div>
+<div id="ov-contact" class="ov" role="dialog" aria-modal="true" aria-label="Contact"><button class="btn x">Close</button><div class="mg"><div><h4>Contact</h4><h2>Say<br>something.</h2></div><div><p>これは架空のスタジオで、このデモには送信先がありません。フォームは置いていません（送信されたように見せないため）。</p><div class="mail"><span id="mailTxt">hello@ink.example</span><button class="btn" id="copyMail">Copy</button></div><p id="copyMsg" style="margin-top:.8rem;font-size:.85rem;min-height:1.4em"></p></div></div></div>
+<div class="rail" style="display:none"></div>
+<div id="spacer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobile = matchMedia("(max-width:820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x)), mix = (a, b, t) => a + (b - a) * t;
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const canvas = $("#gl"); let renderer;
+function noGL() { $("#nogl").style.display = "flex"; $("#veil").classList.add("off"); }
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" }); } catch (e) { noGL(); return; }
+if (!renderer.capabilities.isWebGL2) { noGL(); return; }
+renderer.setClearColor(0xF4F2ED);
+
+// ================================================================ textures
+function makeTex(c, mips) { const t = new THREE.CanvasTexture(c); t.minFilter = mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter; t.generateMipmaps = !!mips; t.magFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t; }
+const c1 = document.createElement("canvas"); c1.width = 2048; c1.height = 1024; const T1 = makeTex(c1, true);
+const c2 = document.createElement("canvas"); c2.width = 2048; c2.height = 512; const T2 = makeTex(c2, true);
+function drawWord(cv, word, target, fam) { const g = cv.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+  let fs = 600; g.font = `800 ${fs}px ${fam}`; fs *= target / g.measureText(word).width; g.font = `800 ${fs}px ${fam}`; const m = g.measureText(word); const asc = m.actualBoundingBoxAscent || fs * .72; g.fillText(word, cv.width / 2, cv.height / 2 + asc / 2); }
+const FAM = '"Hanken Grotesk","Arial Black",Arial,sans-serif';
+function drawTexts() { drawWord(c1, "INK", 1700, FAM); drawWord(c2, "CONTRAST", 1960, FAM); T1.needsUpdate = true; T2.needsUpdate = true; }
+drawTexts(); try { document.fonts.load('800 200px "Hanken Grotesk"').then(drawTexts).catch(() => {}); document.fonts.ready.then(drawTexts); } catch (e) {}
+
+// the artwork (chapter 10): every mark of the journey as one picture, plus the visitor's own ink
+const AW = 1280, AH = 800; const cArt = document.createElement("canvas"); cArt.width = AW; cArt.height = AH; const TA = makeTex(cArt, true); const ag = cArt.getContext("2d");
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function taper(g, pts, w0, w1) { for (let i = 1; i < pts.length; i++) { const t = i / (pts.length - 1); g.lineWidth = Math.max(.5, w0 + (w1 - w0) * t); g.beginPath(); g.moveTo(pts[i - 1][0], pts[i - 1][1]); g.lineTo(pts[i][0], pts[i][1]); g.stroke(); } }
+function renderArt() {
+  const R = rng(11), g = ag; g.fillStyle = "#fff"; g.fillRect(0, 0, AW, AH); g.strokeStyle = "#090909"; g.fillStyle = "#090909"; g.lineCap = "round"; g.lineJoin = "round";
+  // ripples
+  for (let k = 0; k < 7; k++) { g.globalAlpha = .85 - k * .1; g.lineWidth = 4 - k * .45; g.beginPath(); g.ellipse(250, 640, 40 + k * 38, (40 + k * 38) * .28, 0, 0, 7); g.stroke(); }
+  g.globalAlpha = 1;
+  for (let i = 0; i < 160; i++) { const a = .3 + R() * 2.5, v = 60 + R() * 260, t = R(); const x = 250 + Math.cos(a) * v * t * 1.6, y = 640 - Math.sin(a) * v * t * 1.4 + t * t * 130; g.beginPath(); g.arc(x, y, .8 + R() * R() * 7, 0, 7); g.fill(); }
+  // bloom with branches
+  const branch = (x, y, a, len, w, d) => { const pts = [[x, y]]; let cx = x, cy = y, ca = a; for (let i = 0; i < 14; i++) { ca += (R() - .5) * .7; cx += Math.cos(ca) * len / 14; cy += Math.sin(ca) * len / 14; pts.push([cx, cy]); } taper(g, pts, w, w * .15); if (d > 0) for (let k = 0; k < 3; k++) { const j = (3 + (R() * 9 | 0)); branch(pts[j][0], pts[j][1], ca + (R() - .5) * 2.4, len * .55, w * .5, d - 1); } };
+  g.beginPath(); g.arc(820, 280, 52, 0, 7); g.fill(); for (let i = 0; i < 11; i++) branch(820, 280, i / 11 * 6.28 + R(), 130 + R() * 170, 14, 2);
+  // tendrils
+  for (let i = 0; i < 10; i++) { const x0 = 420 + i * 52 + R() * 20, pts = []; for (let k = 0; k <= 30; k++) { const t = k / 30; pts.push([x0 + Math.sin(t * 3 + i) * 50 * t + (R() - .5) * 2, 800 - t * (300 + R() * 160)]); } g.globalAlpha = i % 2 ? .45 : .95; taper(g, pts, 11, 1.2); } g.globalAlpha = 1;
+  // letters
+  g.save(); g.globalAlpha = .9; g.font = `800 330px ${FAM}`; g.textAlign = "center"; g.translate(930, 600); g.rotate(-.12); g.lineWidth = 5; g.strokeText("INK", 0, 0); g.restore();
+  // flow ribbons
+  for (let i = 0; i < 6; i++) { const pts = []; const y0 = 100 + i * 120, ph = R() * 6; for (let k = 0; k <= 60; k++) { const t = k / 60; pts.push([t * AW, y0 + Math.sin(t * 6 + ph) * 60 + t * 120 - 60]); } g.globalAlpha = .8; taper(g, pts, 2 + i * 2, 1); } g.globalAlpha = 1;
+  // pool
+  for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(1050 + (R() - .5) * 120, 220 + (R() - .5) * 90, 30 + R() * 60, 20 + R() * 40, R() * 3, 0, 7); g.fill(); }
+  TA.needsUpdate = true;
+}
+renderArt();
+let userPts = []; try { userPts = JSON.parse(sessionStorage.getItem("ink_pts") || "[]"); } catch (e) {}
+function drawUser(a, b, w) { const g = ag; g.strokeStyle = "#090909"; g.fillStyle = "#090909"; g.lineCap = "round"; g.lineWidth = w; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.beginPath(); g.arc(b[0], b[1], w * .6, 0, 7); g.fill(); }
+function replayUser() { for (const s of userPts) { if (s.length === 5) drawUser([s[0], s[1]], [s[2], s[3]], s[4]); else if (s.length === 3) { ag.beginPath(); ag.arc(s[0], s[1], s[2], 0, 7); ag.fill(); } } TA.needsUpdate = true; }
+replayUser();
+
+// ================================================================ the shader
+const FS = `
+precision highp float;
+#define PI 3.14159265
+const vec3 PAPER=vec3(.957,.949,.929);
+const vec3 INK=vec3(.035);
+uniform vec2 uRes,uMouse,uFc,uAH; uniform float uTime,uP,uAsp,uSF,uQ,uFlow,uVel,uZs;
+uniform sampler2D uT1,uT2,uArt;
+float PX,FIT,XR;
+float ss(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.,1.); return t*t*(3.-2.*t); }
+float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+float noise(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y); }
+float fbm(vec2 p){ float s=0.,a=.5; for(int i=0;i<5;i++){ s+=a*noise(p); p=mat2(1.6,1.2,-1.2,1.6)*p; a*=.5; } return s; }
+mat2 rot(float a){ float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
+float cov(float d){ return clamp(.5-d/PX,0.,1.); }
+float smin(float a,float b,float k){ float h=max(k-abs(a-b),0.)/k; return min(a,b)-h*h*k*.25; }
+float Mk(vec2 uv,float b){ return textureLod(uT1,uv,b).r; }
+vec3 wall(vec2 p){ return PAPER*(.975-.012*length(p))*(1.-.03*fbm(p*3.)); }
+float sdBox(vec2 p,vec2 b){ vec2 q=abs(p)-b; return length(max(q,0.))+min(max(q.x,q.y),0.); }
+
+// ---------- 01 THE DROP
+vec3 sceneDrop(vec2 p,float l){
+  float surf=-.12, impY=-.52; float f=ss(0.,.5,l);
+  float dropY=mix(1.6,impY+.03,pow(f,1.7));
+  float camY=mix(dropY-.05,-.3,ss(.45,.62,l));
+  vec2 w=p+vec2(0.,camY);
+  float stretch=mix(.09,.3,f); vec2 a=vec2(0.,dropY);
+  float r=.06*(1.+.04*sin(uTime*3.)*(1.-f));
+  vec2 pa=w-a; float h=clamp(pa.y/stretch,0.,1.);
+  float d=smin(length(pa)-r,length(pa-vec2(0.,stretch*h))-mix(r*.85,.003,h),.045);
+  float dropA=cov(d)*(1.-ss(.5,.535,l));
+  vec3 col=PAPER*(1.-.025*length(p));
+  float below=ss(surf+.004,surf-.004,w.y);
+  float depthv=clamp((surf-w.y)/1.2,0.,1.);
+  vec3 pool=mix(vec3(.9,.9,.89),vec3(.79,.79,.78),depthv)+(fbm(vec2(w.x*3.,(w.y-surf)*10.)+uTime*.05)-.5)*.03;
+  col=mix(col,pool,below*.65);
+  float te=clamp((l-.5)/.5,0.,1.); vec2 q=vec2(w.x,(w.y-impY)*3.2); float rr=length(q); float ink=0.;
+  for(int k=0;k<4;k++){ float fk=float(k); float rad=te*(1.5+.3*fk)-fk*.12; float amp=(1.-te*.75)*(.85-.18*fk); float th=.012+.012*te;
+    ink=max(ink,step(.0,rad)*ss(th,0.,abs(rr-rad))*amp*ss(0.,.05,rad)); }
+  ink*=below; ink=max(ink,ss(.06+.14*te+.03,.06+.14*te,rr)*(1.-ss(.25,1.,te))*step(.001,te)*below*.9);
+  float sp=0.;
+  for(int i=0;i<14;i++){ float fi=float(i); float h1=hash(vec2(fi,2.)),h2=hash(vec2(fi,9.)); float ang=mix(.35,2.8,h1); float v=.7+.9*h2; float tt=te*1.15;
+    vec2 pos=vec2(cos(ang)*v*tt*.7,impY+sin(ang)*v*tt*.9-1.3*tt*tt); float rad=(.008+.016*h2)*(1.-te*.5)*step(.001,te)*step(impY-.03,pos.y);
+    sp=max(sp,cov(length(w-pos)-rad)); }
+  float hc=.28*sin(PI*min(te*1.4,1.))*(1.-te*.3)*step(.001,te); vec2 cb=w-vec2(0.,impY); float hh=clamp(cb.y/max(hc,.001),0.,1.);
+  float crown=cov(length(cb-vec2(0.,hc*hh))-mix(.035,.012,hh)*(1.-te*.4))*step(.001,te)*(1.-ss(.75,1.,te));
+  col=mix(col,vec3(.12),max(ink,0.)*.85);
+  col=mix(col,INK,max(max(sp,crown),dropA));
+  float hl=ss(r*.5,0.,length(w-a-vec2(-r*.35,r*.3)))*dropA; col=mix(col,vec3(.5),hl*.55);
+  return col;
+}
+// ---------- 02 BLOOM
+vec3 sceneBloom(vec2 p,float l){
+  float t=uTime*.1; vec2 q=rot(l*1.8)*p*mix(1.5,.8,ss(0.,.7,l));
+  float rad0=length(q); q=rot((1./(rad0+.35))*l*2.4)*q;
+  vec2 w=q; w+=.5*vec2(fbm(q*1.5+vec2(0.,t)),fbm(q*1.5+vec2(5.2,1.3)-t)); w+=.3*vec2(fbm(w*3.+t*2.),fbm(w*3.+7.));
+  float r1=1.-abs(fbm(w*2.2+3.)*2.-1.); float ridge=pow(r1,5.);
+  float rad=length(q); float growth=mix(.12,1.7,ss(0.,.9,l));
+  float core=ss(growth,growth*.15,rad+(fbm(w*2.)-.5)*.6*growth);
+  float dens=core*(.22+.78*ridge)+core*core*.5;
+  float film=ss(.58,.78,fbm(w*4.+q*.5))*ss(growth*1.3,growth*.3,rad)*.32;
+  float a=clamp(dens+film,0.,1.);
+  vec3 bg=mix(vec3(.93,.93,.92),PAPER,ss(1.6,0.,length(p)))*(1.-.02*fbm(p*3.));
+  float sp=ss(.93,.97,hash(floor(p*60.)+floor(uTime*.3)))*.1*(1.-core); bg-=sp;
+  return mix(bg,INK,pow(a,1.15)*.96);
+}
+// ---------- 03 TENDRILS
+vec3 sceneTendril(vec2 p,float l){
+  p.y+=l*.25; p.x*=1.+p.y*.1;
+  vec3 col=mix(vec3(.93,.93,.92),PAPER,ss(1.8,0.,length(p)))*(1.-.02*fbm(p*3.));
+  float grow=ss(0.,.5,l); float aD=0.,aL=0.;
+  for(int i=0;i<13;i++){ float fi=float(i); float h=hash(vec2(fi,3.)); float x0=(fi/12.-.5)*3.1+(h-.5)*.25; float y0=-1.45;
+    float len=(.9+1.2*hash(vec2(fi,7.)))*grow*1.7; float t=clamp((p.y-y0)/max(len,.01),0.,1.);
+    float sway=sin(t*3.+uTime*.7+fi)*.12*t+sin(t*7.-uTime*1.1+fi*2.)*.03*t;
+    float md=exp(-pow((p.y-uMouse.y)/.55,2.)); sway+=(uMouse.x-x0)*.55*md*t*step(.001,length(uMouse)+.001);
+    float cx=x0+sway+.25*sin(fi*2.)*t*t; float wd=mix(.05,.003,t*t)*(.6+.8*h);
+    float d=abs(p.x-cx)-wd; float inside=step(y0,p.y)*step(p.y,y0+len);
+    float tip=length(vec2(p.x-cx,(p.y-(y0+len))*.9))-.02-.012*h;
+    float c=max(cov(d)*inside,cov(tip)*step(.05,grow));
+    if(mod(fi,2.)<.5) aD=max(aD,c); else aL=max(aL,c*.55);
+  }
+  col=mix(col,vec3(.55),aL); col=mix(col,INK,aD); return col;
+}
+// ---------- 04 THE LETTER
+vec3 sceneLetter(vec2 p,float l){
+  p=rot(.12*sin(l*2.))*p/FIT; p/=mix(1.15,1.,ss(0.,.9,l));
+  vec2 uv=p/vec2(3.,1.5)+.5; float conv=ss(0.,.8,l); float e=.05,b=6.;
+  vec2 g=vec2(Mk(uv+vec2(e,0.),b)-Mk(uv-vec2(e,0.),b),Mk(uv+vec2(0.,e),b)-Mk(uv-vec2(0.,e),b));
+  vec2 ps=p-g*conv*1.7;
+  float wave=fbm(vec2(ps.x*1.2,uTime*.12))*2.4+sin(ps.x*2.+uTime*.6)*.3*(1.-conv);
+  float lineY=ps.y*(10.+8.*conv)+wave*(1.-.7*conv);
+  float th=.1+.5*ss(0.,.6,Mk(uv,4.))*conv; float s=abs(fract(lineY)-.5)*2.; float lines=ss(th+.06,th,s);
+  float region=ss(1.05,.55,abs(p.y))*ss(2.4,1.3,abs(p.x));
+  float M0=Mk(uv,0.); float solid=ss(.55,.95,l); float body=mix(lines*region*(1.-.2*conv),M0,solid);
+  float ext=0.; for(int k=1;k<=10;k++){ ext=max(ext,Mk(uv-vec2(.0034,.0046)*float(k),0.)*(1.-float(k)/12.)); }
+  ext*=solid*(1.-M0); float sh=Mk(uv-vec2(.03,.07),3.)*.2*solid;
+  vec3 col=PAPER*(1.-.03*length(p)*.4); col=mix(col,col*.76,sh); col=mix(col,vec3(.42),ext); col=mix(col,INK,body); return col;
+}
+// ---------- 05 IMPRINT
+vec3 sceneImprint(vec2 p,float l){
+  p/=FIT; float z=1.+5.*ss(.25,1.,l); vec2 fp=vec2(-.62,.12); vec2 q=fp+(p-fp)/z;
+  float drop=ss(0.,.2,l); float sc=mix(1.18,1.,drop*drop); vec2 uv=q/sc/vec2(3.,1.5)+.5; float bleed=ss(.12,.9,l);
+  float fib=fbm(q*vec2(160.,48.))*.7+fbm(q*500.)*.3; float cap=fbm(q*95.+fib)*.6+fib*.4;
+  float B=Mk(uv,mix(2.,5.5,bleed*.7)); float thr=mix(.55,.28,bleed); float fld=B+(cap-.5)*.7*bleed;
+  float edge=ss(-.07,.07,fld-thr); float M0=Mk(uv,0.); float ink=max(M0*.92,edge*.8);
+  float bump=fbm(q*140.+vec2(.02,.03))-fbm(q*140.);
+  vec3 col=PAPER*(1.-.035*fib)+bump*1.2;
+  col=mix(col,col*.7,Mk(uv-vec2(.02,.05),3.)*.25*(1.-ss(.1,.3,l)));
+  col=mix(col,mix(vec3(.12),INK,ss(.3,1.,ink)),ink); col+=.04*ss(.12,0.,abs(fld-thr))*(1.-ink); return col;
+}
+// ---------- 06/07 SCULPT + FRACTURE (ray marched)
+const vec4 SP[16]=vec4[16](vec4(0.,-.55,0.,.6),vec4(0.,.05,0.,.42),vec4(0.,.55,0.,.3),vec4(0.,.95,0.,.2),
+ vec4(.95,-.1,0.,.14),vec4(.67,.15,.67,.18),vec4(0.,-.2,.95,.12),vec4(-.67,.2,.67,.16),vec4(-.95,-.05,0.,.15),vec4(-.67,.25,-.67,.11),vec4(0.,-.15,-.95,.17),vec4(.67,.1,-.67,.13),
+ vec4(.3,1.35,.2,.1),vec4(-.35,1.1,-.3,.09),vec4(.55,.8,-.4,.08),vec4(-.6,.5,.45,.11));
+float mapS(vec3 p,float F){
+  float k=mix(.32,.02,F); float d=1e5;
+  for(int i=0;i<16;i++){ vec4 s=SP[i]; vec3 c=s.xyz; float h=hash(vec2(float(i),1.7)); vec3 dir=normalize(c+vec3(.001,.2,.001));
+    c+=dir*F*(.5+1.6*h)*1.8; c.xz=rot(F*(1.5+h))*c.xz; float r=s.w*(1.-.35*F); c.y=max(c.y,-1.1+r);
+    d=smin(d,length(p-c)-r,k); }
+  float vis=1.-ss(0.,.35,F);
+  for(int j=0;j<3;j++){ vec3 q=p; q.xy=rot(.7*float(j)+.3)*q.xy; q.yz=rot(.5+.9*float(j))*q.yz; float R=(1.25+.45*float(j))*mix(.5,1.,F);
+    float tr=length(vec2(length(q.xz)-R,q.y))-(.022+.012*float(j))+vis*.8; d=smin(d,tr,.05); }
+  return d;
+}
+vec3 envm(vec3 rd){
+  float az=atan(rd.z,rd.x); vec3 c=vec3(.5+.32*rd.y);
+  float s1=ss(.14,0.,abs(rd.y-.55)-.1)*ss(1.1,.4,abs(az-.8)); float s2=ss(.1,0.,abs(rd.y-.15)-.06)*ss(.9,.3,abs(az+2.1));
+  c+=vec3(1.6)*s1+vec3(1.2)*s2; c*=1.-.8*ss(.5,.1,abs(abs(az)-3.14))*ss(.8,.2,rd.y); c+=ss(.7,1.,rd.y)*.6; return c;
+}
+vec3 sceneSculpt(vec2 p,float l,int id){
+  float F; vec3 ro,ta;
+  if(id==5){ F=0.; float a=l*5.9+.4; ro=vec3(sin(a)*3.9,.5+.5*sin(l*3.1),cos(a)*3.9); ta=vec3(0.,-.05,0.); }
+  else { F=ss(0.,.55,l); float a=6.3+l*3.;
+    vec3 dv=normalize(vec3(sin(a)*.95,.22,cos(a)*.95)); float s=mix(3.9,-3.9,ss(.28,.78,l)); ro=dv*s; if(abs(s)<.001) ro+=dv*.001;
+    float w=ss(.3,.45,l)*(1.-ss(.6,.75,l)); ta=mix(vec3(0.,-.05,0.),ro-dv*2.,w); }
+  vec3 f=normalize(ta-ro); vec3 r=normalize(cross(f,vec3(0.,1.,0.))); vec3 u=cross(r,f); vec3 rd=normalize(p.x*r+p.y*u+1.9*f);
+  vec3 L=normalize(vec3(.5,.9,.35)); float FY=-1.15;
+  float t=0.,hit=-1.; int steps=int(mix(40.,72.,uQ));
+  for(int i=0;i<72;i++){ if(i>=steps) break; float d=mapS(ro+rd*t,F); if(d<.0015*t+.001){ hit=t; break; } t+=d*.9; if(t>14.) break; }
+  float tf=rd.y<-.0001?(FY-ro.y)/rd.y:1e5; vec3 col=PAPER*(1.-.03*length(p));
+  if(tf>0.&&tf<1e4&&(hit<0.||tf<hit)){
+    vec3 pf=ro+rd*tf; float res=1.; float tt=.04;
+    for(int i=0;i<24;i++){ float h=mapS(pf+L*tt+vec3(0.,.02,0.),F); res=min(res,8.*h/tt); tt+=clamp(h,.04,.5); if(res<.01||tt>6.) break; }
+    res=clamp(res,0.,1.); float ao=clamp(mapS(pf+vec3(0.,.25,0.),F)/.25,0.,1.);
+    vec3 fc=PAPER*(.6+.4*res)*(.78+.22*ao); col=mix(fc,PAPER*(1.-.03*length(p)),ss(4.,13.,tf));
+  }
+  if(hit>0.){
+    vec3 pos=ro+rd*hit; vec2 e=vec2(.002,-.002); vec3 n=normalize(e.xyy*mapS(pos+e.xyy,F)+e.yyx*mapS(pos+e.yyx,F)+e.yxy*mapS(pos+e.yxy,F)+e.xxx*mapS(pos+e.xxx,F));
+    float ndv=clamp(dot(n,-rd),0.,1.); float fr=.05+.95*pow(1.-ndv,5.); vec3 rf=reflect(rd,n);
+    float sh=1.; { float tt2=.03; for(int i=0;i<18;i++){ float h=mapS(pos+n*.02+L*tt2,F); sh=min(sh,8.*h/tt2); tt2+=clamp(h,.05,.5); if(sh<.01||tt2>5.) break; } } sh=clamp(sh,0.,1.);
+    vec3 c=INK*(.6+.5*max(dot(n,L),0.)*sh)+envm(rf)*(fr+.06)*(.5+.5*sh)+pow(max(dot(rf,L),0.),60.)*sh*.8;
+    if(rf.y<0.&&FY-pos.y<4.){ float tfl=(FY-pos.y)/rf.y; if(tfl>0.){ c=mix(c,PAPER*.7*fr*1.4,.0); } }
+    col=c;
+  }
+  return col;
+}
+// ---------- 08 FLOW (tunnel)
+vec3 sceneTunnel(vec2 p,float l){
+  float z0=uFlow; vec2 c=vec2(sin(z0*.35)*.35,cos(z0*.27)*.25)*ss(0.,.3,l); vec2 q=p-c*.0; q.x-=c.x*.2; q.y-=c.y*.2;
+  float r=length(q)+.002; float a=atan(q.y,q.x); float depth=.35/r+z0;
+  float aa=a+depth*.45*sin(z0*.1+1.);
+  float n=fbm(vec2(aa*1.4,depth*.8)*vec2(1.,1.2)+vec2(z0*.05,0.));
+  float bands=sin(aa*3.+n*3.+depth*.6)*.5+.5; float rib=ss(.92,.98,bands); float spec=pow(max(0.,sin(aa*5.+depth*2.5+n*4.)),24.);
+  float wall=.045+.05*bands+.28*rib*(.6+.4*n)+.5*spec*.5;
+  float lite=ss(.0,.55,r); vec3 col=mix(vec3(.96),vec3(wall),ss(.03,.45,r)); col=mix(col,vec3(wall*.7),.0);
+  col=mix(col,col*(.85+.15*sin(depth*6.)),.3*lite);
+  col+=vec3(.6)*ss(.4,.0,r)*(1.-ss(.0,.14,r)*.0)*.5; return col;
+}
+// ---------- 09 CONTRAST
+vec3 sceneContrast(vec2 p,float l){
+  vec3 bg=vec3(.035); float t=uTime*.15; float g=ss(0.,.85,l)*2.3; vec2 q=p;
+  q+=.35*vec2(fbm(q*1.3+t),fbm(q*1.3+7.-t)); q+=.18*vec2(fbm(q*3.+t*2.),fbm(q*3.+3.));
+  float d=length(p*vec2(.8,1.))/max(g,.01); float n=fbm(q*2.2)-.5; float m=1.-ss(.88,1.02,d+n*.75);
+  float r1=1.-abs(fbm(q*2.+1.)*2.-1.);
+  vec3 liq=PAPER*(.86+.14*fbm(q*4.5))*(.93+.07*pow(r1,6.)); liq-=.1*ss(.55,.95,d)*.6;
+  vec2 qt=p+.12*(q-p); vec2 uv2=qt/(vec2(4.6,1.15)*min(1.,XR/1.78))+.5; float tx=textureLod(uT2,uv2,0.).r*m*ss(.25,.7,l);
+  vec3 col=mix(bg+ss(.8,.85,fbm(p*20.))*.08,liq,m); col=mix(col,INK,tx); return col;
+}
+// ---------- 10 THE CANVAS
+vec3 sceneCanvas(vec2 p,float l){
+  vec2 pw=uFc+p/uZs; vec2 uvA=pw/(2.*uAH)+.5; vec3 col=wall(p);
+  float sdb=sdBox(pw-vec2(.05,-.08),uAH); col=mix(col,col*.62,ss(.3,-.02,sdb)*.5);
+  float eps=PX/uZs; float inside=ss(eps,-eps,sdBox(pw,uAH));
+  float A=texture(uArt,uvA).r; vec3 art=mix(INK,vec3(.985,.982,.97),A)*(1.-.015*fbm(pw*30.));
+  return mix(col,art,inside);
+}
+// ---------- 11 DISSOLVE
+vec3 sceneDissolve(vec2 p,float l){
+  vec2 pw=p/.85; float t=l; vec2 ah=uAH; vec3 col=wall(p);
+  float fadeA=1.-ss(0.,.1,t);
+  float sdb=sdBox(pw-vec2(.05,-.08),ah); col=mix(col,col*.62,ss(.3,-.02,sdb)*.5*fadeA);
+  float inside=ss(PX/.85,-PX/.85,sdBox(pw,ah))*fadeA; float A=textureLod(uArt,pw/(2.*ah)+.5,0.).r;
+  col=mix(col,mix(INK,vec3(.985,.982,.97),A),inside);
+  float cs=.04; vec2 c0=pw;
+  for(int it=0;it<2;it++){ float r=length(c0); float e=ss(0.,1.,(t-.08-r*.15)/.8); float ang=e*2.4/(r*.6+.6); c0=rot(-ang)*pw/max(1.-e,.04); }
+  vec2 id=floor(c0/cs); float ink=0.;
+  for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){
+    vec2 cid=id+vec2(float(i),float(j)); vec2 cc=(cid+.5)*cs+(vec2(hash(cid+3.1),hash(cid+7.7))-.5)*cs*.4; float h=hash(cid);
+    float r=length(cc); float e=ss(0.,1.,(t-.08-r*.15)/.8); float ang=e*2.4/(r*.6+.6); vec2 pos=rot(ang)*cc*(1.-e);
+    float Ac=textureLod(uArt,cc/(2.*ah)+.5,3.).r; float ia=1.-Ac; if(abs(cc.x)>ah.x||abs(cc.y)>ah.y) ia=0.;
+    float rad=cs*.5*sqrt(max(ia,0.))*(.6+.7*h)*(1.-.25*e); ink=max(ink,clamp(.5-(length(pw-pos)-rad)*.85/(PX/.85),0.,1.)); }
+  float merge=ss(.78,1.,t); ink=max(ink,cov(length(p)-mix(0.,.075,merge)));
+  return mix(col,INK,ink*ss(0.,.04,t+.0)+ink*(1.-ss(0.,.04,t))*0.);
+}
+// ---------- 12 THE MARK
+vec3 sceneMark(vec2 p,float l){
+  float off=mix(0.,.14,ss(.4,.9,l)); vec2 pc=p-vec2(0.,off); float m=ss(.3,.8,l);
+  vec2 wob=(vec2(fbm(p*6.+uTime*.3),fbm(p*6.+9.-uTime*.3))-.5)*mix(.03,.004,m);
+  vec2 uv=(pc+wob)/(vec2(2.4,1.2)*FIT)+.5; float fT=Mk(uv,mix(5.,0.,m*m)); float fC=1.-ss(0.,.16,length(pc+wob));
+  float f=mix(fC,fT,m); float w=mix(.2,.02,ss(.5,1.,m)); float ink=ss(.5-w,.5+w,f);
+  vec3 col=PAPER*(1.-.02*length(p));
+  float sh=mix(1.-ss(0.,.3,length(pc-vec2(.03,-.05))),Mk(uv-vec2(.012,.03),4.),m)*.22; col*=1.-sh*(1.-ink);
+  float hl=ss(.04,0.,length(pc-vec2(-.03,.03)))*(1.-m)*.5; col=mix(col,mix(INK,vec3(.5),hl),ink); return col;
+}
+vec3 scene(int id,vec2 p,float l){
+  if(id==0) return sceneDrop(p,l); if(id==1) return sceneBloom(p,l); if(id==2) return sceneTendril(p,l); if(id==3) return sceneLetter(p,l);
+  if(id==4) return sceneImprint(p,l); if(id==5||id==6) return sceneSculpt(p,l,id); if(id==7) return sceneTunnel(p,l); if(id==8) return sceneContrast(p,l);
+  if(id==9) return sceneCanvas(p,l); if(id==10) return sceneDissolve(p,l); return sceneMark(p,l);
+}
+void main(){
+  PX=2.*uSF/uRes.y; XR=uAsp*uSF; FIT=min(1.,XR/1.45);
+  vec2 p=(gl_FragCoord.xy-.5*uRes)/uRes.y*2.*uSF;
+  float P=clamp(uP,0.,1.); float x=P*12.; int ci=int(min(floor(x),11.)); float l=P>=1.?1.:fract(x);
+  vec3 col=scene(ci,p,l);
+  if(ci<11){ float tr=ss(.86,1.,l); if(tr>0.){ vec3 c2=scene(ci+1,p,0.); float bn=fbm(p*2.2+3.)*.6+.4*fbm(p*7.); float m=ss(bn-.12,bn+.12,tr*1.25-.12); col=mix(col,c2,m); } }
+  col+=(hash(gl_FragCoord.xy+fract(uTime)*91.)-.5)*.02; gl_FragColor=vec4(clamp(col,0.,1.),1.);
+}`;
+const U = { uRes: { value: new THREE.Vector2(1, 1) }, uMouse: { value: new THREE.Vector2(0, 0) }, uFc: { value: new THREE.Vector2(.45, -.15) }, uAH: { value: new THREE.Vector2(1.55, .97) },
+  uTime: { value: 0 }, uP: { value: 0 }, uAsp: { value: 1.78 }, uSF: { value: 1 }, uQ: { value: 1 }, uFlow: { value: 0 }, uVel: { value: 0 }, uZs: { value: 6 }, uT1: { value: T1 }, uT2: { value: T2 }, uArt: { value: TA } };
+const mat = new THREE.ShaderMaterial({ vertexShader: "void main(){ gl_Position=vec4(position.xy,0.,1.); }", fragmentShader: FS, uniforms: U, depthTest: false, depthWrite: false });
+const scene = new THREE.Scene(); const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false; scene.add(quad); const cam = new THREE.Camera();
+
+// ================================================================ state
+let P = 0, targetP = 0, tm = 0, paused = false, vel = 0, lastP = 0, flowAcc = 0; let SF = 1;
+const mouse = { x: 0, y: 0 }, mouseS = { x: 0, y: 0 }; let mouseSeen = false;
+const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
+addEventListener("scroll", () => { targetP = clamp(scrollY / maxScroll(), 0, 1); $("#hint").style.opacity = scrollY > 30 ? 0 : .6; }, { passive: true });
+let anim = null; const E3 = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const stepAnim = now => { if (!anim) return; const k = clamp((now - anim.t0) / anim.dur, 0, 1); scrollTo(0, anim.from + (anim.to - anim.from) * E3(k)); if (k >= 1) anim = null; };
+addEventListener("wheel", () => { anim = null; }, { passive: true }); addEventListener("touchstart", () => { anim = null; }, { passive: true });
+const goTo = (p, dur) => { const to = p * maxScroll(); if (reduce) scrollTo(0, to); else anim = { from: scrollY, to, t0: performance.now(), dur: dur || 1700 + Math.abs(p - targetP) * 2600 }; };
+const CH = ["The drop", "Bloom", "Tendrils", "The letter", "Imprint", "Sculpt", "Fracture", "Flow", "Contrast", "The canvas", "Dissolve", "The mark"];
+const chOf = p => Math.min(11, Math.floor(p * 12)); const chMid = i => (i + .5) / 12;
+const idx = $("#idx"), chl = $("#chl");
+CH.forEach((n, i) => { const b = document.createElement("button"); b.innerHTML = `<span>${String(i + 1).padStart(2, "0")} ${n}</span><i></i>`; b.setAttribute("aria-label", `${i + 1}章 ${n}`); b.addEventListener("click", () => goTo(i === 0 ? .004 : chMid(i))); idx.appendChild(b);
+  const li = document.createElement("li"); li.innerHTML = `<button><small>${String(i + 1).padStart(2, "0")}</small>${n}</button>`; li.firstChild.addEventListener("click", () => { closeOv(); goTo(i === 0 ? .004 : chMid(i)); }); chl.appendChild(li); });
+const idxBtns = $$("button", idx);
+$("#logo").addEventListener("click", () => goTo(0)); $("#again").addEventListener("click", () => goTo(0, 4200));
+let lastFocus = null;
+function openOv(name) { closeOv(true); const el = $("#ov-" + name); lastFocus = document.activeElement; el.classList.add("open"); document.body.classList.add("lock"); $(".x", el).focus(); }
+function closeOv(keep) { $$(".ov.open").forEach(e => e.classList.remove("open")); document.body.classList.remove("lock"); if (!keep && lastFocus) lastFocus.focus(); }
+$$("[data-open]").forEach(b => b.addEventListener("click", () => openOv(b.dataset.open))); $$(".ov .x").forEach(b => b.addEventListener("click", () => closeOv()));
+addEventListener("keydown", e => { if ($$(".ov.open").length) { if (e.key === "Escape") closeOv(); return; } const t = e.target.tagName; if (t === "INPUT") return;
+  if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); goTo(chMid(Math.min(11, chOf(targetP) + 1))); } if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); goTo(Math.max(.004, chMid(Math.max(0, chOf(targetP) - 1)))); } });
+$("#copyMail").addEventListener("click", async () => { const t = $("#mailTxt").textContent; try { await navigator.clipboard.writeText(t); $("#copyMsg").textContent = "コピーしました。"; } catch (e) { const r = document.createRange(); r.selectNodeContents($("#mailTxt")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copyMsg").textContent = "選択しました。コピーしてください。"; } });
+// letters
+const chs = $$(".ch").map(el => ({ el, a: +el.dataset.a, b: +el.dataset.b, letters: [] }));
+chs.forEach(c => { $$(".big", c.el).forEach(big => { const t = big.dataset.t; big.textContent = ""; t.split(" ").forEach((w, wi, arr) => { const ws = document.createElement("span"); ws.className = "w"; [...w].forEach(ch => { const s = document.createElement("span"); s.className = "l"; s.textContent = ch; ws.appendChild(s); c.letters.push(s); }); big.appendChild(ws); if (wi < arr.length - 1) big.appendChild(document.createTextNode(" ")); }); }); c.letters.forEach((s, i) => s.dataset.i = i / Math.max(1, c.letters.length - 1)); });
+// ---- pointer → shader space; ink on the canvas chapter
+function toP(cx, cy) { const h = innerHeight; return [(cx - innerWidth / 2) / h * 2 * SF, -(cy - h / 2) / h * 2 * SF]; }
+let lastU = null; const dot = $("#dot");
+function artView(l) { const zs = mix(6, .85, ss(0, .7, l)), a = ss(0, .8, l); const xr = innerWidth / innerHeight * SF, aw = Math.min(1.55, xr * .9); return { zs, fx: mix(.45, 0, a), fy: mix(-.15, 0, a), aw, ah: aw / 1.6 }; }
+function addInk(cx, cy) {
+  const x = P * 12; if (x < 9.12 || x > 10.0) { lastU = null; return; } const v = artView(clamp(x - 9, 0, 1)); const [px, py] = toP(cx, cy); const pw = [v.fx + px / v.zs, v.fy + py / v.zs];
+  const u = pw[0] / (2 * v.aw) + .5, w = pw[1] / (2 * v.ah) + .5; if (u < 0 || u > 1 || w < 0 || w > 1) { lastU = null; return; }
+  const X = u * AW, Y = (1 - w) * AH; const sp = lastU ? Math.hypot(X - lastU[0], Y - lastU[1]) : 0; const wd = clamp(16 - sp * .35, 4, 16);
+  if (lastU) { drawUser(lastU, [X, Y], wd); userPts.push([lastU[0] | 0, lastU[1] | 0, X | 0, Y | 0, wd | 0]); } else { ag.beginPath(); ag.arc(X, Y, wd * .6, 0, 7); ag.fill(); userPts.push([X | 0, Y | 0, wd * .6 | 0]); }
+  if (sp > 30 && Math.random() < .5) { const sx = X + (Math.random() - .5) * 40, sy = Y + (Math.random() - .5) * 40, sr = 1 + Math.random() * 3; ag.beginPath(); ag.arc(sx, sy, sr, 0, 7); ag.fill(); userPts.push([sx | 0, sy | 0, sr | 0]); }
+  if (userPts.length > 1200) userPts.splice(0, 200); lastU = [X, Y]; TA.needsUpdate = true;
+}
+addEventListener("pointermove", e => { const [px, py] = toP(e.clientX, e.clientY); mouse.x = px; mouse.y = py; mouseSeen = true; dot.style.transform = `translate(${e.clientX}px,${e.clientY}px)`; addInk(e.clientX, e.clientY); });
+addEventListener("pointerleave", () => { mouseSeen = false; lastU = null; }); addEventListener("pointerup", () => { lastU = null; });
+$("#clear").addEventListener("click", () => { userPts = []; renderArt(); try { sessionStorage.removeItem("ink_pts"); } catch (e) {} });
+// ---- sound (opt-in, synthesized)
+const aud = { ctx: null, g: null, on: false };
+function setSound(on) { if (on && !aud.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const c = aud.ctx = new AC(); aud.g = c.createGain(); aud.g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 260; [65.4, 98, 130.8].forEach((f, i) => { const o = c.createOscillator(); o.type = "sine"; o.frequency.value = f; const g = c.createGain(); g.gain.value = .05 / (i + 1); o.connect(g); g.connect(lp); o.start(); }); lp.connect(aud.g); aud.g.connect(c.destination); }
+  aud.on = on; if (aud.ctx) { if (on) aud.ctx.resume(); aud.g.gain.setTargetAtTime(on ? .5 : 0, aud.ctx.currentTime, .1); } $("#snd").setAttribute("aria-pressed", String(on)); $("#snd").textContent = on ? "Sound on" : "Sound off"; }
+function plink(f, v) { if (!aud.ctx || !aud.on) return; const c = aud.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * .45, t + .35); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + .5); o.connect(g); g.connect(aud.g); o.start(t); o.stop(t + .55); }
+$("#snd").addEventListener("click", () => setSound(!aud.on)); addEventListener("pagehide", () => { try { aud.ctx && aud.ctx.close(); } catch (e) {} });
+let prevEv = 0; const EVENTS = [[.0417, () => { plink(520, .5); setTimeout(() => plink(780, .2), 90); }], [.64, () => plink(220, .3)], [.917, () => plink(440, .35)]];
+// ---- quality
+let dprBase = Math.min(devicePixelRatio, mobile ? 1.25 : 1.5), qual = mobile ? .7 : .9;
+function applyRes() { const r = dprBase * qual; renderer.setPixelRatio(r); renderer.setSize(innerWidth, innerHeight, false); const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); U.uRes.value.copy(sz); const asp = innerWidth / innerHeight; U.uAsp.value = asp; SF = Math.max(1, 1 / (asp * 1.3)); U.uSF.value = SF; }
+addEventListener("resize", applyRes); applyRes();
+
+// ================================================================ director
+const railFill = $("#railFill"); const dts = []; let first = true;
+const darkOf = x => ss(6.9, 7.4, x) * (1 - ss(8.85, 9.15, x));
+function update(dt) {
+  if (!paused) tm += dt * (reduce ? .25 : 1);
+  P += (targetP - P) * (1 - Math.exp(-dt * (reduce ? 25 : 6))); vel += ((P - lastP) / Math.max(dt, .001) - vel) * (1 - Math.exp(-dt * 8)); lastP = P;
+  mouseS.x += (mouse.x - mouseS.x) * (1 - Math.exp(-dt * 10)); mouseS.y += (mouse.y - mouseS.y) * (1 - Math.exp(-dt * 10));
+  flowAcc += dt * Math.min(2.5, Math.abs(vel) * 40) * (paused ? 0 : 1);
+  const x = P * 12, l10 = clamp(x - 9, 0, 1), v = artView(l10);
+  U.uP.value = P; U.uTime.value = tm; U.uMouse.value.set(mouseSeen ? mouseS.x : 0, mouseSeen ? mouseS.y : -9); U.uFlow.value = P * 30 + flowAcc + (reduce ? 0 : tm * .35); U.uVel.value = vel;
+  U.uZs.value = v.zs; U.uFc.value.set(v.fx, v.fy); U.uAH.value.set(v.aw, v.ah); U.uQ.value = mobile ? .3 + .4 * qual : qual;
+  document.body.style.setProperty("--fg", ((d) => { const a = 9 + (244 - 9) * d, b = 9 + (242 - 9) * d, c = 9 + (237 - 9) * d; return `rgb(${a | 0},${b | 0},${c | 0})`; })(darkOf(x)));
+  for (const c of chs) { const f = ss(c.a, c.a + .014, P) * (1 - ss(c.b - .014, c.b, P)); c.el.style.visibility = f > .005 ? "visible" : "hidden"; if (f <= .005) continue; c.el.style.opacity = Math.min(1, f * 1.4);
+    for (const s of c.letters) { const d = +s.dataset.i * .45; const lf = clamp((f - d * .6) / .55, 0, 1); const e = lf * lf * (3 - 2 * lf); s.style.opacity = e; s.style.transform = `translate3d(0,${(1 - e) * 36}px,0)`; s.style.filter = e < .98 ? `blur(${(1 - e) * 9}px)` : "none"; } }
+  const inCv = x > 9.12 && x < 10.0; dot.style.opacity = inCv && mouseSeen ? .9 : 0; const ca = ss(9.1, 9.25, x) * (1 - ss(9.9, 10.05, x)); $("#clear").style.opacity = ca; $("#clear").style.visibility = ca > .02 ? "visible" : "hidden";
+  railFill.style.width = (P * 100).toFixed(2) + "%"; const ci = chOf(P); idxBtns.forEach((b, i) => b.classList.toggle("on", i === ci));
+  if (aud.on) for (const [t, fn] of EVENTS) if (prevEv < t && P >= t) fn(); prevEv = P;
+}
+const render = () => renderer.render(scene, cam);
+let lastT = performance.now(), saveT = 0;
+function loop(now) {
+  requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, .05); lastT = now; if (document.hidden) return; stepAnim(now); update(dt); render();
+  dts.push(dt); if (dts.length > 45) { const avg = dts.reduce((a, b) => a + b) / dts.length; dts.length = 0; if (avg > .036 && qual > .45) { qual = Math.max(.45, qual - .1); applyRes(); } else if (avg < .019 && qual < (mobile ? .8 : 1)) { qual = Math.min(mobile ? .8 : 1, qual + .05); applyRes(); } }
+  if (first) { first = false; setTimeout(() => $("#veil").classList.add("off"), 300); }
+  if (now - saveT > 800) { saveT = now; try { sessionStorage.setItem("ink_p", String(targetP)); sessionStorage.setItem("ink_pts", JSON.stringify(userPts)); } catch (e) {} }
+}
+let sp = 0; try { sp = parseFloat(sessionStorage.getItem("ink_p") || "0") || 0; } catch (e) {}
+requestAnimationFrame(() => { if (sp > .001) { scrollTo(0, sp * maxScroll()); targetP = sp; P = sp; lastP = sp; prevEv = sp; } });
+window.__ink = { renderAt(p) { targetP = P = lastP = prevEv = p; update(.016); render(); }, state: () => ({ P, qual }), setQ(q) { qual = q; applyRes(); }, setSound, userPts: () => userPts.length };
+if (!window.__inkManual) requestAnimationFrame(loop); else $("#veil").classList.add("off");
+})();
+</script>

@@ -1,0 +1,448 @@
+<title>ÉTHER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Hanken+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one fixed "film" viewport. Media units (video with a designed placeholder underneath) are masked, scaled and re-ordered by a single master progress; 1500vh of scroll drives 12 chapters. */
+  :root{--ivory:#F1EEE7;--charcoal:#10100F;--oxblood:#651F2B;--gold:#B39B75;--dim:rgba(241,238,231,.62);--line:rgba(241,238,231,.22);
+    --serif:"Bodoni Moda","Didot","Bodoni 72","Hiragino Mincho ProN","Yu Mincho",Georgia,serif;--sans:"Hanken Grotesk","Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;color-scheme:dark}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--charcoal)}
+  body{background:var(--charcoal);color:var(--ivory);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.lock{overflow:hidden}
+  #spacer{height:1500vh}
+  #film{position:fixed;inset:0;overflow:hidden;background:var(--charcoal);z-index:0}
+  #ivory{position:absolute;inset:0;background:var(--ivory);display:none;z-index:1}
+  .unit{position:absolute;inset:0;overflow:hidden;display:none;will-change:transform,clip-path;background:var(--charcoal)}
+  [data-u=af]{background:transparent}
+  .unit.fr{outline:1px solid rgba(16,16,15,.75);outline-offset:14px;box-shadow:0 30px 60px -30px rgba(16,16,15,.45)}
+  .mb{position:absolute;inset:0;will-change:transform}
+  .mb canvas,.mb video,.mb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .mb img{opacity:0;user-select:none;-webkit-user-drag:none}.unit.hasimg img{opacity:1}.unit.hasimg canvas.ph{opacity:0}.mb video{opacity:0}.unit.real video{opacity:1}.unit.real canvas.ph{opacity:0}
+  @keyframes kb{from{transform:scale(1.02)}to{transform:scale(1.12) translate(-1.2%,.8%)}}
+  .tag{position:absolute;left:14px;bottom:14px;font:500 9px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:rgba(241,238,231,.85);background:rgba(16,16,15,.55);padding:5px 8px;pointer-events:none;white-space:nowrap}
+  .unit.real .tag,.unit.hasimg .tag{display:none}
+  .grain{position:absolute;inset:-50%;width:200%;height:200%;z-index:90;pointer-events:none;opacity:.16;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");animation:gr .9s steps(6) infinite}
+  @keyframes gr{0%{transform:translate(0,0)}20%{transform:translate(-6%,4%)}40%{transform:translate(5%,-7%)}60%{transform:translate(-4%,-3%)}80%{transform:translate(7%,5%)}100%{transform:translate(0,0)}}
+  .vig{position:absolute;inset:0;z-index:89;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(16,16,15,.5) 100%)}
+  .tx{position:absolute;z-index:60;pointer-events:none;will-change:transform;text-shadow:0 0 34px rgba(16,16,15,.38)}.dk,.dk *{text-shadow:none}
+  .serif{font-family:var(--serif);font-weight:500;letter-spacing:-.02em}
+  .giant{font-family:var(--serif);font-weight:500;font-size:clamp(7rem,30vw,34rem);line-height:.8;letter-spacing:-.045em;white-space:nowrap}
+  .eyebrow{font:500 .62rem var(--sans);letter-spacing:.38em;text-transform:uppercase}
+  .ln{display:block;overflow:hidden;padding:.04em 0}.ln>span{display:block;will-change:transform}
+  .big{font-family:var(--serif);font-weight:500;line-height:.95;letter-spacing:-.03em;font-size:clamp(2.6rem,9vw,9rem)}
+  .big i{font-weight:400}
+  .small{font:400 clamp(.8rem,1.1vw,1rem) var(--sans);letter-spacing:.04em;line-height:1.75;max-width:30rem}
+  #t1b{z-index:3;left:0;top:50%;margin-top:-.4em;color:var(--ivory)}
+  #t1f{z-index:30;left:0;top:50%;margin-top:-.4em;color:transparent;-webkit-text-stroke:1.5px rgba(241,238,231,.9)}
+  #t1s{z-index:31;left:max(24px,5vw);bottom:12vh;color:var(--ivory)}
+  #t2{z-index:7;left:max(24px,5vw);bottom:13vh;color:var(--ivory);width:46vw}
+  #occ{position:absolute;inset:0;width:100%;height:100%;z-index:8;display:none;pointer-events:none;object-fit:cover}
+  .dk{color:var(--charcoal)}
+  #t3{left:50%;bottom:7vh;transform:translateX(-50%);text-align:center;z-index:61}
+  #t4{left:max(24px,6vw);bottom:12vh}
+  #t5{left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;mix-blend-mode:difference;color:#fff}
+  #t6{left:max(24px,6vw);top:16vh}
+  #t7{left:50%;top:50%;transform:translate(-50%,-50%);width:100%;text-align:center}
+  #t7 .rec{position:absolute;left:0;right:0;top:50%;will-change:transform,opacity}
+  #t8{inset:0}
+  #t8 .w{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:600 clamp(2rem,7vw,6rem) var(--sans);letter-spacing:.5em;margin-right:-.5em;text-transform:uppercase;display:none;color:var(--ivory);mix-blend-mode:difference}
+  #track{position:absolute;top:0;left:0;height:100%;width:280vw;z-index:30;will-change:transform;display:none}
+  #track .it{position:absolute}
+  #t10{position:absolute;inset:0;z-index:62;pointer-events:none}
+  .work{position:absolute;inset:0;visibility:hidden;pointer-events:none}
+  .work .ti{position:absolute;left:max(24px,5vw);bottom:12vh;color:var(--ivory)}
+  .work .ti .big{font-size:clamp(3rem,10vw,10rem)}
+  .work .ti .small{margin-top:1.4rem;color:rgba(241,238,231,.85)}
+  .work .ct{position:absolute;right:max(24px,5vw);top:calc(86px + env(safe-area-inset-top,0px));font:500 .62rem var(--sans);letter-spacing:.38em;color:var(--ivory)}
+  .work button{pointer-events:auto;position:absolute;right:max(24px,5vw);bottom:12vh}
+  .btn{font:500 .66rem var(--sans);letter-spacing:.32em;text-transform:uppercase;color:var(--ivory);background:transparent;border:1px solid var(--ivory);padding:1rem 1.6rem;cursor:pointer;transition:background .25s,color .25s;pointer-events:auto}
+  .btn:hover{background:var(--ivory);color:var(--charcoal)}
+  .btn.solid{background:var(--ivory);color:var(--charcoal)}.btn.solid:hover{background:var(--gold);border-color:var(--gold)}
+  #man{position:absolute;inset:0;width:100%;height:100%;z-index:40;display:none}
+  #t11n{left:max(24px,5vw);bottom:12vh;color:var(--charcoal);z-index:63}
+  #t12{inset:0;z-index:64;display:none}
+  #filmframe{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);display:none;z-index:35;pointer-events:none}
+  #filmframe .spr{position:absolute;top:0;bottom:0;width:7%;background:#070707;background-image:repeating-linear-gradient(to bottom,transparent 0 12px,var(--ivory) 12px 22px,transparent 22px 34px);background-size:34% 100%;background-repeat:repeat-y;background-position:50% 0}
+  #logo12{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;white-space:nowrap}
+  #logo12 .g{position:absolute;left:0;top:0;width:100%;color:var(--ivory);pointer-events:none}
+  #t12 .cta{position:absolute;left:0;right:0;bottom:6vh;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+  /* chrome */
+  header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,3vw) 16px;mix-blend-mode:difference;color:#fff}
+  .brand{font:500 1.15rem var(--serif);letter-spacing:.04em;background:none;border:0;color:inherit;cursor:pointer}
+  .tools{display:flex;gap:1.4rem;align-items:center}
+  .tl{font:500 .6rem var(--sans);letter-spacing:.3em;text-transform:uppercase;background:none;border:0;color:inherit;cursor:pointer;padding:.4rem 0;border-bottom:1px solid transparent}
+  .tl:hover,.tl[aria-pressed="true"]{border-bottom-color:currentColor}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .pb{position:fixed;left:max(16px,3vw);right:max(16px,3vw);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:100;display:flex;gap:3px;align-items:flex-end;mix-blend-mode:difference;color:#fff}
+  .pb .nm{position:absolute;left:0;bottom:16px;font:500 .58rem var(--sans);letter-spacing:.3em;text-transform:uppercase;white-space:nowrap;pointer-events:none}
+  .pb button{flex:1;height:14px;background:none;border:0;cursor:pointer;position:relative;padding:0}
+  .pb button::before{content:"";position:absolute;left:0;right:0;bottom:6px;height:1px;background:currentColor;opacity:.3}
+  .pb button i{position:absolute;left:0;bottom:6px;height:1px;background:currentColor;width:0}
+  .pb button.on::before{opacity:.65}
+  .sidebtn{position:fixed;right:max(12px,2vw);top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:6px;mix-blend-mode:difference;color:#fff}
+  .sidebtn button{background:none;border:1px solid rgba(255,255,255,.5);color:inherit;width:34px;height:34px;cursor:pointer;font:400 .9rem var(--sans)}
+  .sidebtn button:hover{background:#fff;color:#000}
+  .ov{position:fixed;inset:0;z-index:200;background:rgba(16,16,15,.97);display:none;overflow:auto;padding:calc(84px + env(safe-area-inset-top,0px)) max(16px,4vw) 48px}
+  .ov.open{display:block}
+  .ov .x{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:max(16px,3vw)}
+  .mg{max-width:70rem;margin:0 auto;display:grid;grid-template-columns:1fr 1.3fr;gap:3rem}
+  .mg h4{font:500 .6rem var(--sans);letter-spacing:.38em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+  .cl{list-style:none}.cl button{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ivory);font:500 clamp(1.1rem,2.2vw,1.7rem) var(--serif);padding:.65rem 0;display:flex;gap:1.2rem;cursor:pointer;transition:color .2s,padding .2s}
+  .cl button:hover{color:var(--gold);padding-left:.5rem}.cl small{font:500 .58rem var(--sans);letter-spacing:.2em;color:var(--dim);align-self:center;min-width:1.8rem}
+  .sl details{border-bottom:1px solid var(--line);padding:.55rem 0}
+  .sl summary{cursor:pointer;font:500 .72rem var(--sans);letter-spacing:.14em;display:flex;justify-content:space-between;gap:1rem;list-style:none}
+  .sl summary span:last-child{color:var(--gold);white-space:nowrap}
+  .sl dl{display:grid;grid-template-columns:7rem 1fr;gap:.35rem .8rem;margin:.7rem 0 .4rem;font:400 .78rem var(--sans);line-height:1.6;color:var(--dim)}.sl dt{color:var(--ivory);letter-spacing:.08em}
+  .note{font:400 .8rem var(--sans);line-height:1.8;color:var(--dim);margin-bottom:1rem}.note b{color:var(--ivory)}
+  #detail .box{max-width:60rem;margin:0 auto;display:grid;grid-template-columns:1.3fr 1fr;gap:2.4rem;align-items:start}
+  
+  #detail h3{font:500 clamp(2rem,4vw,3.4rem)/1 var(--serif);letter-spacing:-.02em;margin:.6rem 0 1rem}
+  #detail p{font:400 .92rem var(--sans);line-height:1.8;color:var(--dim);margin-bottom:.8rem}
+  #contact .box{max-width:40rem;margin:0 auto}
+  #contact h3{font:500 clamp(2rem,4vw,3rem)/1 var(--serif);margin-bottom:1.2rem}
+  #contact p{font:400 .92rem var(--sans);line-height:1.8;color:var(--dim);margin-bottom:1rem}
+  .mail{font:500 1.1rem var(--sans);letter-spacing:.04em;color:var(--ivory);border:1px solid var(--line);padding:1rem;display:flex;justify-content:space-between;gap:1rem;align-items:center;user-select:all}
+  #curtain div{position:fixed;left:0;right:0;height:50%;background:#000;z-index:300;transition:transform 1.1s cubic-bezier(.7,0,.2,1);pointer-events:none}
+  #curtain .a{top:0;transform:translateY(-101%)}#curtain .b{bottom:0;transform:translateY(101%)}
+  #curtain.shut .a,#curtain.shut .b{transform:none}#curtain.shut div{pointer-events:auto}
+  #nogl{display:none}
+  @media (max-width:820px){.mg{grid-template-columns:1fr;gap:2rem}#detail .box{grid-template-columns:1fr}.sidebtn{display:none}.tools{gap:1rem}.pb .nm{font-size:.52rem}.work .ti .big{font-size:clamp(2.6rem,13vw,6rem)}.work button{bottom:auto;top:calc(120px + env(safe-area-inset-top,0px));right:max(24px,5vw)}.work .ti{bottom:14vh}#t2{left:max(20px,5vw);bottom:17vh;width:86vw}.sl dl{grid-template-columns:5rem 1fr}}
+  @media (prefers-reduced-motion:reduce){.grain{animation:none}#curtain div{transition:none}}
+</style>
+
+<div id="film" aria-label="ÉTHER の映像ステージ">
+  <div id="ivory"></div>
+  <div id="t1b" class="tx giant" aria-hidden="true">ÉTHER</div>
+  <div id="t1f" class="tx giant" aria-hidden="true">ÉTHER</div>
+  <div id="t1s" class="tx eyebrow">The art of seeing</div>
+  <div id="t2" class="tx"><span class="ln"><span class="big" style="font-size:clamp(2rem,5.4vw,5.6rem)">A different</span></span><span class="ln"><span class="big" style="font-size:clamp(2rem,5.4vw,5.6rem)"><i>way to feel.</i></span></span></div>
+  
+  <div id="t3" class="tx dk"><span class="eyebrow" style="display:block;margin-bottom:.8rem;color:#651F2B">03 / The frame</span><span class="ln"><span class="big" style="font-size:clamp(1.8rem,4.6vw,4.4rem)">A frame is a <i>decision.</i></span></span></div>
+  <div id="t4" class="tx"><span class="ln"><span class="big">To see</span></span><span class="ln"><span class="big"><i>is to</i></span></span><span class="ln"><span class="big">touch.</span></span></div>
+  <div id="t5" class="tx"><span class="ln"><span class="big" style="font-size:clamp(2rem,6.4vw,6.4rem)">Time, in three</span></span><span class="ln"><span class="big" style="font-size:clamp(2rem,6.4vw,6.4rem)"><i>places.</i></span></span></div>
+  <div id="t6" class="tx"><span class="ln"><span class="big" style="color:#10100F">Look until</span></span><span class="ln"><span class="big" style="color:#10100F"><i>it opens.</i></span></span></div>
+  <div id="t7" class="tx"><div class="rec big">Depth is</div><div class="rec big"><i>a kind of</i></div><div class="rec big">attention.</div></div>
+  <div id="t8" class="tx"><div class="w" data-k="0">Still</div><div class="w" data-k="1">Now</div><div class="w" data-k="2">This</div></div>
+  <div id="track" aria-label="THE HUMAN">
+    <div class="it" id="trk1" style="left:8vw;top:0;width:100vw;height:100%"><div class="eyebrow dk" style="position:absolute;left:0;top:calc(88px + env(safe-area-inset-top,0px));color:#651F2B">09 / The human</div></div>
+    <div class="it big dk" style="left:60vw;top:28vh;width:36vw;font-size:clamp(1.8rem,4.6vw,5rem)">A body is<br><i>a sentence</i><br>read slowly.</div>
+    <div class="it small dk" style="left:140vw;bottom:9vh;width:24vw;color:#10100F">Fig. 2 — placeholder footage. Replace media/chapter09.mp4 with a continuous, unposed take.</div>
+    <div class="it big dk" style="left:214vw;top:26vh;width:60vw;font-size:clamp(2.6rem,8vw,8rem)"><i>Nobody</i><br>is posing.</div>
+  </div>
+  <div id="t10"></div>
+  <canvas id="man" aria-hidden="true"></canvas>
+  <div id="t11n" class="tx"><span class="eyebrow" style="color:#651F2B;display:block">11 / The manifesto</span></div>
+  <div id="filmframe"><div class="spr" style="left:0"></div><div class="spr" style="right:0"></div></div>
+  <div id="t12" class="tx">
+    <div id="logo12" class="serif"><div class="giant" id="lg0" style="position:relative;font-size:clamp(5rem,20vw,22rem)">ÉTHER</div></div>
+    <div class="cta"><button class="btn solid" id="contactBtn">Contact</button><button class="btn" id="replay">Replay</button></div>
+  </div>
+  <div class="vig"></div><div class="grain"></div>
+</div>
+
+<header>
+  <button class="brand" id="brand" aria-label="先頭へ">ÉTHER</button>
+  <div class="tools"><button class="tl" id="menuBtn" aria-expanded="false">Menu</button><button class="tl" id="snd" aria-pressed="false">Sound off</button></div>
+</header>
+<div class="sidebtn"><button id="prev" aria-label="前の章">↑</button><button id="next" aria-label="次の章">↓</button></div>
+<div class="pb" id="pb"><div class="nm" id="nm"></div></div>
+
+<div id="menu" class="ov" role="dialog" aria-modal="true" aria-label="Menu">
+  <button class="btn x" id="menuX">Close</button>
+  <div class="mg">
+    <div><h4>Chapters</h4><ul class="cl" id="cl"></ul>
+      <h4 style="margin-top:2.4rem">Studio</h4>
+      <p class="note"><b>ÉTHER は架空のクリエイティブ・スタジオです。</b>これは「実写映像で見せるサイト」の編集設計のデモです。</p>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap"><button class="btn" id="menuContact">Contact</button></div></div>
+    <div class="sl"><h4>Stills &amp; assets</h4>
+      <p class="note"><b>画像は12枚のスチルです。</b>動きは、ゆっくりしたズームとパン、マスク、ワイプで作っています（動画ではありません）。<code>media/chapter01.mp4</code> のように動画を置くと、その章だけ動画に差し替わります。画像の権利と、人物が写る素材の使用許諾は未確認です。</p><div id="shotList"></div></div>
+  </div>
+</div>
+<div id="detail" class="ov" role="dialog" aria-modal="true" aria-labelledby="dTitle"><button class="btn x" id="detailX">Close</button><div class="box"><div style="overflow:hidden;aspect-ratio:16/9;background:#000"><img id="dImg" alt="" style="width:100%;height:100%;object-fit:cover;display:block;animation:kb 18s ease-in-out infinite alternate"></div><div><div class="eyebrow" id="dKick" style="color:#B39B75"></div><h3 id="dTitle"></h3><p id="dBody"></p><p id="dMeta" style="font-size:.72rem;letter-spacing:.08em"></p></div></div></div>
+<div id="contact" class="ov" role="dialog" aria-modal="true" aria-labelledby="cTitle"><button class="btn x" id="contactX">Close</button><div class="box"><h3 id="cTitle">Contact</h3><p>これは架空のスタジオで、このデモには送信先がありません。<b style="color:#F1EEE7">フォームは置いていません</b>（送信されたように見せないため）。</p><div class="mail"><span id="mailTxt">hello@ether.example</span><button class="btn" id="copyMail">Copy</button></div><p id="copyMsg" style="margin-top:.8rem;font-size:.8rem;min-height:1.4em"></p></div></div>
+<div id="curtain" aria-hidden="true"><div class="a"></div><div class="b"></div></div>
+<div id="spacer"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobile = matchMedia("(max-width:820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), mix = (a, b, t) => a + (b - a) * t;
+const E = t => t * t * (3 - 2 * t), E3 = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2, seg = (l, a, b) => cl((l - a) / (b - a));
+const PAL = { iv: "#F1EEE7", ch: "#10100F", ox: "#651F2B", go: "#B39B75" };
+
+// ---------------------------------------------------------------- chapters + shot list (also the asset guide)
+const CH = [
+  ["Black / Breath", 0, .08], ["The gaze", .08, .16], ["The frame", .16, .24], ["The touch", .24, .32], ["The garden", .32, .40], ["The object", .40, .48],
+  ["The architecture", .48, .56], ["The interruption", .56, .64], ["The human", .64, .72], ["The collection", .72, .82], ["The manifesto", .82, .92], ["The afterimage", .92, 1]];
+const L = (i, p) => cl((p - CH[i - 1][1]) / (CH[i - 1][2] - CH[i - 1][1]));
+const SHOTS = [
+  ["still01.webp", "01 Opening → ch 1 Black / Breath", "A woman on a terrace, backlit by the sun.", "Starts as an extreme crop of the veil, then pulls back through a circular mask to the full picture.", "Optional upgrade: media/chapter01.mp4"],
+  ["still02.webp", "02 Awaken → ch 2 The gaze", "Face close-up, hair in the wind, eyes toward the right.", "Mask opens from the eye line; headline appears on the side she looks toward.", "Type occlusion by the face needs a matte (chapter02_matte.png) — not included."],
+  ["still03.webp", "03 Elements → ch 4 The touch", "A hand touching the water.", "Slow push; a diagonal wipe follows the hand into the next image.", "Also cropped for cut 08c."],
+  ["still04.webp", "04 Transition → ch 4 wipe target", "Veil in motion across the sun.", "Revealed by the hand-driven wipe.", "Also used for work I."],
+  ["still05.webp", "05 Nature → ch 5 The garden", "Olive branch against the sun.", "Three strips with different zooms re-join into one picture.", "Also work IV and cut 08b."],
+  ["still06.webp", "06 Craft → ch 3 The frame", "A stone carver with hammer and chisel.", "Full-screen picture shrinks into a framed print on ivory.", "Also work II."],
+  ["still07.webp", "07 Space → ch 7 The architecture", "Concrete and stone terrace, a figure facing the sunset.", "Push-in toward the sun; type recedes with perspective.", "Also work V."],
+  ["still08.webp", "08 Human → ch 9 The human", "A woman in profile, hair and fabric in the wind.", "Panel on the horizontal editorial track.", ""],
+  ["still09.webp", "09 Detail → ch 6 The object", "A glass sculpture holding the sunset.", "Converges to a circle; the camera dives into it toward the next image.", "Also work III."],
+  ["still10.webp", "10 Movement → ch 9 The human", "A woman turning in a storm of fabric.", "Second panel on the track.", ""],
+  ["still11.webp", "11 Manifest → ch 11 The manifesto", "A figure before a glowing ring and floating stone.", "Seen only through the letterforms until they grow to full frame.", "Contains its own ÉTHER lettering; crop if it clashes."],
+  ["still12.webp", "12 The afterimage → ch 12", "A giant stone head breaking apart over a figure.", "The film frame advances from image 11 to this one; the logo leaves afterimages.", ""],
+];
+// ---------------------------------------------------------------- placeholder drawers (generated stand-ins, not footage)
+function folds(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, o.a); g.addColorStop(1, o.b); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < o.n; i++) { const y0 = i / o.n * h; c.beginPath(); c.moveTo(0, y0); for (let x = 0; x <= w; x += 6) c.lineTo(x, y0 + Math.sin(x * o.f + t * o.s + i * .7) * o.amp + Math.sin(x * o.f * 2.3 + t * .6 + i) * o.amp * .4); c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fillStyle = `rgba(${o.sh},${.05 + .05 * Math.sin(i * 1.3)})`; c.fill(); c.strokeStyle = `rgba(${o.hi},.2)`; c.stroke(); }
+}
+const FACE = [[.42, 0], [.40, .12], [.405, .2], [.425, .27], [.44, .31], [.50, .41], [.445, .435], [.46, .47], [.45, .495], [.455, .515], [.44, .545], [.43, .575], [.39, .62], [.385, .7], [.37, 1]];
+function profile(c, w, h, t, l, o) {
+  const br = 1 + .006 * Math.sin(t * 1.6), cx = w * .3;
+  if (!o.sil) { const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, "#16100f"); g.addColorStop(.7, "#3a1a20"); g.addColorStop(1, PAL.ox); c.fillStyle = g; c.fillRect(0, 0, w, h); }
+  c.save(); c.translate(cx, h); c.scale(br, br); c.translate(-cx, -h);
+  c.beginPath(); c.moveTo(0, 0); FACE.forEach(([x, y]) => c.lineTo(x * w, y * h)); c.lineTo(0, h); c.closePath();
+  const g2 = c.createLinearGradient(w * .2, 0, w * .5, 0); g2.addColorStop(0, "#241817"); g2.addColorStop(.5, "#6a4a40"); g2.addColorStop(.85, "#d9c2a3"); g2.addColorStop(1, PAL.go); c.fillStyle = g2; c.fill();
+  c.beginPath(); c.ellipse(w * .2, h * .06, w * .26, h * .3, 0, 0, 7); c.fillStyle = "#0e0a0a"; c.fill();
+  const bl = Math.max(0, Math.sin(t * .8) * 6 - 5.2); c.fillStyle = "#1a1210"; c.fillRect(w * .405, h * (.33 - .004), w * .035, h * (.006 + bl * .02));
+  c.restore();
+}
+function wall(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#d8d0c2"); g.addColorStop(1, "#8d8272"); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const x = w * (.1 + .5 * ((t * .04) % 1)); c.fillStyle = "rgba(255,244,220,.55)"; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + w * .3, 0); c.lineTo(x + w * .15, h); c.lineTo(x - w * .15, h); c.closePath(); c.fill();
+  c.strokeStyle = "rgba(40,30,20,.5)"; c.lineWidth = 3; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(x - 20 + i * 30, 0); c.quadraticCurveTo(x + 40 + Math.sin(t + i) * 12, h * .5, x - 10 + i * 24, h); c.stroke(); }
+}
+function hand(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#1b1918"); g.addColorStop(1, "#3a3430"); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const sx = w * .6, sy = h * .55; c.fillStyle = "#cfc6b6"; c.beginPath(); c.ellipse(sx, sy - h * .18, w * .1, h * .2, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(sx - w * .25, h); c.quadraticCurveTo(sx - w * .2, sy, sx, sy); c.quadraticCurveTo(sx + w * .2, sy, sx + w * .25, h); c.fill();
+  c.strokeStyle = "rgba(0,0,0,.18)"; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(sx - w * .24, sy + i * 9); c.lineTo(sx + w * .24, sy + i * 9 - 6); c.stroke(); }
+  const hx = w * (.1 + .6 * l), hy = h * (.45 + .06 * Math.sin(l * 6)); c.lineCap = "round"; c.strokeStyle = PAL.go; c.lineWidth = h * .11; c.beginPath(); c.moveTo(-10, h * .8); c.quadraticCurveTo(hx * .5, h * .7, hx, hy); c.stroke();
+  c.lineWidth = h * .035; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(hx, hy + (i - 1.5) * h * .028); c.lineTo(hx + w * .08, hy + (i - 1.5) * h * .032); c.stroke(); }
+}
+function garden(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, PAL.go); g.addColorStop(1, "#e7dcc6"); c.fillStyle = g; c.fillRect(0, 0, w, h); c.fillStyle = "rgba(30,28,20,.55)";
+  for (let i = 0; i < 26; i++) { const x = (i * 97.3 % w), y = (i * 53.1 % h) + Math.sin(t * .6 + i) * 6; c.save(); c.translate(x, y); c.rotate(Math.sin(t * .5 + i) * .4 + i); c.beginPath(); c.ellipse(0, 0, 8 + (i % 4) * 5, 22 + (i % 3) * 10, 0, 0, 7); c.fill(); c.restore(); }
+}
+function pear(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#e9e2d3"); g.addColorStop(1, "#b6a98f"); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const z = 1 + .12 * l, cx = w * .46, cy = h * .56; c.save(); c.translate(cx, cy); c.scale(z, z); c.translate(-cx, -cy);
+  const pg = c.createRadialGradient(cx - 20, cy - 10, 8, cx, cy, 80); pg.addColorStop(0, "#d3c26a"); pg.addColorStop(1, "#6a5a22"); c.fillStyle = pg; c.beginPath(); c.arc(cx, cy + 22, 50, 0, 7); c.arc(cx, cy - 26, 30, 0, 7); c.fill(); c.strokeStyle = "#3a2a14"; c.lineWidth = 3; c.beginPath(); c.moveTo(cx, cy - 56); c.lineTo(cx + 8, cy - 74); c.stroke();
+  const gx = cx + 80 + Math.sin(t * .5) * 3; const gg = c.createRadialGradient(gx - 14, cy - 8, 6, gx, cy + 10, 62); gg.addColorStop(0, "rgba(255,255,255,.7)"); gg.addColorStop(.6, "rgba(220,230,235,.22)"); gg.addColorStop(1, "rgba(40,50,60,.35)"); c.fillStyle = gg; c.beginPath(); c.arc(gx, cy + 10, 62, 0, 7); c.fill(); c.restore();
+}
+function corr(c, w, h, t, l, o) {
+  c.fillStyle = "#cfc7b8"; c.fillRect(0, 0, w, h); const vx = w * .5, vy = h * .46;
+  for (let i = 0; i < 14; i++) { const q = ((i / 14) + l * 1.3) % 1, s = Math.pow(q, 2.6), x0 = vx - (vx + 20) * s, x1 = vx + (w - vx + 20) * s, y0 = vy - (vy + 20) * s, y1 = vy + (h - vy + 20) * s; c.strokeStyle = `rgba(16,16,15,${.1 + .5 * s})`; c.lineWidth = 1 + 3 * s; c.strokeRect(x0, y0, x1 - x0, y1 - y0); const lw = (x1 - x0) * .12; c.fillStyle = `rgba(255,240,205,${.55 * s})`; c.fillRect(x0 + (x1 - x0) * .08, y0 + (y1 - y0) * .1, lw, (y1 - y0) * .5); c.fillRect(x1 - (x1 - x0) * .08 - lw, y0 + (y1 - y0) * .1, lw, (y1 - y0) * .5); }
+  c.fillStyle = "rgba(16,16,15,.9)"; c.beginPath(); c.arc(vx, vy, 6 + 10 * (1 - l), 0, 7); c.fill();
+}
+function human(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, "#4a2a2f"); g.addColorStop(1, PAL.ox); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const x = w * (.2 + .6 * ((t * .05 + (o.ph || 0)) % 1)), sw = Math.sin(t * 3); c.strokeStyle = PAL.iv; c.lineCap = "round"; c.lineWidth = h * .06;
+  const hy = h * .22; c.beginPath(); c.moveTo(x, hy + h * .05); c.lineTo(x, h * .55); c.stroke(); c.beginPath(); c.arc(x, hy, h * .06, 0, 7); c.fillStyle = PAL.iv; c.fill();
+  [[1, 0], [-1, 0]].forEach(([s]) => { c.beginPath(); c.moveTo(x, h * .55); c.lineTo(x + s * sw * h * .1, h * .78); c.lineTo(x + s * sw * h * .08, h * .96); c.stroke(); c.lineWidth = h * .045; c.beginPath(); c.moveTo(x, h * .3); c.lineTo(x - s * sw * h * .08, h * .46); c.stroke(); c.lineWidth = h * .06; });
+}
+function stone(c, w, h, t, l, o) {
+  c.fillStyle = "#1a1917"; c.fillRect(0, 0, w, h); const g = c.createLinearGradient(w * .3, 0, w * .7, h); g.addColorStop(0, "#bdb4a4"); g.addColorStop(1, "#6a6358"); c.fillStyle = g; c.fillRect(w * .3, h * .15, w * .4, h * .78);
+  c.strokeStyle = "rgba(0,0,0,.18)"; for (let i = 0; i < 14; i++) { c.beginPath(); c.moveTo(w * .3, h * .15 + i * 11 + Math.sin(t + i) * 1.5); c.lineTo(w * .7, h * .15 + i * 11 - 8); c.stroke(); } c.fillStyle = "rgba(255,244,220,.2)"; c.fillRect(w * .3, h * .15, w * .06, h * .78);
+}
+function arches(c, w, h, t, l, o) {
+  c.fillStyle = "#d8d0c0"; c.fillRect(0, 0, w, h); for (let i = 0; i < 6; i++) { const x = w * (.08 + i * .16), ww = w * .13; c.fillStyle = "#2a2622"; c.beginPath(); c.moveTo(x, h); c.lineTo(x, h * .45); c.arc(x + ww / 2, h * .45, ww / 2, Math.PI, 0); c.lineTo(x + ww, h); c.fill(); c.fillStyle = `rgba(255,236,196,${.25 + .15 * Math.sin(t + i)})`; c.fillRect(x + ww * .15, h * .6, ww * .7, h * .4); }
+}
+function orb(c, w, h, t, l, o) {
+  const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#1c1b1a"); g.addColorStop(1, "#3a352e"); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const cx = w * .5, cy = h * .5, r = h * .3; const gg = c.createRadialGradient(cx - r * .3, cy - r * .3, 4, cx, cy, r); gg.addColorStop(0, "rgba(255,255,255,.85)"); gg.addColorStop(.5, "rgba(190,205,215,.25)"); gg.addColorStop(1, "rgba(179,155,117,.5)"); c.fillStyle = gg; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fill();
+  c.strokeStyle = "rgba(255,255,255,.35)"; c.beginPath(); c.arc(cx + Math.sin(t * .6) * 8, cy + 6, r * .72, .3, 2.2); c.stroke();
+}
+const FOLD_A = { a: "#2a0f15", b: "#8a5a45", n: 14, f: .018, s: .9, amp: 9, sh: "16,16,15", hi: "241,238,231" };
+const FOLD_B = { a: "#651F2B", b: "#B39B75", n: 9, f: .012, s: 1.2, amp: 22, sh: "16,16,15", hi: "241,238,231" };
+const FOLD_C = { a: "#10100F", b: "#651F2B", n: 11, f: .02, s: .7, amp: 14, sh: "0,0,0", hi: "179,155,117" };
+const DR = { fab: [folds, FOLD_A], prof: [profile, {}], wall: [wall, {}], hand: [hand, {}], gard: [garden, {}], obj: [pear, {}], corr: [corr, {}], hum: [human, {}], man: [folds, FOLD_B], w1: [folds, FOLD_C], w2: [stone, {}], w3: [orb, {}], w4: [garden, {}], w5: [arches, {}] };
+
+// ---------------------------------------------------------------- media units (video over a designed placeholder)
+const film = $("#film"), UN = {}, ORDER = [];
+function addUnit(id, file, dr, opts = {}) {
+  const el = document.createElement("div"); el.className = "unit"; el.dataset.u = id;
+  el.innerHTML = `<div class="mb"><canvas class="ph" width="384" height="216"></canvas><img alt="" draggable="false"><video muted playsinline loop preload="none" aria-hidden="true"></video><div class="tag"></div></div>`;
+  film.insertBefore(el, $("#t1b")); const cv = $("canvas", el), v = $("video", el), mb = $(".mb", el);
+  const u = { id, file, el, mb, cv, ctx: cv.getContext("2d"), v, tag: $(".tag", el), dr: DR[dr], mode: opts.mode || "play", label: opts.label || id, ready: false, missing: false, st: null, last: 0, tried: false, seekT: 0, reuse: opts.reuse };
+  const im = $("img", el); u.src = opts.img || ""; u.imEl = im; u.imgOk = false; u.origin = opts.origin || null;
+  if (opts.pos) { im.style.objectPosition = opts.pos; v.style.objectPosition = opts.pos; }
+  if (opts.img) { im.addEventListener("load", () => { u.imgOk = true; el.classList.add("hasimg"); }); im.src = opts.img; }
+  v.addEventListener("loadeddata", () => { u.ready = true; el.classList.add("real"); });
+  v.addEventListener("error", () => { u.missing = true; u.ready = false; el.classList.remove("real"); });
+  u.tag.textContent = `Placeholder · ${u.label} · media/${file}.mp4`; u.idx = ORDER.length; UN[id] = u; ORDER.push(id); return u;
+}
+const ST = n => `media/still${String(n).padStart(2, "0")}.webp`;
+addUnit("fab", "chapter01", "fab", { mode: "scrub", label: "01 opening", img: ST(1), pos: "60% 50%", origin: "60% 80%" });
+addUnit("prof", "chapter02", "prof", { mode: "scrub", label: "02 awaken", img: ST(2), pos: "50% 40%" });
+addUnit("wall", "chapter03", "wall", { label: "03 frame · craft", img: ST(6), pos: "60% 50%" });
+addUnit("hand", "chapter04", "hand", { mode: "scrub", label: "04 touch", img: ST(3), pos: "50% 60%" });
+addUnit("fab2", "chapter04b", "fab", { mode: "scrub", label: "04 wipe · transition", img: ST(4), pos: "55% 50%" });
+["g0", "g1", "g2"].forEach((k, i) => addUnit(k, "chapter05", "gard", { label: "05 nature · strip " + (i + 1), img: ST(5), pos: "40% 50%" }));
+addUnit("obj", "chapter06", "obj", { label: "06 detail", img: ST(9), pos: "64% 50%", origin: "64% 52%" });
+addUnit("corr", "chapter07", "corr", { mode: "scrub", label: "07 space", img: ST(7), pos: "45% 50%", origin: "64% 52%" });
+addUnit("cA", "chapter08a", "prof", { mode: "scrub", label: "08a · crop of 03", img: ST(3), pos: "50% 60%", origin: "50% 72%" });
+addUnit("cB", "chapter08b", "obj", { label: "08b · crop of 05", img: ST(5), pos: "50% 50%", origin: "62% 28%" });
+addUnit("cC", "chapter08c", "hand", { mode: "scrub", label: "08c · crop of 02", img: ST(2), pos: "55% 40%", origin: "58% 34%" });
+[["h0", 8, "50% 50%"], ["h1", 10, "52% 50%"], ["h2", 11, "40% 50%"]].forEach(([k, n, pos], i) => addUnit(k, "chapter09", "hum", { label: "09 human · " + (i + 1), img: ST(n), pos }));
+const WORKS = [
+  ["I", "Veil Study", "Silk, light and breath. A veil that remembers the wind.", "w1", "Cloth is the only actor. One window of low sun.", "work01", 4],
+  ["II", "Monolith No. 4", "A hand, a chisel, and the time it takes to learn a stone.", "w2", "A single working afternoon in the studio.", "work02", 6],
+  ["III", "Glass Hour", "A sculpture of glass; the whole evening passes through it.", "w3", "Refraction as a clock. Nothing moves except the light.", "work03", 9],
+  ["IV", "Frond", "Olive, branch and the last hour of sun.", "w4", "A garden seen against the light.", "work04", 5],
+  ["V", "Loggia", "A terrace that remembers who walked it.", "w5", "Concrete, water and a horizon.", "work05", 7]];
+const WPOS = ["55% 50%", "62% 50%", "64% 50%", "40% 50%", "45% 50%"];
+WORKS.forEach((w, i) => addUnit("w" + (i + 1), w[5], w[3], { label: "10 work " + w[0] + " · " + w[1], img: ST(w[6]), pos: WPOS[i] }));
+addUnit("man", "chapter11", "man", { label: "11 manifest", img: ST(11), pos: "50% 50%" });
+addUnit("af", "chapter12", "man", { label: "12 afterimage", img: ST(12), pos: "58% 50%" });
+const mediaOf = id => UN[id];
+// shot list (menu)
+$("#shotList").innerHTML = SHOTS.map(s => `<details><summary><span>${s[1]}</span><span>STILL</span></summary><dl><dt>File</dt><dd>media/${s[0]}</dd><dt>Picture</dt><dd>${s[2]}</dd><dt>Treatment</dt><dd>${s[3]}</dd><dt>Note</dt><dd>${s[4] || "—"}</dd></dl></details>`).join("");
+
+// ---------------------------------------------------------------- state / input
+let P = 0, targetP = 0, tm = 0, lastP = 0; const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
+addEventListener("scroll", () => { targetP = cl(scrollY / maxScroll()); }, { passive: true });
+let anim = null; const animScroll = (to, dur) => { anim = { from: scrollY, to, t0: performance.now(), dur }; };
+const stepAnim = now => { if (!anim) return; const k = cl((now - anim.t0) / anim.dur), e = E3(k); scrollTo(0, anim.from + (anim.to - anim.from) * e); if (k >= 1) anim = null; };
+addEventListener("wheel", () => { anim = null; }, { passive: true }); addEventListener("touchstart", () => { anim = null; }, { passive: true });
+const goTo = (p, dur) => { const to = p * maxScroll(); if (reduce) scrollTo(0, to); else animScroll(to, dur || 1500 + Math.abs(p - targetP) * 2600); };
+const chOf = p => { let i = 0; while (i < 11 && p >= CH[i][2]) i++; return i; };
+const mid = i => (CH[i][1] + CH[i][2]) / 2;
+// UI
+const pb = $("#pb"), nm = $("#nm"), cl2 = $("#cl"); const pbB = CH.map((c, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1} ${c[0]}`); b.innerHTML = "<i></i>"; b.style.flex = String(c[2] - c[1]); b.addEventListener("click", () => goTo(i === 0 ? .004 : mid(i))); pb.appendChild(b); return b; });
+CH.forEach((c, i) => { const li = document.createElement("li"); li.innerHTML = `<button><small>${String(i + 1).padStart(2, "0")}</small>${c[0]}</button>`; li.firstChild.addEventListener("click", () => { closeOv(menu); goTo(i === 0 ? .004 : mid(i)); }); cl2.appendChild(li); });
+$("#brand").addEventListener("click", () => goTo(0)); $("#prev").addEventListener("click", () => goTo(Math.max(.004, mid(Math.max(0, chOf(targetP) - 1))))); $("#next").addEventListener("click", () => goTo(mid(Math.min(11, chOf(targetP) + 1))));
+addEventListener("keydown", e => { if ($$(".ov.open").length) { if (e.key === "Escape") closeOv($$(".ov.open")[0]); return; } if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); $("#next").click(); } if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); $("#prev").click(); } });
+const menu = $("#menu"), detail = $("#detail"), contact = $("#contact"); let lastFocus = null;
+function openOv(el, focusSel) { lastFocus = document.activeElement; el.classList.add("open"); document.body.classList.add("lock"); $(focusSel || ".x", el).focus(); }
+function closeOv(el) { el.classList.remove("open"); if (!$$(".ov.open").length) document.body.classList.remove("lock"); if (lastFocus) lastFocus.focus(); }
+$("#menuBtn").addEventListener("click", () => openOv(menu)); $("#menuX").addEventListener("click", () => closeOv(menu)); $("#detailX").addEventListener("click", () => closeOv(detail)); $("#contactX").addEventListener("click", () => closeOv(contact));
+$("#contactBtn").addEventListener("click", () => openOv(contact)); $("#menuContact").addEventListener("click", () => { closeOv(menu); openOv(contact); });
+$("#copyMail").addEventListener("click", async () => { const t = $("#mailTxt").textContent; try { await navigator.clipboard.writeText(t); $("#copyMsg").textContent = "コピーしました。"; } catch (e) { const r = document.createRange(); r.selectNodeContents($("#mailTxt")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copyMsg").textContent = "選択しました。コピーしてください。"; } });
+// work blocks
+const t10 = $("#t10"); const workEls = WORKS.map((w, i) => { const d = document.createElement("div"); d.className = "work"; d.innerHTML = `<div class="ct">${w[0]} / V</div><div class="ti"><div class="eyebrow" style="color:#B39B75;margin-bottom:1rem">10 / The collection</div><div class="ln"><div class="big" style="display:block">${w[1]}</div></div><p class="small">${w[2]}</p></div><button class="btn" data-k="${i}" tabindex="-1">View detail</button>`; t10.appendChild(d); $("button", d).addEventListener("click", () => openDetail(i)); return d; });
+function openDetail(i) { const w = WORKS[i], u = UN["w" + (i + 1)]; $("#dKick").textContent = `Work ${w[0]} · still`; $("#dTitle").textContent = w[1]; $("#dBody").textContent = w[2] + " " + w[4]; $("#dMeta").textContent = `media/still${String(w[6]).padStart(2, "0")}.webp · fictional work · ${i + 1} of 5`; $("#dImg").src = u.src || ""; openOv(detail); }
+// audio (opt-in, synthesized room tone)
+const aud = { ctx: null, g: null, on: false };
+function setSound(on) { if (on && !aud.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const c = aud.ctx = new AC(); aud.g = c.createGain(); aud.g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520; [110, 164.8, 220.4].forEach((f, i) => { const o = c.createOscillator(); o.type = "sine"; o.frequency.value = f; const g = c.createGain(); g.gain.value = .05 / (i + 1); o.connect(g); g.connect(lp); o.start(); }); const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; const ns = c.createBufferSource(); ns.buffer = nb; ns.loop = true; const bp = c.createBiquadFilter(); bp.type = "lowpass"; bp.frequency.value = 300; const ng = c.createGain(); ng.gain.value = .05; ns.connect(bp); bp.connect(ng); ng.connect(lp); ns.start(); lp.connect(aud.g); aud.g.connect(c.destination); }
+  aud.on = on; if (aud.ctx) { if (on) aud.ctx.resume(); aud.g.gain.setTargetAtTime(on ? .5 : 0, aud.ctx.currentTime, .08); } $("#snd").setAttribute("aria-pressed", String(on)); $("#snd").textContent = on ? "Sound on" : "Sound off"; }
+$("#snd").addEventListener("click", () => setSound(!aud.on));
+
+// ---------------------------------------------------------------- manifesto text-mask
+const man = $("#man"), mctx = man.getContext("2d"), off = document.createElement("canvas"), octx = off.getContext("2d", { willReadFrequently: true }), srcC = document.createElement("canvas"), sctx = srcC.getContext("2d");
+const MT = ["WE MAKE", "THINGS TO", "BE SEEN."]; let mfocus = { x: .5, y: .5, r: 20 }, mfs = 100;
+function manLayout() {
+  const W = man.width = Math.min(innerWidth * Math.min(devicePixelRatio, 1.5), 1600) | 0, H = man.height = Math.min(innerHeight * Math.min(devicePixelRatio, 1.5), 1000) | 0; srcC.width = 1280; srcC.height = 720;
+  mfs = Math.min(W / 5.4, H / 3.6); const sc = 360 / W, tw = 360, th = Math.round(H * sc); off.width = tw; off.height = th; octx.clearRect(0, 0, tw, th); octx.fillStyle = "#000"; octx.textAlign = "center"; octx.textBaseline = "middle"; octx.font = `700 ${mfs * sc}px "Bodoni Moda", Georgia, serif`;
+  MT.forEach((t, i) => octx.fillText(t, tw / 2, th / 2 + (i - 1) * mfs * sc * .95)); const id = octx.getImageData(0, 0, tw, th).data; const ink = (x, y) => x >= 0 && y >= 0 && x < tw && y < th && id[((y | 0) * tw + (x | 0)) * 4 + 3] > 128;
+  let best = { r: 0, x: tw / 2, y: th / 2 }; for (let y = 2; y < th; y += 3) for (let x = 2; x < tw; x += 3) { if (!ink(x, y)) continue; let r = 1; while (r < 40) { let ok = true; for (let a = 0; a < 16; a++) if (!ink(x + Math.cos(a / 16 * 6.283) * r, y + Math.sin(a / 16 * 6.283) * r)) { ok = false; break; } if (!ok) break; r++; } if (r > best.r) best = { r, x, y }; }
+  mfocus = { x: best.x / sc, y: best.y / sc, r: best.r / sc };
+}
+function drawMan(l, u) {
+  const W = man.width, H = man.height; const prog = E3(seg(l, .12, .94)); const sFinal = Math.max(W, H) * .75 / Math.max(mfocus.r, 4); const s = Math.exp(mix(0, Math.log(sFinal), prog));
+  // source frame
+  if (u.ready) { try { sctx.drawImage(u.v, 0, 0, 1280, 720); } catch (e) {} } else if (u.imgOk) { sctx.drawImage(u.imEl, 0, 0, 1280, 720); } else u.dr[0](sctx, 1280, 720, tm, .5, u.dr[1]);
+  mctx.save(); mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.clearRect(0, 0, W, H);
+  mctx.translate(W / 2, H / 2); mctx.scale(s, s); mctx.translate(-mfocus.x, -mfocus.y);
+  mctx.font = `700 ${mfs}px "Bodoni Moda", Georgia, serif`; mctx.textAlign = "center"; mctx.textBaseline = "middle"; mctx.fillStyle = "#000"; MT.forEach((t, i) => mctx.fillText(t, W / 2, H / 2 + (i - 1) * mfs * .95));
+  mctx.restore(); mctx.save(); mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.globalCompositeOperation = "source-in";
+  const ar = 384 / 216, ca = W / H; let dw = W, dh = H; if (ca > ar) dh = W / ar; else dw = H * ar; mctx.drawImage(srcC, (W - dw) / 2, (H - dh) / 2, dw, dh); mctx.restore();
+}
+
+// ---------------------------------------------------------------- the director: every frame is a pure function of p
+const TRK = $("#track"), IVO = $("#ivory"), T = { t1b: $("#t1b"), t1f: $("#t1f"), t1s: $("#t1s"), t2: $("#t2"), t3: $("#t3"), t4: $("#t4"), t5: $("#t5"), t6: $("#t6"), t7: $("#t7"), t8: $("#t8"), t10: $("#t10"), t11n: $("#t11n"), t12: $("#t12"), ff: $("#filmframe") };
+const reset = () => { for (const id of ORDER) UN[id].st = { on: false, z: 2, clip: "", tf: "", mb: "", rect: null, local: 0, fr: false, tOff: 0, t: 0, tall: false, origin: null }; };
+const vis = (el, on) => { el.style.display = on ? "block" : "none"; };
+const circ = (r, x = 50, y = 50) => `circle(${r}% at ${x}% ${y}%)`;
+const lines = (root, ps, speeds) => $$(".ln>span", root).forEach((s, i) => { const q = ps[Math.min(i, ps.length - 1)]; s.style.transform = `translate3d(0,${(1 - cl(q)) * 112 * (speeds ? speeds[i] : 1)}%,0)`; });
+function direct(p) {
+  reset(); const ci = chOf(p) + 1, vw = innerWidth, vh = innerHeight; const U = UN;
+  [T.t1b, T.t1f, T.t1s, T.t2, T.t3, T.t4, T.t5, T.t6, T.t7, T.t8, T.t11n, T.t12, T.ff, TRK, man, IVO].forEach(e => e.style.display = "none"); workEls.forEach(w => { w.style.visibility = "hidden"; $("button", w).tabIndex = -1; });
+  const l1 = L(1, p), l2 = L(2, p), l3 = L(3, p), l4 = L(4, p), l5 = L(5, p), l6 = L(6, p), l7 = L(7, p), l8 = L(8, p), l9 = L(9, p), l10 = L(10, p), l11 = L(11, p), l12 = L(12, p);
+  // 01 BLACK / BREATH — the circular mask opens as the camera pulls back; ÉTHER crosses behind and in front of the picture.
+  if (ci === 1) { const e = E(seg(l1, 0, .9)); const u = U.fab.st; u.on = true; u.z = 4; u.clip = circ(mix(.6, 76, e)); u.mb = `scale(${mix(4.4, 1.0, e)})`; u.local = l1;
+    const x = mix(8, -10, l1); T.t1b.style.display = T.t1f.style.display = T.t1s.style.display = "block"; T.t1b.style.transform = T.t1f.style.transform = `translate3d(${x}vw,0,0)`; T.t1f.style.zIndex = 30; T.t1s.style.clipPath = `inset(0 ${(1 - seg(l1, .35, .8)) * 100}% 0 0)`; }
+  // 02 THE GAZE — a circle grows from the eye line; the headline appears where the face looks and the profile occludes its first letters.
+  if (ci === 2) { const e = E(seg(l2, 0, .3)); const f = U.fab.st; f.on = e < 1; f.z = 3; f.clip = ""; f.mb = "scale(1.0)"; f.local = 1; const u = U.prof.st; u.on = true; u.z = 4; u.clip = circ(mix(.6, 76, e), 52, 36); u.mb = `scale(${mix(1.14, 1.0, l2)}) translate(${mix(1.5, 0, l2)}%,0)`; u.local = l2;
+    T.t2.style.display = "block"; T.t2.style.clipPath = `inset(0 ${(1 - seg(l2, .28, .62)) * 100}% 0 ${seg(l2, .84, .98) * 100}%)`; T.t2.style.transform = `translate3d(${mix(-2, 1, l2)}vw,0,0)`;
+    }
+  // 03 THE FRAME — the full-screen picture shrinks into a framed print on ivory; the next picture is pushed in from behind.
+  if (ci === 3) { const a = seg(l3, 0, .2), b = E(seg(l3, .2, .55)), c = E3(seg(l3, .55, .86)), d = E(seg(l3, .86, 1));
+    const prof = U.prof.st; prof.on = a < 1; prof.z = 3; prof.local = 1; prof.mb = "scale(1.0)"; IVO.style.display = a >= .999 ? "block" : "none";
+    const sc = mix(1, .58, b) * mix(1, 1 / .58, d), w = U.wall.st; w.on = c < 1; w.z = 6; w.local = l3; w.tf = `translate3d(${-c * 120}vw,${mix(0, -2, b)}vh,0) scale(${mix(1, .58, b)})`; w.clip = a < 1 ? `inset(0 0 0 ${(1 - E(a)) * 100}%)` : ""; w.fr = b > .05 && d < .5; if (b === 0) w.mb = "scale(1.0)"; else w.mb = `scale(${mix(1.04, 1.0, b)})`;
+    const h = U.hand.st; h.on = c > 0; h.z = 5; h.local = 0; h.fr = d < .5; h.tf = `translate3d(${(1 - c) * 120}vw,0,0) scale(${mix(.58, 1, d)})`; h.mb = "scale(1.04)"; h.z = c > 0 && d > 0 ? 8 : 5;
+    if (c > 0 || b > 0) IVO.style.display = "block"; T.t3.style.display = (b > .1 && d < .2) ? "block" : "none"; $$(".ln>span", T.t3)[0].style.transform = `translate3d(0,${(1 - seg(l3, .3, .5)) * 112}%,0)`; T.t3.style.opacity = 1 - seg(l3, .78, .88); }
+  // 04 THE TOUCH — the hand's position drives a diagonal wipe into cloth; type is split by baseline at different speeds.
+  if (ci === 4) { const u = U.hand.st; u.on = true; u.z = 4; u.local = l4; u.mb = `scale(${mix(1.04, 1.12, l4)})`; const wp = E(seg(l4, .5, .96)) * 118; const f = U.fab2.st; f.on = wp > 0; f.z = 6; f.local = 1 - l4 * .2; f.mb = "scale(1.06)"; f.clip = `polygon(0 0,${wp}% 0,${wp - 18}% 100%,0 100%)`;
+    T.t4.style.display = "block"; lines(T.t4, [seg(l4, .06, .3), seg(l4, .1, .34), seg(l4, .14, .38)].map((q, i) => q - seg(l4, .56 + i * .05, .8 + i * .03) * 1.0), [1, 1.3, 1.7]); }
+  // 05 THE GARDEN — three strips show three moments of one shot, drift apart, and re-join into one picture.
+  if (ci === 5) { const enter = E(seg(l5, 0, .25)), join = E(seg(l5, .62, 1)); const f = U.fab2.st; f.on = enter < 1; f.z = 3; f.local = .8; f.mb = "scale(1.06)";
+    ["g0", "g1", "g2"].forEach((k, i) => { const u = U[k].st, gap = 1.2 * (1 - join), dir = i === 1 ? -1 : 1; u.on = true; u.z = 4 + i; u.local = l5; u.tOff = (i - 1) * 2.6 * (1 - join); u.mb = "scale(1.03)";
+      const off = (dir * mix(10, 0, join) + (1 - enter) * (i === 1 ? -110 : 110) * (.7 + .3 * i)); u.tf = `translate3d(0,${off}%,0)`; const L0 = i * 33.3333 + (i ? gap : 0), R0 = (2 - i) * 33.3333 + (i < 2 ? gap : 0); u.clip = `inset(0 ${R0}% 0 ${L0}%)`; u.tall = true; });
+    T.t5.style.display = "block"; lines(T.t5, [seg(l5, .3, .46), seg(l5, .34, .5)], [1, 1.3]); T.t5.style.opacity = 1 - seg(l5, .62, .74); }
+  // 06 THE OBJECT — macro, then the picture converges to a circle that the camera dives into.
+  if (ci === 6) { const g = U.g0.st, g1 = U.g1.st, g2 = U.g2.st; const enter = E(seg(l6, 0, .16)); [g, g1, g2].forEach((s, i) => { s.on = enter < 1; s.z = 4; s.local = 1; s.tOff = 0; s.mb = "scale(1.03)"; s.clip = `inset(0 ${(2 - i) * 33.3333}% 0 ${i * 33.3333}%)`; s.tf = ""; });
+    const o = U.obj.st, sh = E(seg(l6, .58, .78)), dive = E3(seg(l6, .8, 1)); o.on = dive < 1; o.z = 6; o.local = l6; o.mb = `scale(${mix(1.0, 1.1, l6)})`; o.clip = enter < 1 ? `inset(${(1 - enter) * 100}% 0 0 0)` : circ(mix(76, 11, sh), 64, 52);
+    const c = U.corr.st; c.on = dive > 0; c.z = 7; c.local = 0; c.mb = `scale(${mix(.22, 1, dive)})`; c.clip = circ(mix(11, 76, dive), 64, 52); const showBg = enter >= 1 && sh > 0; IVO.style.display = "none";
+    T.t6.style.display = sh < .01 ? "block" : "none"; lines(T.t6, [seg(l6, .2, .4), seg(l6, .24, .44)], [1, 1.3]); }
+  // 07 THE ARCHITECTURE — natural parallax (scale and push); type recedes toward the vanishing point with perspective.
+  if (ci === 7) { const u = U.corr.st; u.on = true; u.z = 4; u.local = l7; u.mb = `scale(${mix(1, 1.45, E(l7))}) translate(0,${mix(0, 2.5, l7)}%)`; film.style.setProperty("--k", l7);
+    T.t7.style.display = "block"; $$(".rec", T.t7).forEach((el, j) => { const q = cl((l7 - .08 - j * .17) / .5), s = mix(3.2, .22, E(q)), op = Math.sin(Math.PI * Math.pow(q, .7)); el.style.transform = `translate3d(0,-50%,0) scale(${s})`; el.style.opacity = q <= 0 || q >= 1 ? 0 : op * 1.3; el.style.color = "#F1EEE7"; el.style.letterSpacing = `${mix(-.03, .3, q)}em`; }); }
+  // 08 THE INTERRUPTION — silence: the last frame is cut out into a window; three hard, elegant cuts behind it; then everything leaves left.
+  if (ci === 8) { const exit = E3(seg(l8, .86, 1)); const win = E(seg(l8, 0, .1)); const cw = U.corr.st; cw.on = true; cw.z = 12; cw.local = 1; cw.mb = "scale(1.45) translate(0,2.5%)"; cw.fr = win > .5; cw.clip = `inset(${win * 24}% ${win * 56}% ${win * 24}% ${win * 6}%)`; cw.tf = `translate3d(${-exit * 120}vw,0,0)`;
+    const A = U.cA.st; A.on = true; A.z = 5; A.local = .9; A.mb = "scale(1.35) translate(-3%,2%)"; A.tf = `translate3d(${-exit * 120}vw,0,0)`;
+    const bw = E3(seg(l8, .34, .42)); const B = U.cB.st; B.on = bw > 0; B.z = 7; B.local = .7; B.mb = "scale(1.45)"; B.clip = `inset(0 0 0 ${(1 - bw) * 100}%)`; B.tf = A.tf; const cw2 = E3(seg(l8, .6, .68)); const C = U.cC.st; C.on = cw2 > 0; C.z = 9; C.local = .55; C.mb = "scale(1.2)"; C.clip = `inset(${(1 - cw2) * 100}% 0 0 0)`; C.tf = A.tf;
+    const k = l8 < .34 ? 0 : l8 < .6 ? 1 : 2; T.t8.style.display = "block"; $$(".w", T.t8).forEach(w => w.style.display = (+w.dataset.k === k && l8 > .12 && exit < .5) ? "block" : "none"); if (aud.g) aud.g.gain.setTargetAtTime(aud.on && l8 > .02 && l8 < .96 ? 0 : .5, aud.ctx.currentTime, .05); if (l8 < .02 || l8 > .96) { } IVO.style.display = exit > 0 ? "block" : "none"; }
+  else if (aud.g && aud.on) aud.g.gain.setTargetAtTime(.5, aud.ctx.currentTime, .1);
+  // 09 THE HUMAN — a horizontal editorial track driven by vertical scroll; panels, type and white space swap in from off-screen.
+  if (ci === 9) { IVO.style.display = "block"; TRK.style.display = "block"; const tx = mix(100, -170, E(l9)); TRK.style.transform = `translate3d(${tx}vw,0,0)`; const px = tx;
+    [["h0", 8, 12, 46, 74, 0], ["h1", 100, 10, 36, 78, 1], ["h2", 176, 18, 34, 64, 2]].forEach(([id, x, y, w, h, k]) => { const u = U[id].st; u.on = true; u.z = 8; u.local = l9; u.tOff = k * 3; u.rect = { x: (x + px) / 100 * vw, y: y / 100 * vh, w: w / 100 * vw, h: h / 100 * vh }; u.mb = `translate(${-(px + x) * .05}%,0) scale(1.16)`; }); }
+  // 10 THE COLLECTION — large panels take the screen one by one like cuts; each opens a detail view.
+  if (ci === 10) { const n = 5, k = Math.min(4, Math.floor(l10 * n)), q = l10 * n - k; for (let i = 0; i < n; i++) { const u = U["w" + (i + 1)].st; if (i > k) continue; const e = i === k ? E3(seg(q, 0, .22)) : 1; u.on = i === k || (i === k - 1 && q < .24); u.z = 6 + i; u.local = i === k ? q : 1; u.mb = `scale(${mix(1.08, 1.0, i === k ? q : 1)})`; u.clip = i === k && e < 1 ? `inset(0 0 0 ${(1 - e) * 100}%)` : ""; }
+    IVO.style.display = k === 0 && q < .22 ? "block" : "none"; if (k === 0 && q < .22) { TRK.style.display = "block"; TRK.style.transform = `translate3d(-170vw,0,0)`; }
+    workEls.forEach((w, i) => { const on = i === k && q > .1 && q < .96; w.style.visibility = on ? "visible" : "hidden"; $("button", w).tabIndex = on ? 0 : -1; const ti = $(".ti", w); ti.style.transform = `translate3d(0,${(1 - seg(q, .1, .3)) * 28}px,0)`; $(".big", w).style.transform = `translate3d(0,${(1 - seg(q, .12, .32)) * 100}%,0)`; $(".big", w).parentElement.style.overflow = "hidden"; }); }
+  // 11 THE MANIFESTO — the type is the mask; the footage lives inside the letters and returns to full frame as they grow.
+  if (ci === 11) { const cur = E3(seg(l11, 0, .12)); IVO.style.display = "block"; const w5 = U.w5.st; w5.on = cur < 1; w5.z = 6; w5.local = 1; w5.mb = "scale(1.0)"; w5.clip = `inset(0 0 ${cur * 100}% 0)`; w5.tf = "";
+    man.style.display = cur > .98 ? "block" : "none"; if (cur > .98) { drawMan(l11, U.man); } T.t11n.style.display = (cur > .98 && l11 < .4) ? "block" : "none"; }
+  // 12 THE AFTERIMAGE — the footage converges into a film frame; the logo leaves afterimages; Contact and Replay are real.
+  if (ci === 12) { const sh = E(seg(l12, 0, .45)); man.style.display = sh < .995 ? "block" : "none"; const ffw = Math.min(vw * .46, vh * .44 * 1.78), ffh = ffw / 1.78, cy = vh * .42; if (sh < .995) { drawMan(1, U.man); const kx = mix(1, ffw / vw, sh), ky = mix(1, ffh / vh, sh); man.style.transform = `translate3d(0,${(cy - vh / 2) * sh}px,0) scale(${kx},${ky})`; man.style.clipPath = "none"; } else man.style.transform = "";
+    IVO.style.display = sh < .02 ? "block" : "none"; film.style.background = sh < .02 ? "var(--ivory)" : "var(--charcoal)";
+    T.ff.style.display = sh > .3 ? "block" : "none"; T.ff.style.width = ffw * 1.16 + "px"; T.ff.style.height = ffh + "px"; T.ff.style.top = cy + "px"; T.ff.style.opacity = seg(sh, .3, 1);
+    const adv = E(seg(l12, .46, .62)); const rc = { x: (vw - ffw) / 2, y: cy - ffh / 2, w: ffw, h: ffh }; const m = U.man.st; m.on = sh >= .995; m.z = 6; m.local = 1; m.rect = rc; m.fr = false; m.mb = `translate(0,${-adv * 100}%)`; const af = U.af.st; af.on = sh >= .995; af.z = 7; af.local = 1; af.rect = rc; af.fr = false; af.mb = `translate(0,${(1 - adv) * 100}%)`;
+    T.t12.style.display = "block"; const lg = $("#logo12"); const q = E(seg(l12, .64, .84)); const fs = Math.min(vw * .075, vh * .13); lg.style.opacity = q; lg.style.top = (cy + ffh / 2 + vh * .035 + fs * .45) + "px"; lg.style.transform = `translate(-50%,${(1 - q) * 40}px)`; lg.style.clipPath = `inset(0 0 ${(1 - q) * 100}% 0)`;
+    $("#lg0").style.fontSize = fs + "px"; $$(".g", lg).forEach(g => g.remove()); for (let i = 1; i <= 4; i++) { const g = document.createElement("div"); g.className = "g giant"; g.style.fontSize = fs + "px"; g.style.opacity = (.34 / i) * q; g.style.transform = `translate3d(${-i * 1.1}vw,${i * .4}vh,0)`; g.textContent = "ÉTHER"; lg.appendChild(g); }
+    $(".cta", T.t12).style.opacity = seg(l12, .84, .94); $(".cta", T.t12).style.pointerEvents = l12 > .86 ? "auto" : "none"; }
+  if (ci !== 12) { film.style.background = ci === 9 || ci === 3 ? "var(--ivory)" : "var(--charcoal)"; }
+  apply(p, ci);
+}
+
+function apply(p, ci) {
+  const near = new Set(); ORDER.forEach(id => { const u = UN[id], st = u.st; const el = u.el; el.style.display = st.on ? "block" : "none"; if (!st.on) { if (u.ready && !u.v.paused) u.v.pause(); return; }
+    el.style.zIndex = st.z; el.style.clipPath = st.clip || "none"; el.style.transform = st.tf || "none"; el.classList.toggle("fr", !!st.fr); u.mb.style.transformOrigin = st.origin || u.origin || "50% 50%"; u.mb.style.transform = ((st.mb || "") + ` translate(${(Math.sin(tm * .13 + u.idx) * .35).toFixed(3)}%,${(Math.cos(tm * .1 + u.idx) * .25).toFixed(3)}%)`).trim();
+    if (st.rect) { el.style.inset = "auto"; el.style.left = st.rect.x + "px"; el.style.top = st.rect.y + "px"; el.style.width = st.rect.w + "px"; el.style.height = st.rect.h + "px"; } else { el.style.inset = "0"; el.style.width = ""; if (st.tall) { el.style.height = "140%"; el.style.top = "-20%"; } else { el.style.height = ""; el.style.top = ""; } }
+    // placeholder animation (stand-in for footage)
+    if (!u.imgOk && !u.ready) { u.dr[0](u.ctx, 384, 216, tm + st.tOff + (st.t || 0), st.local, u.dr[1]); }
+    if (u.ready) mediaSync(u, st); });
+  const nmx = CH[ci - 1]; nm.textContent = `${String(ci).padStart(2, "0")} — ${nmx[0]}`; pbB.forEach((b, i) => { b.classList.toggle("on", i === ci - 1); $("i", b).style.width = (i < ci - 1 ? 100 : i === ci - 1 ? cl((p - CH[i][1]) / (CH[i][2] - CH[i][1])) * 100 : 0) + "%"; });
+  prepare(ci);
+}
+// MediaLoader: only the current and next chapters' media are requested; scrub videos are seeked at most ~12×/s; others play muted.
+const NEED = { 1: ["fab"], 2: ["fab", "prof"], 3: ["prof", "wall", "hand"], 4: ["hand", "fab2", "g0", "g1", "g2"], 5: ["g0", "g1", "g2", "obj"], 6: ["obj", "corr"], 7: ["corr", "cA", "cB", "cC"], 8: ["cA", "cB", "cC", "h0", "h1", "h2"], 9: ["h0", "h1", "h2", "w1"], 10: ["w1", "w2", "w3", "w4", "w5", "man"], 11: ["man", "w5"], 12: ["man"] };
+function prepare(ci) { (NEED[ci] || []).concat(NEED[Math.min(12, ci + 1)] || []).forEach(id => { const u = UN[id]; if (u.tried || window.__etherNoMedia) return; u.tried = true; u.v.preload = "auto"; u.v.src = `media/${u.file}.mp4`; u.v.load(); }); }
+function mediaSync(u, st) { const v = u.v, d = v.duration || 0; if (u.mode === "scrub") { if (!v.paused) v.pause(); const target = d * cl(st.local, 0, .999); const now = performance.now(); if (!v.seeking && Math.abs(v.currentTime - target) > .05 && now - u.seekT > 80) { v.currentTime = target; u.seekT = now; } } else if (v.paused) v.play().catch(() => {}); }
+
+// ---------------------------------------------------------------- replay: close the curtain, return to the first frame, open into black
+function replay() { const c = $("#curtain"); if (reduce) { scrollTo(0, 0); P = targetP = 0; return; } c.classList.add("shut"); setTimeout(() => { scrollTo(0, 0); P = targetP = lastP = 0; setTimeout(() => c.classList.remove("shut"), 350); }, 1250); }
+$("#replay").addEventListener("click", replay);
+
+// ---------------------------------------------------------------- loop
+let lastT = performance.now(), first = true; const manReady = () => { manLayout(); }; addEventListener("resize", manReady); try { document.fonts.ready.then(manReady); } catch (e) {} manReady();
+function frame(dt) { tm += dt * (reduce ? .2 : 1); P += (targetP - P) * (1 - Math.exp(-dt * (reduce ? 25 : 7))); direct(P); lastP = P; }
+function loop(now) { requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, .05); lastT = now; if (document.hidden) return; stepAnim(now); frame(dt); try { if (now - (loop.sv || 0) > 700) { loop.sv = now; sessionStorage.setItem("ether_p", String(targetP)); } } catch (e) {} }
+let sp = 0; try { sp = parseFloat(sessionStorage.getItem("ether_p") || "0") || 0; } catch (e) {}
+requestAnimationFrame(() => { if (sp > .001) { scrollTo(0, sp * maxScroll()); targetP = sp; P = sp; } });
+window.__ether = { renderAt(p) { targetP = P = p; frame(.016); }, state: () => ({ P, ready: Object.fromEntries(ORDER.map(i => [i, UN[i].ready])) }), UN, replay };
+if (!window.__etherManual) requestAnimationFrame(loop); else direct(0);
+})();
+</script>
