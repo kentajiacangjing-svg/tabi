@@ -1,0 +1,515 @@
+<title>BLOOM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Hanken+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one fixed WebGL canvas, 1200vh of scroll = master timeline. Type floats over the 3D; the lab panel appears in chapter 11. */
+  :root{--black:#050204;--deep:#58000E;--velvet:#960016;--crimson:#DF0628;--ruby:#FF3655;--ivory:#F6EDEA;--dim:rgba(246,237,234,.6);--line:rgba(255,54,85,.28);
+    --serif:"Bodoni Moda","Didot","Bodoni 72","Hiragino Mincho ProN","Yu Mincho",Georgia,serif;--sans:"Hanken Grotesk","Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;color-scheme:dark}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--black)}
+  body{background:var(--black);color:var(--ivory);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.lock{overflow:hidden}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:pan-y}
+  #gl.orbit{touch-action:none}#gl.drag{cursor:grabbing}
+  #spacer{height:1200vh}
+  .vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(5,2,4,.72) 100%)}
+  header{position:fixed;top:0;left:0;right:0;z-index:40;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,3.2vw) 16px}
+  .logo{justify-self:start;font:italic 500 1.35rem var(--serif);letter-spacing:.02em;color:var(--ivory);background:none;border:0;cursor:pointer}
+  .ind{justify-self:center;font:400 .6rem var(--sans);letter-spacing:.34em;text-transform:uppercase;color:var(--dim);white-space:nowrap;text-align:center}
+  .ind b{font-weight:600;color:var(--ivory)}
+  .tools{justify-self:end;display:flex;gap:.5rem;align-items:center}
+  .hb{font:400 .6rem var(--sans);letter-spacing:.26em;text-transform:uppercase;color:var(--dim);background:none;border:1px solid var(--line);padding:.58rem .8rem;cursor:pointer;transition:all .25s;white-space:nowrap}
+  .hb:hover,.hb[aria-pressed="true"]{color:var(--ivory);border-color:var(--ruby)}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--ruby);outline-offset:3px}
+  .ch{position:fixed;z-index:10;pointer-events:none;left:max(16px,4.5vw);right:max(16px,4.5vw);visibility:hidden}
+  .ch.r{text-align:right;right:max(60px,6vw)}.ch.c{text-align:center}
+  .ch .lab{font:500 .62rem var(--sans);letter-spacing:.42em;text-transform:uppercase;color:var(--ruby);display:block;margin-bottom:1.2rem}
+  .ch .big{font-family:var(--serif);font-weight:500;line-height:.92;letter-spacing:-.025em;font-size:clamp(2.6rem,9vw,8.6rem);display:block;text-shadow:0 0 40px rgba(5,2,4,.55)}
+  .ch .big i{font-weight:400}
+  .ch .big.xl{font-size:clamp(5rem,24vw,24rem);line-height:.8;letter-spacing:-.04em}
+  .ch .sm{font:300 clamp(.74rem,1.1vw,.95rem) var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-top:1.4rem;display:block;line-height:1.9}
+  .ch .l{display:inline-block;will-change:transform,opacity,filter}.ch .w{display:inline-block;white-space:nowrap}
+  .btn{pointer-events:auto;font:600 .72rem var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--ivory);background:var(--crimson);border:0;padding:1.1rem 2rem;cursor:pointer;margin-top:2rem;transition:background .25s}
+  .btn:hover{background:var(--ruby)}
+  .c1{bottom:11vh}.c2{top:20vh}.c3{bottom:12vh}.c4{top:19vh}.c5{bottom:12vh}.c6{top:19vh}.c7{bottom:12vh}.c8{top:19vh}.c9{bottom:12vh}.c10{top:19vh}.c12{top:50%;transform:translateY(-50%)}
+  nav.idx{position:fixed;right:max(10px,1.6vw);top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:2px}
+  nav.idx button{background:none;border:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:.6rem;color:var(--dim);font:400 .56rem var(--sans);letter-spacing:.2em;padding:5px 2px}
+  nav.idx button i{display:block;width:12px;height:1px;background:currentColor;transition:width .3s,background .3s}
+  nav.idx button span{pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+  nav.idx button:hover span,nav.idx button.on span{opacity:1}
+  nav.idx button.on{color:var(--ivory)}nav.idx button.on i{width:28px;background:var(--ruby)}
+  .rail{position:fixed;left:max(16px,3.2vw);right:max(16px,3.2vw);bottom:calc(12px + env(safe-area-inset-bottom,0px));height:1px;background:var(--line);z-index:20;pointer-events:none}
+  .rail i{position:absolute;left:0;top:0;height:1px;width:0;background:var(--ruby)}
+  .notice{position:fixed;left:max(16px,3.2vw);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;font:400 .54rem var(--sans);letter-spacing:.28em;text-transform:uppercase;color:rgba(246,237,234,.4);pointer-events:none}
+  #lab{position:fixed;z-index:35;right:max(16px,3vw);bottom:max(28px,6vh);width:min(100% - 32px,22rem);background:rgba(5,2,4,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);padding:1.2rem;opacity:0;visibility:hidden;max-height:calc(100% - 96px);overflow:auto}
+  #lab.live{pointer-events:auto}
+  #lab h3{font:italic 500 1.5rem var(--serif);letter-spacing:-.01em}
+  .g{margin-top:.95rem}
+  .g>.t,.g>label.t{font:400 .56rem var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;margin-bottom:.4rem}
+  .o{display:flex;flex-wrap:wrap;gap:.35rem}
+  .o button{font:500 .6rem var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:.55rem .7rem;border:1px solid var(--line);background:none;color:var(--dim);cursor:pointer;transition:all .2s;display:flex;gap:.5rem;align-items:center}
+  .o button:hover{color:var(--ivory);border-color:var(--ruby)}
+  .o button[aria-pressed="true"]{color:var(--ivory);background:var(--velvet);border-color:var(--ruby)}
+  .sw{width:11px;height:11px;border-radius:50%;display:inline-block}
+  input[type=range]{width:100%;accent-color:var(--crimson);height:22px}
+  .hint{font:300 .54rem var(--sans);letter-spacing:.18em;color:var(--dim);margin-top:.8rem;line-height:1.8;text-transform:uppercase}
+  #menu{position:fixed;inset:0;z-index:60;background:rgba(5,2,4,.95);display:none;overflow:auto;padding:calc(80px + env(safe-area-inset-top,0px)) max(16px,4vw) 40px}
+  #menu.open{display:block}
+  .mgrid{max-width:68rem;margin:0 auto;display:grid;grid-template-columns:1.2fr 1fr;gap:3rem}
+  .mgrid h4{font:500 .6rem var(--sans);letter-spacing:.38em;text-transform:uppercase;color:var(--ruby);margin-bottom:1rem}
+  .chl{list-style:none}.chl button{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ivory);font:italic 500 clamp(1.1rem,2.2vw,1.6rem) var(--serif);padding:.65rem 0;display:flex;gap:1.2rem;cursor:pointer;transition:color .2s,padding .2s}
+  .chl button:hover{color:var(--ruby);padding-left:.5rem}.chl small{font:500 .58rem var(--sans);letter-spacing:.2em;color:var(--dim);align-self:center;min-width:1.8rem;font-style:normal}
+  .mgrid p{color:var(--dim);line-height:1.8;font-size:.92rem;margin-bottom:.9rem}
+  .mgrid form{display:grid;gap:.7rem;margin-top:1rem}
+  .mgrid label{font:400 .58rem var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--dim)}
+  .mgrid input,.mgrid textarea{width:100%;background:var(--black);border:1px solid var(--line);color:var(--ivory);padding:.75rem;font:400 .9rem var(--sans);margin-top:.35rem;resize:vertical}
+  #fmsg{font:400 .68rem var(--sans);color:var(--ruby);line-height:1.7;min-height:2.4em}
+  .mclose{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:max(16px,3.2vw);z-index:65}
+  #veil{position:fixed;inset:0;z-index:90;background:var(--black);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;transition:opacity 1.2s,visibility 1.2s;font:400 .64rem var(--sans);letter-spacing:.5em;text-transform:uppercase;color:var(--dim)}
+  #veil.off{opacity:0;visibility:hidden;pointer-events:none}#veil b{font:italic 500 1.6rem var(--serif);color:var(--ivory);letter-spacing:.04em;text-transform:none}
+  #nogl{position:fixed;inset:0;z-index:99;background:var(--black);display:none;align-items:center;justify-content:center;text-align:center;padding:2rem;color:var(--dim);font:300 .85rem var(--sans);letter-spacing:.2em;line-height:2}
+  @media (max-width:820px){.ind span{display:none}.mgrid{grid-template-columns:1fr;gap:2rem}nav.idx button span{display:none}.hint{display:none}.tools .hb.x{display:none}header{grid-template-columns:auto 1fr auto}#lab{padding:.9rem;bottom:calc(28px + env(safe-area-inset-bottom,0px))}.g{margin-top:.6rem}.ch.r{right:max(48px,6vw)}}
+  @media (prefers-reduced-motion:reduce){#veil{transition:none}}
+</style>
+
+<canvas id="gl" role="img" aria-label="真紅の薔薇とDNAの二重螺旋の3D表現。スクロールで種から螺旋、薔薇、星雲へと変化します。"></canvas>
+<div class="vig"></div>
+<div id="veil"><b>Bloom</b><span>Growing</span></div>
+<div id="nogl">WebGL に対応したブラウザで開いてください。<br>Please open this page in a WebGL-capable browser.</div>
+
+<header>
+  <button class="logo" id="logo" aria-label="最初の章へ戻る">Bloom</button>
+  <div class="ind" id="ind" aria-live="polite"></div>
+  <div class="tools"><button class="hb x" id="prev" aria-label="前の章">←</button><button class="hb x" id="next" aria-label="次の章">→</button><button class="hb" id="snd" aria-pressed="false">Sound off</button><button class="hb" id="menuBtn" aria-expanded="false">Menu</button></div>
+</header>
+<nav class="idx" id="idx" aria-label="章"></nav>
+
+<section class="ch c1" data-a="-1" data-b="0.075"><span class="lab">01 / Seed</span><span class="big xl" data-t="Bloom"></span><span class="sm">Life, written in red. — Scroll</span></section>
+<section class="ch c2 r" data-a="0.085" data-b="0.155"><span class="lab">02 / Germination</span><span class="big" data-t="Life begins here."></span></section>
+<section class="ch c3" data-a="0.165" data-b="0.245"><span class="lab">03 / Double helix</span><span class="big" data-t="Coded in crimson."></span></section>
+<section class="ch c4 r" data-a="0.255" data-b="0.325"><span class="lab">04 / Inside the code</span></section>
+<section class="ch c5" data-a="0.335" data-b="0.415"><span class="lab">05 / Mutation</span><span class="big" data-t="Form is alive."></span></section>
+<section class="ch c6 r" data-a="0.425" data-b="0.495"><span class="lab">06 / Petal genesis</span></section>
+<section class="ch c7" data-a="0.505" data-b="0.585"><span class="lab">07 / The rose</span><span class="big" data-t="Beauty is biology."></span></section>
+<section class="ch c8 r" data-a="0.595" data-b="0.675"><span class="lab">08 / Fracture</span></section>
+<section class="ch c9" data-a="0.685" data-b="0.765"><span class="lab">09 / Red universe</span><span class="big" data-t="Infinite possibilities."></span></section>
+<section class="ch c10 r" data-a="0.775" data-b="0.845"><span class="lab">10 / Living sculpture</span></section>
+<section class="ch c12 c" data-a="0.955" data-b="2"><span class="lab">12 / Eternal bloom</span><span class="big xl" data-t="Bloom"></span><span class="sm" style="margin-top:1rem">Life, written in red.</span><button class="btn" id="again">Begin again</button></section>
+
+<section id="lab" aria-label="Genesis lab">
+  <h3>Genesis lab</h3>
+  <div class="g"><span class="t" id="tT">Tone</span><div class="o" role="group" aria-labelledby="tT"><button data-tone="0" aria-pressed="true"><i class="sw" style="background:#960016"></i>Crimson</button><button data-tone="1" aria-pressed="false"><i class="sw" style="background:#FF3655"></i>Ruby</button><button data-tone="2" aria-pressed="false"><i class="sw" style="background:#DF0628"></i>Vivid</button></div></div>
+  <div class="g"><label class="t" for="pitch"><span>Helix pitch</span><span id="pitchV">2.2</span></label><input type="range" id="pitch" min="1.2" max="4.6" step="0.01" value="2.2"></div>
+  <div class="g"><label class="t" for="bloom"><span>Bloom</span><span id="bloomV">62%</span></label><input type="range" id="bloom" min="0" max="100" value="62"></div>
+  <div class="g"><label class="t" for="light"><span>Light angle</span><span id="lightV">35°</span></label><input type="range" id="light" min="0" max="360" value="35"></div>
+  <div class="g"><div class="o"><button id="orbitLock" aria-pressed="false">Orbit lock</button><button id="labReset">Reset</button></div></div>
+  <p class="hint">Drag the sculpture to rotate · scroll leaves the lab · Orbit lock captures touch</p>
+</section>
+
+<div id="menu" role="dialog" aria-modal="true" aria-label="Menu">
+  <button class="hb mclose" id="menuClose">Close</button>
+  <div class="mgrid">
+    <div><h4>Chapters</h4><ul class="chl" id="chl"></ul></div>
+    <div><h4>Studio</h4>
+      <p><b>BLOOM は架空のアート＆バイオデザイン・スタジオです。</b>このサイトは、真紅の薔薇とDNAの二重螺旋を題材にした3D表現の実験で、すべてコードで生成しています。</p>
+      <p>音は、あなたがSound onを押したときだけ鳴ります（合成した鼓動とドローンで、音源ファイルはありません）。</p>
+      <h4 style="margin-top:2rem">Contact</h4>
+      <form id="cform" novalidate><label>Name<input id="cn" autocomplete="name"></label><label>Message<textarea id="cm" rows="3"></textarea></label><button class="btn" style="margin-top:.2rem" type="submit">Send</button><div id="fmsg" role="status"></div></form>
+      <h4 style="margin-top:2rem">Motion</h4><div class="o"><button id="pauseBtn" aria-pressed="false" style="font:500 .6rem var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:.55rem .7rem;border:1px solid var(--line);background:none;color:var(--dim);cursor:pointer">Pause motion</button></div></div>
+  </div>
+</div>
+<div class="rail"><i id="railFill"></i></div>
+<div class="notice">Fictional studio · Bloom</div>
+<div id="spacer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobile = matchMedia("(max-width:820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x)), mix = (a, b, t) => a + (b - a) * t;
+const sm = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const canvas = $("#gl"); let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" }); }
+catch (e) { $("#nogl").style.display = "flex"; $("#veil").classList.add("off"); return; }
+renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.NoToneMapping; renderer.toneMappingExposure = .9; renderer.setClearColor(0x050204);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x050204); scene.fog = new THREE.FogExp2(0x050204, .02);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.04, 140);
+const sculpt = new THREE.Group(); scene.add(sculpt);
+
+// ================================================================ shared uniforms
+const U = {
+  uTime: { value: 0 }, uSpin: { value: 0 }, uPitch: { value: 3.4 }, uR: { value: .05 }, uExt: { value: .16 }, uThick: { value: .012 }, uWob: { value: 0 }, uSegF: { value: 19.6 }, uBridgeA: { value: 0 }, uBridgeSp: { value: 1 },
+  uPulse: { value: 0 }, uPetG: { value: 0 }, uOpenH: { value: .3 }, uOpenR: { value: 0 }, uRoseMix: { value: 0 }, uRoseScale: { value: 1 }, uFrac: { value: 0 }, uFlow: { value: 0 }, uNeb: { value: 0 }, uSculpt: { value: 0 }, uTwistS: { value: 0 }, uRoseSpin: { value: 0 }, uMatVar: { value: 0 },
+  uDeep: { value: new THREE.Color(.35, 0, .055) }, uMid: { value: new THREE.Color(.59, 0, .086) }, uHi: { value: new THREE.Color(.87, .024, .157) }, uRim: { value: 1 }, uGlass: { value: 0 }, uPetN: { value: 160 },
+  uShellOpen: { value: 0 }, uShellS: { value: 1 }, uNebAmt: { value: 0 },
+};
+const COMMON = `
+uniform float uTime,uSpin,uPitch,uR,uExt,uThick,uWob,uSegF,uPulse;
+vec3 strandC(float t,float s){
+  float a=6.2831853*t/uPitch+uSpin+s*PI; float w=uWob;
+  float R=uR*(1.+w*.45*sin(t*1.1+uTime*.4)+w*.25*sin(t*2.3-uTime*.3));
+  vec3 c=vec3(R*cos(a), t+w*.5*sin(t*.8+uTime*.2), R*sin(a));
+  c.xz+=w*.9*vec2(sin(t*.7+1.3+uTime*.1), cos(t*.55+uTime*.12));
+  return c;
+}
+void strandFrame(float u,float v,float s,out vec3 pos,out vec3 nrm){
+  float t=(u*2.-1.)*uExt; vec3 c=strandC(t,s); vec3 T=normalize(strandC(t+.04,s)-strandC(t-.04,s));
+  vec3 Rv=vec3(c.x,0.,c.z); Rv=length(Rv)>1e-4?normalize(Rv):vec3(1.,0.,0.); vec3 N1=normalize(Rv-T*dot(Rv,T)); vec3 B=cross(T,N1);
+  float seg=1.+.28*cos(t*uSegF); float edge=smoothstep(0.,1.,(uExt-abs(t))/(uExt*.18+.02));
+  float th=uThick*seg*(1.+.12*cos(3.*v+t*uSegF*.5))*edge; vec3 dir=N1*cos(v)+B*sin(v);
+  pos=c+dir*th; nrm=dir;
+}`;
+// PBR shading hooks shared by strands, bridges, petals and the seed (palette, veins, rim light, material variants)
+const FRAG_HEAD = `uniform vec3 uDeep,uMid,uHi; uniform float uRim,uGlass,uPulse,uMatVar; varying vec2 vUvS; varying float vMatS; varying float vGradS;`;
+function patchFrag(sh, kind) {
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + FRAG_HEAD)
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      float vein=smoothstep(.9,1.,sin(vUvS.x*${kind === "petal" ? "46." : "170."}+sin(vUvS.y*5.+vUvS.x*${kind === "petal" ? "9." : "30."})*2.));
+      vec3 baseC=mix(uDeep,uMid,clamp(vGradS,0.,1.)); baseC=mix(baseC,uHi,smoothstep(.55,1.,vGradS)*.75); diffuseColor.rgb=baseC*(1.-.38*vein);`)
+    .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+      float mt=vMatS*uMatVar; roughnessFactor=mix(roughnessFactor,mix(.08,.22,step(1.5,mt)),smoothstep(.5,1.,mt)); `)
+    .replace("#include <metalnessmap_fragment>", `#include <metalnessmap_fragment>
+      metalnessFactor=mix(metalnessFactor, step(1.5,mt)*.95+step(.5,mt)*(1.-step(1.5,mt))*.15, smoothstep(.5,1.,mt));`)
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      float fres=pow(1.-clamp(abs(dot(normalize(vNormal),normalize(vViewPosition))),0.,1.),2.2);
+      totalEmissiveRadiance+=vec3(.55,.0,.07)*fres*uRim*(.7+.6*uPulse)+vec3(.45,0.,.05)*vein*.55+vec3(.5,0.,.06)*uPulse*${kind === "seed" ? "1.6" : ".15"}*(.4+.6*(1.-vGradS));`);
+}
+function mkMat(opts, kind, vertHook) {
+  const m = new THREE.MeshPhysicalMaterial(Object.assign({ color: 0x7a0012, metalness: .12, roughness: .22, clearcoat: .8, clearcoatRoughness: .08, envMapIntensity: .85, side: THREE.DoubleSide }, opts));
+  m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); vertHook(sh); patchFrag(sh, kind); };
+  m.customProgramCacheKey = () => "bl" + kind; return m;
+}
+
+// ================================================================ environment
+const pmrem = new THREE.PMREMGenerator(renderer);
+function buildEnv() {
+  const s = new THREE.Scene(); s.background = new THREE.Color(0x030102);
+  const box = (w, h, p, col, k, rx, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(...p); m.rotation.x = rx || 0; m.rotation.y = ry || 0; s.add(m); };
+  box(18, 1.2, [0, 8, 0], 0xFF0A1E, 1.6, Math.PI / 2); box(18, .4, [0, 7.6, -3], 0xFF2038, 1.5, Math.PI / 2);
+  box(16, .5, [0, 2.6, 7.5], 0xFF2038, 1.6); box(1.2, .5, [3, 2.8, 7.4], 0xFF5068, 2.4);
+  box(16, .6, [0, 1.2, -7.5], 0xFF0A1E, 1.7);
+  box(9, .6, [-10, 2, 0], 0xFF2038, 1.6, 0, Math.PI / 2); box(9, 2.4, [11, 2.4, 0], 0xA00010, .9, 0, Math.PI / 2);
+  box(3, 3, [0, -9, 0], 0x58000E, 1.4, Math.PI / 2);
+  const t = pmrem.fromScene(s, 0).texture; s.traverse(o => { if (o.geometry) o.geometry.dispose(); }); return t;
+}
+const key = new THREE.DirectionalLight(0xff0a1c, .5); key.position.set(4, 5, 3); scene.add(key);
+const rimA = new THREE.PointLight(0xff0018, .9, 30); rimA.position.set(-5, 2, -4); scene.add(rimA); const rimB = new THREE.PointLight(0xff1030, .6, 30); rimB.position.set(5, -1, 5); scene.add(rimB); scene.add(new THREE.AmbientLight(0x240004, .15));
+
+// ================================================================ strands (the double helix) — procedural tube, deformed on the GPU
+const NS = mobile ? 420 : 780, MS = 16;
+function strandGeo() {
+  const verts = 2 * (NS + 1) * (MS + 1), pos = new Float32Array(verts * 3), idx = []; let k = 0;
+  for (let s = 0; s < 2; s++) for (let i = 0; i <= NS; i++) for (let j = 0; j <= MS; j++) { pos.set([i / NS, j / MS * 6.2831853, s], k * 3); k++; }
+  for (let s = 0; s < 2; s++) for (let i = 0; i < NS; i++) for (let j = 0; j < MS; j++) { const a = s * (NS + 1) * (MS + 1) + i * (MS + 1) + j, b = a + MS + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setIndex(idx); return g;
+}
+const strandMat = mkMat({ roughness: .34, clearcoat: .35, clearcoatRoughness: .2, envMapIntensity: .5 }, "strand", sh => {
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>\n${COMMON}\nvarying vec2 vUvS; varying float vMatS; varying float vGradS;`)
+    .replace("#include <beginnormal_vertex>", `vec3 sP, sN; strandFrame(position.x, position.y, position.z, sP, sN); vec3 objectNormal=sN; vUvS=vec2(position.x*60.,position.y); vMatS=0.; vGradS=.35+.5*(.5+.5*sin(position.x*40.+position.z*3.))+.15*uPulse;`)
+    .replace("#include <begin_vertex>", "vec3 transformed=sP;");
+});
+const strands = new THREE.Mesh(strandGeo(), strandMat); strands.frustumCulled = false; sculpt.add(strands);
+
+// ================================================================ bridges (base pairs: glass rods with beads)
+const NB = 84;
+function bridgeGeo() {
+  const aX = [], aO = [], nrm = [], idx = []; let base = 0;
+  const R = .035, SEG = 10;
+  for (let i = 0; i <= 1; i++) for (let j = 0; j <= SEG; j++) { const a = j / SEG * 6.2831853, ny = Math.cos(a), nz = Math.sin(a); aX.push(i * 2 - 1); aO.push(0, ny * R, nz * R); nrm.push(0, ny, nz); }
+  for (let j = 0; j < SEG; j++) { const a = j, b = j + SEG + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); } base = 2 * (SEG + 1);
+  const BR = .095, SU = 10, SV = 8;
+  for (const sx of [-1, 1]) { const off = base; for (let i = 0; i <= SV; i++) for (let j = 0; j <= SU; j++) { const th = i / SV * Math.PI, ph = j / SU * 6.2831853, x = Math.cos(th), y = Math.sin(th) * Math.cos(ph), z = Math.sin(th) * Math.sin(ph); aX.push(sx); aO.push(x * BR, y * BR, z * BR); nrm.push(x, y, z); }
+    for (let i = 0; i < SV; i++) for (let j = 0; j < SU; j++) { const a = off + i * (SU + 1) + j, b = a + SU + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); } base += (SV + 1) * (SU + 1); }
+  const g = new THREE.InstancedBufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(aX.length * 3), 3)); g.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(nrm), 3));
+  g.setAttribute("aX", new THREE.BufferAttribute(new Float32Array(aX), 1)); g.setAttribute("aO", new THREE.BufferAttribute(new Float32Array(aO), 3)); g.setIndex(idx);
+  const it = new Float32Array(NB); for (let i = 0; i < NB; i++) it[i] = i; g.setAttribute("aT", new THREE.InstancedBufferAttribute(it, 1)); g.instanceCount = NB; return g;
+}
+const bridgeMat = mkMat({ roughness: .22, clearcoat: .5, envMapIntensity: .6 }, "bridge", sh => {
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>\n${COMMON}\nuniform float uBridgeA,uBridgeSp; attribute float aX; attribute vec3 aO; attribute float aT; varying vec2 vUvS; varying float vMatS; varying float vGradS;`)
+    .replace("#include <beginnormal_vertex>", `float bt=(aT-${((NB - 1) / 2).toFixed(1)})*.34*uBridgeSp; float vis=step(abs(bt),uExt*.97)*uBridgeA; vec3 c0=strandC(bt,0.), c1=strandC(bt,1.); vec3 A=c1-c0; vec3 e0=normalize(A+vec3(1e-5)); vec3 e1=normalize(cross(e0,vec3(0.,1.,0.))); vec3 e2=cross(e0,e1);
+      vec3 bP=(c0+c1)*.5+A*.5*aX+(e0*aO.x+e1*aO.y+e2*aO.z)*vis*(uThick*6.+.2); vec3 objectNormal=normalize(e0*normal.x+e1*normal.y+e2*normal.z); vUvS=vec2(aT*3.,atan(aO.z,aO.y)); vMatS=0.; vGradS=.62+.3*sin(aT*.9);`)
+    .replace("#include <begin_vertex>", "vec3 transformed=mix((c0+c1)*.5,bP,step(.0001,vis));");
+});
+const bridges = new THREE.Mesh(bridgeGeo(), bridgeMat); bridges.frustumCulled = false; sculpt.add(bridges);
+
+// ================================================================ petals (thick, curved, translucent) — one mesh serves helix, rose, shards, nebula, sculpture
+const PET = mobile ? 90 : 160; U.uPetN.value = PET;
+function petalGeo(NU, NV) {
+  const pos = [], gg = [], rr = [];
+  const tri = (a, b, c) => { const cu = (a[0] + b[0] + c[0]) / 3, cv = (a[1] + b[1] + c[1]) / 3, r = [Math.random(), Math.random(), Math.random()]; for (const q of [a, b, c]) { pos.push(q[0], q[1], q[2]); gg.push(cu, cv, 0, 0); rr.push(r[0], r[1], r[2]); } };
+  const P = (i, j, s) => [i / NU, -1 + 2 * j / NV, s];
+  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) { for (const s of [1, -1]) { const p00 = P(i, j, s), p10 = P(i + 1, j, s), p01 = P(i, j + 1, s), p11 = P(i + 1, j + 1, s); if (s > 0) { tri(p00, p10, p11); tri(p00, p11, p01); } else { tri(p00, p11, p10); tri(p00, p01, p11); } } }
+  const strip = (a0, a1) => { const o0 = [a0[0], a0[1], 1], o1 = [a1[0], a1[1], 1], i0 = [a0[0], a0[1], -1], i1 = [a1[0], a1[1], -1]; tri(o0, o1, i1); tri(o0, i1, i0); };
+  for (let i = 0; i < NU; i++) { strip([i / NU, -1], [(i + 1) / NU, -1]); strip([i / NU, 1], [(i + 1) / NU, 1]); } for (let j = 0; j < NV; j++) strip([1, -1 + 2 * j / NV], [1, -1 + 2 * (j + 1) / NV]);
+  const g = new THREE.InstancedBufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute("aG", new THREE.BufferAttribute(new Float32Array(gg), 4)); g.setAttribute("aR", new THREE.BufferAttribute(new Float32Array(rr), 3));
+  const aI = new Float32Array(PET * 4), aM = new Float32Array(PET * 4), aRose = new Float32Array(PET * 4), aRose2 = new Float32Array(PET * 4);
+  for (let i = 0; i < PET; i++) { const f = i / (PET - 1), s = i % 2, t = (((i >> 1) / (PET / 2)) * 2 - 1) * 10.5 + (Math.random() - .5) * .5, sd = Math.random(), mt = sd < .6 ? 0 : sd < .8 ? 1 : 2;
+    aI.set([f, s, t, sd], i * 4); aM.set([mt, Math.random(), .6 + .8 * Math.random(), 0], i * 4);
+    aRose.set([i * 2.39996323, .05 + .62 * Math.pow(f, .72), .42 * (1 - f) - .1, .5 + 1.05 * Math.pow(f, .55)], i * 4); aRose2.set([.08 + .22 * f, .25 + 1.15 * Math.pow(f, .65), .55 * (1 - f), mt], i * 4); }
+  g.setAttribute("aI", new THREE.InstancedBufferAttribute(aI, 4)); g.setAttribute("aM", new THREE.InstancedBufferAttribute(aM, 4)); g.setAttribute("aRose", new THREE.InstancedBufferAttribute(aRose, 4)); g.setAttribute("aRose2", new THREE.InstancedBufferAttribute(aRose2, 4)); g.instanceCount = PET; return g;
+}
+const PET_GLSL = `
+uniform float uPetG,uOpenH,uOpenR,uRoseMix,uRoseScale,uFrac,uFlow,uNeb,uSculpt,uTwistS,uRoseSpin,uMatVar,uPetN;
+attribute vec4 aG; attribute vec3 aR; attribute vec4 aI; attribute vec4 aM; attribute vec4 aRose; attribute vec4 aRose2;
+varying vec2 vUvS; varying float vMatS; varying float vGradS;
+vec2 rot2(vec2 v,float a){float c=cos(a),s=sin(a);return vec2(c*v.x-s*v.y,s*v.x+c*v.y);}
+vec3 rodr(vec3 v,vec3 ax,float a){float c=cos(a),s=sin(a);return v*c+cross(ax,v)*s+ax*dot(ax,v)*(1.-c);}
+vec3 pet(vec2 uv,float open){ float u=uv.x,v=uv.y; float w=(.22+.78*sin(PI*pow(max(u,0.),.72)))*sin(min(u*3.2,1.5707963))*.5; float x=v*w;
+  float kap=.35+2.4*open; float y=sin(kap*u)/kap; float z=-(1.-cos(kap*u))/kap; z+=(1.15*(1.-.45*open))*x*x; return vec3(x,y,z); }
+vec3 petN(vec2 uv,float open,vec3 p0){ vec3 pu=pet(uv+vec2(.02,0.),open), pv=pet(uv+vec2(0.,.02),open); vec3 n=cross(pu-p0,pv-p0); return normalize(n+vec3(1e-6)); }
+struct PW{ vec3 p; vec3 n; vec3 c; };
+PW layoutH(vec2 uv,float side,vec2 uvC,float t,float s,float sz){
+  vec3 cb=strandC(t,s); vec3 Tg=normalize(strandC(t+.05,s)-strandC(t-.05,s)); vec3 Ov=vec3(cb.x,0.,cb.z); Ov=length(Ov)>1e-4?normalize(Ov):vec3(1.,0.,0.);
+  float lean=.5+.9*aM.y; vec3 al=normalize(Ov*cos(lean)+vec3(0.,1.,0.)*sin(lean)*(s<.5?1.:-1.)); vec3 zw=normalize(cross(Tg,al)); vec3 xw=cross(al,zw);
+  vec3 base=cb+Ov*uThick*.6; vec3 p0=pet(uv,uOpenH); vec3 n0=petN(uv,uOpenH,p0); float th=.012*(.6+.4*sz); vec3 pl=p0+n0*th*side; vec3 pc=pet(uvC,uOpenH);
+  PW r; r.p=base+(xw*pl.x+al*pl.y+zw*pl.z)*sz; r.n=normalize(xw*n0.x+al*n0.y+zw*n0.z)*side; r.c=base+(xw*pc.x+al*pc.y+zw*pc.z)*sz; return r; }
+PW layoutR(vec2 uv,float side,vec2 uvC){
+  float phi=aRose.x, rho=aRose.y, yb=aRose.z, sz=aRose.w*uRoseScale; float od=clamp((uOpenR*1.6-aRose2.z)/.6,0.,1.); od=od*od*(3.-2.*od); float tilt=mix(aRose2.x,aRose2.y,od); float open=od*.9+.1;
+  vec3 Rv=vec3(cos(phi),0.,sin(phi)); vec3 Tv=vec3(-sin(phi),0.,cos(phi)); vec3 Yv=vec3(0.,1.,0.); vec3 al=normalize(Yv*cos(tilt)+Rv*sin(tilt)); vec3 zw=normalize(-Rv*cos(tilt)+Yv*sin(tilt)); vec3 xw=Tv;
+  vec3 base=vec3(rho*cos(phi),yb,rho*sin(phi))*uRoseScale; vec3 p0=pet(uv,open); vec3 n0=petN(uv,open,p0); float th=.014*sz; vec3 pl=p0+n0*th*side*(sz>0.?1./max(sz,.001)*sz:1.); vec3 pc=pet(uvC,open);
+  PW r; r.p=base+(xw*pl.x+al*pl.y+zw*pl.z)*sz; r.n=normalize(xw*n0.x+al*n0.y+zw*n0.z)*side; r.c=base+(xw*pc.x+al*pc.y+zw*pc.z)*sz; return r; }
+vec3 nebPos(vec3 r,float seed){ float k=floor(r.x*7.); float t=(r.y*2.-1.)*15.; float s=step(.5,r.z); float R=3.2+k*1.7, pit=3.6+k*.9; float a=6.2831853*t/pit+s*PI+uSpin*(.3+.12*k);
+  vec3 p=vec3(R*cos(a),t,R*sin(a)); p+=(vec3(fract(seed*13.1),fract(seed*7.7),fract(seed*3.3))-.5)*(.3+.14*k); p.yz=rot2(p.yz,k*.9+.4); p.xy=rot2(p.xy,k*1.3); return p; }`;
+const petalMat = mkMat({ roughness: .38, clearcoat: .6, clearcoatRoughness: .25, metalness: .05 }, "petal", sh => {
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>\n${COMMON}\n${PET_GLSL}`)
+    .replace("#include <beginnormal_vertex>", `
+      vec2 uv=position.xy; float side=position.z; vec2 uvC=aG.xy; float f=aI.x;
+      float gH=smoothstep(0.,1.,uPetG*1.6-abs(aI.z)/11.*.6-aI.w*.3); float szH=aM.z*1.35*gH;
+      float rmI=smoothstep(f*.3,f*.3+.55,uRoseMix*1.3); rmI=uRoseMix>.999?1.:rmI; rmI=uRoseMix<.001?0.:rmI;
+      PW H; H.p=vec3(0.); H.n=vec3(0.,1.,0.); H.c=vec3(0.);
+      if(rmI<.999 && szH>.001) H=layoutH(uv,side,uvC,aI.z,aI.y,szH);
+      PW R; R.p=vec3(0.); R.n=vec3(0.,1.,0.); R.c=vec3(0.);
+      bool needR = rmI>.001 || uSculpt>.001 || uNeb>.001 || uFrac>.001;
+      if(needR) R=layoutR(uv,side,uvC);
+      vec3 vp=mix(H.p,R.p,rmI), vn=normalize(mix(H.n,R.n,rmI)+vec3(1e-5)), cc=mix(H.c,R.c,rmI);
+      if(rmI<.001 && !(szH>.001)){ vp=vec3(0.); cc=vec3(0.); }
+      vec3 off=vp-cc; vec3 rd=aR-.5; vec3 axs=normalize(rd+vec3(1e-4));
+      // fracture: each triangle of the petal becomes a shard that spirals around the axis
+      float fr=uFrac; vec3 rel=cc; float rr2=length(rel.xz); float wv=uFlow*(1.2+3./(1.+rr2));
+      vec3 flow=vec3(rot2(rel.xz,wv).x,rel.y,rot2(rel.xz,wv).y); flow+=normalize(rel+vec3(1e-3))*uFlow*(1.5+5.*aR.x); flow.y+=uFlow*(aR.y-.35)*3.;
+      vec3 cf=mix(cc,flow,fr); float ang=fr*(2.+7.*aR.z)+uFlow*3.*aR.x; vec3 offF=rodr(off,axs,ang)*mix(1.,.8,fr); vec3 nF=rodr(vn,axs,ang);
+      vec3 vF=cf+offF;
+      // nebula: shards become a field of small glowing fragments arranged on many layered helices
+      vec3 cN=nebPos(aR,aI.w+aR.x); vec3 vN=cN+rodr(off,axs,ang+uSpin*.5)*.55;
+      vec3 vE=mix(vF,vN,uNeb); vec3 nE=normalize(mix(nF,rodr(vn,axs,ang+uSpin*.5),uNeb)+vec3(1e-5));
+      // sculpture: petals return to the rose layout (current openness) while the whole form twists with the DNA
+      vec3 vS=mix(vE,R.p,uSculpt); vec3 nS=normalize(mix(nE,R.n,uSculpt)+vec3(1e-5));
+      vS.xz=rot2(vS.xz,uRoseSpin+vS.y*uTwistS); nS.xz=rot2(nS.xz,uRoseSpin+vS.y*uTwistS);
+      vec3 pPos=vS; vec3 objectNormal=nS; vUvS=vec2(uv.x*12.+aI.w*9.,uv.y); vMatS=aRose2.w; vGradS=clamp(.18+.75*pow(uv.x,.9)+.1*aI.w-.25*(1.-side)*.5,0.,1.);`)
+    .replace("#include <begin_vertex>", "vec3 transformed=pPos;");
+});
+const petals = new THREE.Mesh(petalGeo(mobile ? 10 : 14, mobile ? 7 : 10), petalMat); petals.frustumCulled = false; sculpt.add(petals);
+
+// ================================================================ seed shell (velvet pod that opens like a bud)
+const seedMat = mkMat({ roughness: .5, clearcoat: .8, clearcoatRoughness: .3, metalness: .05, side: THREE.FrontSide }, "seed", sh => {
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>\n${COMMON}\nuniform float uShellOpen,uShellS; varying vec2 vUvS; varying float vMatS; varying float vGradS;
+    vec2 rot2(vec2 v,float a){float c=cos(a),s=sin(a);return vec2(c*v.x-s*v.y,s*v.x+c*v.y);}
+    vec3 rodr(vec3 v,vec3 ax,float a){float c=cos(a),s=sin(a);return v*c+cross(ax,v)*s+ax*dot(ax,v)*(1.-c);}
+    vec3 seedP(vec3 d){ float n=sin(d.x*7.+uTime*.6)*sin(d.y*6.+1.)*sin(d.z*8.-uTime*.4); float r=.5*(1.+.05*n+.07*uPulse); vec3 p=d*r; p.y*=1.18;
+      float az=atan(d.z,d.x); float sec=floor((az+PI)/(PI/3.)); float cA=(sec+.5)*(PI/3.)-PI; vec3 hinge=vec3(cos(cA),0.,sin(cA)); vec3 axis=vec3(-sin(cA),0.,cos(cA)); float up=smoothstep(-.05,.35,p.y/.6);
+      vec3 pv=p-hinge*.5; vec3 q=rodr(pv,axis,-uShellOpen*1.5*up)+hinge*.5; q+=hinge*uShellOpen*.35*up; return q*uShellS; }`)
+    .replace("#include <beginnormal_vertex>", `vec3 d0=normalize(position); vec3 sp=seedP(d0); vec3 t1=normalize(cross(d0,vec3(0.,1.,.001))); vec3 t2=cross(d0,t1); vec3 objectNormal=normalize(cross(seedP(normalize(d0+t1*.03))-sp, seedP(normalize(d0+t2*.03))-sp)); if(dot(objectNormal,d0)<0.) objectNormal=-objectNormal;
+      vUvS=vec2(atan(d0.z,d0.x)*8.,d0.y*5.); vMatS=0.; vGradS=.25+.5*(.5+.5*d0.y)+.1*uPulse;`)
+    .replace("#include <begin_vertex>", "vec3 transformed=sp;");
+});
+const seed = new THREE.Mesh(new THREE.IcosahedronGeometry(1, mobile ? 5 : 6), seedMat); seed.frustumCulled = false; sculpt.add(seed);
+
+// glow sprites (additive) — seed core and rose heart
+const haloTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"); const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, "rgba(255,70,90,1)"); r.addColorStop(.2, "rgba(223,6,40,.55)"); r.addColorStop(1, "rgba(88,0,14,0)"); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: .8, fog: false })); core.renderOrder = 6; sculpt.add(core);
+
+// ================================================================ nebula dust (points) + lab stage
+const ND = mobile ? 14000 : 36000; const dg = new THREE.BufferGeometry();
+(function () { const r = new Float32Array(ND * 3), sd = new Float32Array(ND); for (let i = 0; i < ND; i++) { r.set([Math.random(), Math.random(), Math.random()], i * 3); sd[i] = Math.random(); } dg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(ND * 3), 3)); dg.setAttribute("aR", new THREE.BufferAttribute(r, 3)); dg.setAttribute("aS", new THREE.BufferAttribute(sd, 1)); })();
+const DU = { uNebAmt: U.uNebAmt, uPx: { value: 1 }, uSize: { value: 1 } }; Object.assign(DU, { uTime: U.uTime, uSpin: U.uSpin });
+const dust = new THREE.Points(dg, new THREE.ShaderMaterial({ uniforms: DU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: `uniform float uTime,uSpin,uNebAmt,uPx,uSize; attribute vec3 aR; attribute float aS; varying float vA; varying float vH;
+    vec2 rot2(vec2 v,float a){float c=cos(a),s=sin(a);return vec2(c*v.x-s*v.y,s*v.x+c*v.y);}
+    vec3 nebPos(vec3 r,float seed){ float k=floor(r.x*7.); float t=(r.y*2.-1.)*15.; float s=step(.5,r.z); float R=3.2+k*1.7, pit=3.6+k*.9; float a=6.2831853*t/pit+s*3.14159+uSpin*(.3+.12*k);
+      vec3 p=vec3(R*cos(a),t,R*sin(a)); p+=(vec3(fract(seed*13.1),fract(seed*7.7),fract(seed*3.3))-.5)*(.5+.3*k); p.yz=rot2(p.yz,k*.9+.4); p.xy=rot2(p.xy,k*1.3); return p; }
+    void main(){ vec3 p=nebPos(aR,aS); p+=.15*vec3(sin(uTime*.6+aS*40.),cos(uTime*.5+aS*30.),sin(uTime*.7+aS*20.)); vec4 mv=viewMatrix*modelMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv;
+      float d=-mv.z; gl_PointSize=uSize*uPx*(2.2+aS*3.2)*(5./max(d,.4)); vA=uNebAmt*(.45+.75*aS)*smoothstep(70.,6.,d)*smoothstep(.2,1.2,d); vH=aS; }`,
+  fragmentShader: `precision highp float; varying float vA; varying float vH; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,d); a*=a; vec3 c=mix(vec3(.6,.0,.06),vec3(1.,.21,.33),vH); gl_FragColor=vec4(c,a*vA); }` }));
+dust.frustumCulled = false; dust.renderOrder = 5; scene.add(dust);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 80), new THREE.MeshStandardMaterial({ color: 0x12040a, metalness: .85, roughness: .3, envMapIntensity: .45, transparent: true, opacity: 0 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -3.9; floor.visible = false; scene.add(floor);
+const ringGeo = new THREE.TorusGeometry(2.6, .02, 8, 160); const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xDF0628, transparent: true, opacity: 0, fog: false })); ring.rotation.x = Math.PI / 2; ring.position.y = -3.88; ring.visible = false; scene.add(ring);
+
+// ================================================================ camera keys [p, pos, look, fov]
+const orb = (a, r, y) => [r * Math.sin(a), y, r * Math.cos(a)];
+const KEYS = [
+  [0.000, 0, .05, 1.35, 0, 0, 0, 36, 0],
+  [0.045, .3, .12, 1.8, 0, 0, 0, 38, 0],
+  [0.085, 1.4, .5, 2.7, 0, 0, 0, 40, 0],
+  [0.125, -1.9, .6, 2.6, 0, .1, 0, 42, 0],
+  [0.160, 2.4, 1.0, 5.0, 0, .6, 0, 44, 0],
+  [0.175, ...orb(.6, 6.5, 2), 0, 0, 0, 46, 0],
+  [0.200, ...orb(2.3, 7.0, 4), 0, 0, 0, 48, 0],
+  [0.222, ...orb(3.9, 6.6, -2.5), 0, 0, 0, 48, 0],
+  [0.242, ...orb(5.5, 6.0, 3), 0, 0, 0, 46, 0],
+  [0.256, 1.6, -4.5, 3.0, 0, -5, 0, 54, 0],
+  [0.268, .22, -9.4, .2, 0, -3, 0, 62, 0],
+  [0.300, .18, 0, .15, 0, 6, 0, 66, 0],
+  [0.322, .22, 9.4, .2, 0, 14, 0, 62, 0],
+  [0.336, 3.4, 9.0, 4.4, 0, 5, 0, 52, 0],
+  [0.370, -5.2, 3.0, 5.2, 0, 1, 0, 46, 0],
+  [0.405, 4.4, -3.0, 6.0, 0, 0, 0, 46, 0],
+  [0.430, 2.7, 1.0, 3.3, 0, 1, 0, 50, 0],
+  [0.462, .9, 2.0, 1.7, 0, 1.4, 0, 60, 0],
+  [0.490, -3.0, 3.0, 4.2, 0, 1, 0, 48, 0],
+  [0.530, 0, 2.6, 8.0, 0, 0, 0, 44, 0],
+  [0.570, 0, 1.3, 2.7, 0, 0, 0, 52, 0],
+  [0.592, 0, .6, .55, 0, -.4, 0, 62, 0],
+  [0.630, 0, .15, .0, 0, 1.2, -2, 66, 0],
+  [0.668, 0, .2, 3.4, 0, 0, 0, 56, 0],
+  [0.700, 6.0, 2.2, 10, 0, 0, 0, 52, 0],
+  [0.735, -3.2, -1, 3.0, 5, 0, -6, 66, 0],
+  [0.768, 2.2, 3.0, -4, 0, 0, 0, 60, 0],
+  [0.790, 0, 1.4, 8.0, 0, 0, 0, 44, 0],
+  [0.820, 5.2, .8, 6.0, 0, 0, 0, 42, 0],
+  [0.850, 0, .5, 9.6, 0, .2, 0, 38, 1],
+  [0.935, 0, .5, 9.6, 0, .2, 0, 38, 1],
+  [0.962, 0, 1.5, 8.0, 0, .3, 0, 44, 0],
+  [0.985, 0, .3, 3.0, 0, 0, 0, 44, 0],
+  [1.000, 0, .05, 1.35, 0, 0, 0, 36, 0],
+];
+function camAt(p, o) {
+  let i = 0; while (i < KEYS.length - 2 && p > KEYS[i + 1][0]) i++;
+  const a = KEYS[i], b = KEYS[i + 1], h = b[0] - a[0], s = clamp((p - a[0]) / h, 0, 1), s2 = s * s, s3 = s2 * s;
+  const pv = KEYS[Math.max(0, i - 1)], nx = KEYS[Math.min(KEYS.length - 1, i + 2)];
+  for (let k = 1; k <= 7; k++) {
+    const m0 = a[8] || i === 0 ? 0 : (b[k] - pv[k]) / (b[0] - pv[0]); const m1 = b[8] || i + 1 === KEYS.length - 1 ? 0 : (nx[k] - a[k]) / (nx[0] - a[0]);
+    o[k - 1] = (2 * s3 - 3 * s2 + 1) * a[k] + (s3 - 2 * s2 + s) * h * m0 + (-2 * s3 + 3 * s2) * b[k] + (s3 - s2) * h * m1;
+  }
+  return o;
+}
+
+// ================================================================ state, input, UI
+const TONES = [[[.35, 0, .055], [.59, 0, .086], [.87, .024, .157]], [[.29, 0, .08], [.69, 0, .165], [1, .21, .33]], [[.48, 0, .06], [.87, .024, .157], [1, .22, .12]]];
+const lab = { tone: 0, pitch: 2.2, bloom: .62, light: 35, yaw: 0, orbit: false }; const LAB0 = { tone: 0, pitch: 2.2, bloom: .62, light: 35, yaw: 0, orbit: false };
+const eff = { tone: [...TONES[0][0], ...TONES[0][1], ...TONES[0][2]], pitch: 2.2, bloom: .62, yaw: 0, light: 35 };
+let P = 0, targetP = 0, tm = 0, paused = false, vel = 0, lastP = 0; const mouse = new THREE.Vector2(), mouseS = new THREE.Vector2();
+const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
+addEventListener("scroll", () => { targetP = clamp(scrollY / maxScroll(), 0, 1); }, { passive: true });
+let anim = null; const animScroll = (to, dur) => { anim = { from: scrollY, to, t0: performance.now(), dur }; };
+const E3 = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const stepAnim = now => { if (!anim) return; const k = clamp((now - anim.t0) / anim.dur, 0, 1); scrollTo(0, anim.from + (anim.to - anim.from) * E3(k)); if (k >= 1) anim = null; };
+addEventListener("wheel", () => { anim = null; }, { passive: true }); addEventListener("touchstart", () => { anim = null; }, { passive: true });
+const goTo = (p, dur) => { const to = p * maxScroll(); if (reduce) scrollTo(0, to); else animScroll(to, dur || 1700 + Math.abs(p - targetP) * 2600); };
+addEventListener("pointermove", e => { mouse.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); });
+const CH = ["Seed", "Germination", "Double helix", "Inside the code", "Mutation", "Petal genesis", "The rose", "Fracture", "Red universe", "Living sculpture", "Genesis lab", "Eternal bloom"];
+const TB = [0, .08, .16, .25, .33, .42, .50, .59, .68, .77, .85, .94, 1.0];
+const chOf = p => { let i = 0; while (i < 11 && p >= TB[i + 1]) i++; return i; }; const chMid = i => (TB[i] + TB[i + 1]) / 2;
+const idx = $("#idx"), chl = $("#chl"); CH.forEach((n, i) => {
+  const b = document.createElement("button"); b.innerHTML = `<span>${String(i + 1).padStart(2, "0")} ${n}</span><i></i>`; b.setAttribute("aria-label", `${i + 1}章 ${n}`); b.addEventListener("click", () => goTo(i === 0 ? .004 : chMid(i))); idx.appendChild(b);
+  const li = document.createElement("li"); li.innerHTML = `<button><small>${String(i + 1).padStart(2, "0")}</small>${n}</button>`; li.firstChild.addEventListener("click", () => { closeMenu(); goTo(i === 0 ? .004 : chMid(i)); }); chl.appendChild(li); });
+const idxBtns = $$("button", idx), indEl = $("#ind");
+$("#logo").addEventListener("click", () => goTo(0)); $("#prev").addEventListener("click", () => goTo(Math.max(.004, chMid(Math.max(0, chOf(targetP) - 1))))); $("#next").addEventListener("click", () => goTo(chMid(Math.min(11, chOf(targetP) + 1)))); $("#again").addEventListener("click", () => goTo(0, 4200));
+const menuEl = $("#menu"); let lastFocus = null;
+function openMenu() { lastFocus = document.activeElement; menuEl.classList.add("open"); $("#menuBtn").setAttribute("aria-expanded", "true"); $("#menuClose").focus(); document.body.classList.add("lock"); }
+function closeMenu() { menuEl.classList.remove("open"); $("#menuBtn").setAttribute("aria-expanded", "false"); document.body.classList.remove("lock"); if (lastFocus) lastFocus.focus(); }
+$("#menuBtn").addEventListener("click", openMenu); $("#menuClose").addEventListener("click", closeMenu);
+addEventListener("keydown", e => { if (menuEl.classList.contains("open")) { if (e.key === "Escape") closeMenu(); return; } const t = e.target.tagName; if (t === "INPUT" || t === "TEXTAREA") return; if (e.key === "ArrowRight") { e.preventDefault(); $("#next").click(); } if (e.key === "ArrowLeft") { e.preventDefault(); $("#prev").click(); } });
+$("#cform").addEventListener("submit", e => { e.preventDefault(); $("#fmsg").textContent = "このデモには送信先がありません。入力内容はどこにも送信されていません。"; });
+$("#pauseBtn").addEventListener("click", e => { paused = !paused; e.currentTarget.setAttribute("aria-pressed", String(paused)); e.currentTarget.textContent = paused ? "Resume motion" : "Pause motion"; });
+// text
+const chs = $$(".ch").map(el => ({ el, a: +el.dataset.a, b: +el.dataset.b, letters: [] }));
+chs.forEach(c => { $$(".big", c.el).forEach(big => { const t = big.dataset.t; big.textContent = ""; t.split(" ").forEach((w, wi, arr) => { const ws = document.createElement("span"); ws.className = "w"; [...w].forEach(ch => { const s = document.createElement("span"); s.className = "l"; s.textContent = ch; ws.appendChild(s); c.letters.push(s); }); big.appendChild(ws); if (wi < arr.length - 1) big.appendChild(document.createTextNode(" ")); }); }); c.letters.forEach((s, i) => s.dataset.i = i / Math.max(1, c.letters.length - 1)); });
+// lab UI
+const labEl = $("#lab"); const pr = (sel, key, v) => $$(sel).forEach(b => b.setAttribute("aria-pressed", String(b.dataset[key] === String(v))));
+$$("[data-tone]").forEach(b => b.addEventListener("click", () => { lab.tone = +b.dataset.tone; pr("[data-tone]", "tone", lab.tone); }));
+$("#pitch").addEventListener("input", e => { lab.pitch = +e.target.value; $("#pitchV").textContent = lab.pitch.toFixed(1); }); $("#bloom").addEventListener("input", e => { lab.bloom = +e.target.value / 100; $("#bloomV").textContent = e.target.value + "%"; });
+$("#light").addEventListener("input", e => { lab.light = +e.target.value; $("#lightV").textContent = e.target.value + "°"; });
+$("#orbitLock").addEventListener("click", e => { lab.orbit = !lab.orbit; e.currentTarget.setAttribute("aria-pressed", String(lab.orbit)); canvas.classList.toggle("orbit", lab.orbit); });
+function syncLab() { pr("[data-tone]", "tone", lab.tone); $("#pitch").value = lab.pitch; $("#pitchV").textContent = (+lab.pitch).toFixed(1); $("#bloom").value = Math.round(lab.bloom * 100); $("#bloomV").textContent = Math.round(lab.bloom * 100) + "%"; $("#light").value = lab.light; $("#lightV").textContent = Math.round(lab.light) + "°"; $("#orbitLock").setAttribute("aria-pressed", String(lab.orbit)); canvas.classList.toggle("orbit", lab.orbit); }
+$("#labReset").addEventListener("click", () => { Object.assign(lab, LAB0); syncLab(); });
+const labA = () => sm(.865, .885, P) * (1 - sm(.925, .94, P)); const ptr = new Map();
+canvas.addEventListener("pointerdown", e => { if (labA() < .6) return; canvas.setPointerCapture(e.pointerId); ptr.set(e.pointerId, e.clientX); canvas.classList.add("drag"); });
+canvas.addEventListener("pointermove", e => { if (!ptr.has(e.pointerId)) return; lab.yaw += (e.clientX - ptr.get(e.pointerId)) * .008; ptr.set(e.pointerId, e.clientX); });
+const endP = e => { ptr.delete(e.pointerId); if (!ptr.size) canvas.classList.remove("drag"); }; canvas.addEventListener("pointerup", endP); canvas.addEventListener("pointercancel", endP);
+// audio: synthesized heartbeat + drone, opt-in
+const aud = { ctx: null, g: null, on: false, beat: 0 };
+function setSound(on) { if (on && !aud.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const c = aud.ctx = new AC(); aud.g = c.createGain(); aud.g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 420; [55, 82.4, 110.3].forEach((f, i) => { const o = c.createOscillator(); o.type = i ? "sine" : "triangle"; o.frequency.value = f; const g = c.createGain(); g.gain.value = .07 / (i + 1); o.connect(g); g.connect(lp); o.start(); }); lp.connect(aud.g); aud.g.connect(c.destination); }
+  aud.on = on; if (aud.ctx) { if (on) aud.ctx.resume(); aud.g.gain.setTargetAtTime(on ? .5 : 0, aud.ctx.currentTime, .08); } $("#snd").setAttribute("aria-pressed", String(on)); $("#snd").textContent = on ? "Sound on" : "Sound off"; }
+function thump(v) { if (!aud.ctx || !aud.on) return; const c = aud.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(34, t + .22); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + .32); o.connect(g); g.connect(aud.g); o.start(t); o.stop(t + .35); }
+$("#snd").addEventListener("click", () => setSound(!aud.on));
+addEventListener("pagehide", () => { try { aud.ctx && aud.ctx.close(); } catch (e) {} });
+// quality
+let dprBase = Math.min(devicePixelRatio, mobile ? 1.5 : 2), qual = 1;
+function applyRes() { const r = dprBase * qual; renderer.setPixelRatio(r); renderer.setSize(innerWidth, innerHeight, false); DU.uPx.value = r; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener("resize", applyRes); applyRes();
+
+// ================================================================ the director: every uniform is a pure function of progress
+const cv = new Array(7), tP = new THREE.Vector3(), tL = new THREE.Vector3(), railFill = $("#railFill"); const dts = []; const tmpC = new THREE.Color();
+function update(dt) {
+  if (!paused) tm += dt * (reduce ? .2 : 1);
+  P += (targetP - P) * (1 - Math.exp(-dt * (reduce ? 25 : 6))); vel += ((P - lastP) / Math.max(dt, .001) - vel) * (1 - Math.exp(-dt * 8)); lastP = P; const p = P;
+  mouseS.lerp(mouse, 1 - Math.exp(-dt * 5)); const k = 1 - Math.exp(-dt * 6); const LA = labA();
+  // heart: double beat (visual); it relaxes after germination
+  const bp = tm * 1.15, ph = bp % 1, heart = (Math.exp(-ph * 9) + .55 * Math.exp(-Math.max(0, ph - .28) * 11) * (ph > .28 ? 1 : 0)) * (1 - sm(.1, .2, p) * .8); U.uPulse.value = clamp(heart, 0, 1);
+  if (aud.on && Math.floor(bp) !== update.lb) { update.lb = Math.floor(bp); if (p < .2) { thump(.7); setTimeout(() => thump(.4), 260); } }
+  U.uTime.value = tm; U.uSpin.value = p * 3.2 + tm * .06;
+  // palette (lab tone blends in only inside the lab)
+  const T = TONES[lab.tone], tgt = [...T[0], ...T[1], ...T[2]], dflt = [...TONES[0][0], ...TONES[0][1], ...TONES[0][2]]; for (let i = 0; i < 9; i++) eff.tone[i] += (mix(dflt[i], tgt[i], LA) - eff.tone[i]) * k;
+  U.uDeep.value.setRGB(eff.tone[0], eff.tone[1], eff.tone[2]).convertSRGBToLinear(); U.uMid.value.setRGB(eff.tone[3], eff.tone[4], eff.tone[5]).convertSRGBToLinear(); U.uHi.value.setRGB(eff.tone[6], eff.tone[7], eff.tone[8]).convertSRGBToLinear();
+  // ---- seed + germination (ch1-2)
+  U.uShellOpen.value = sm(.088, .15, p) * (1 - sm(.95, .96, p)); U.uShellS.value = (1 - sm(.15, .19, p)) + sm(.972, .99, p); seed.visible = U.uShellS.value > .01;
+  const seedPulseScale = mix(.55, 1, sm(0, .06, p)); sculpt.userData.ss = seedPulseScale;
+  core.scale.setScalar(mix(.7, 1.6, U.uPulse.value) * (1 - sm(.12, .2, p)) + sm(.96, .99, p) * .9 + .0001); core.material.opacity = (.5 + .5 * U.uPulse.value) * clamp((1 - sm(.14, .2, p)) + sm(.965, 1, p), 0, 1);
+  // ---- the helix: grows from the seed (ch2), becomes the glass double helix (ch3), mutates (ch5), collapses into the rose (ch7), returns as the sculpture's coil (ch10)
+  const g2 = sm(.1, .16, p), g3 = sm(.16, .22, p), mut = sm(.34, .4, p), col7 = sm(.52, .58, p), sc10 = sm(.775, .83, p), end12 = sm(.955, .985, p);
+  let ext = mix(.16, 7, g2); ext = mix(ext, 12, g3); ext = mix(ext, .35, col7); ext = mix(ext, 3.4, sc10); ext = mix(ext, .16, end12);
+  let R = mix(.05, .5, g2); R = mix(R, 1.6, g3); R = mix(R, .15, col7); R = mix(R, 1.7, sc10); R = mix(R, .05, end12);
+  let pit = mix(.12, 1.6, g2); pit = mix(pit, 3.4, g3); pit = mix(pit, 3.4 + 1.2 * Math.sin(p * 26), mut * (1 - col7)); pit = mix(pit, 2.2, sc10); pit = mix(pit, mix(2.2, lab.pitch, 1), LA * sc10); pit = mix(pit, .12, end12);
+  let th = mix(.012, .07, g2); th = mix(th, .16, g3); th = mix(th, .2 + .04 * Math.sin(tm * .8), mut * (1 - col7)); th = mix(th, .02, col7); th = mix(th, .14, sc10); th = mix(th, .012, end12);
+  const wob = 1.2 * (1 - sm(.13, .17, p)) * g2 + .9 * mut * (1 - sm(.46, .5, p)) + .25 * sm(.42, .5, p) * (1 - col7);
+  eff.pitch += (pit - eff.pitch) * Math.min(1, k * 1.5); U.uExt.value = ext; U.uR.value = R; U.uPitch.value = Math.max(.1, eff.pitch); U.uThick.value = th; U.uWob.value = wob; U.uSegF.value = 6.2831853 / .32;
+  U.uBridgeA.value = (sm(.17, .23, p) * (1 - col7) + sc10 * col7 * 0) * (1 - sm(.5, .55, p)) + sc10 * (1 - end12); U.uBridgeSp.value = 1;
+  U.uGlass.value = g3; U.uRim.value = mix(.5, 1.4, g3);
+  // ---- petals (ch6) grow along the strands, gather into the rose (ch7), freeze, shatter (ch8), become a nebula (ch9), re-form as the sculpture (ch10), close back into the seed (ch12)
+  U.uPetG.value = sm(.42, .49, p) * (1 - sm(.6, .7, p)); U.uOpenH.value = mix(.2, .85, sm(.44, .5, p));
+  const roseOpen = sm(.54, .59, p); const labBloom = mix(.62, lab.bloom, LA); eff.bloom += (labBloom - eff.bloom) * k;
+  const openR = roseOpen * (1 - sm(.77, .8, p)) + sc10 * eff.bloom; U.uOpenR.value = mix(openR, 0, end12);
+  U.uRoseMix.value = sm(.505, .565, p) * (1 - sm(.6, .6001, p) * 0); U.uRoseScale.value = (1 - end12) * (1 - sm(.995, 1, p));
+  const frz = sm(.59, .615, p); U.uFrac.value = sm(.615, .66, p) * (1 - sm(.775, .83, p)); U.uFlow.value = sm(.615, .68, p) * (1 - sm(.74, .77, p) * 0) * 1.0;
+  U.uNeb.value = sm(.68, .73, p) * (1 - sm(.775, .83, p)); U.uSculpt.value = sc10 * (1 - end12) * 1;
+  U.uTwistS.value = .22 * sc10 * (1 - end12);
+  U.uRoseSpin.value = (sm(.77, .86, p) * (p - .77) * 8) * (1 - end12) + tm * .05 * sm(.77, .86, p) * (1 - end12) + eff.yaw * .0;
+  U.uMatVar.value = sm(.77, .83, p) * (1 - end12);
+  U.uNebAmt.value = sm(.675, .73, p) * (1 - sm(.775, .82, p)); scene.fog.density = mix(.018, .045, sm(.66, .72, p) * (1 - sm(.77, .82, p)));
+  // ---- lab: the sculpture lands in a showroom; user drag rotates it; leaving the lab eases the rotation back
+  eff.yaw += (lab.yaw * LA - eff.yaw) * k; sculpt.rotation.y = eff.yaw; sculpt.position.y = -.4 * sm(.84, .87, p) * (1 - sm(.945, .965, p));
+  const stage = sm(.84, .86, p) * (1 - sm(.945, .96, p)); floor.visible = ring.visible = stage > .01; floor.material.opacity = stage * .85; ring.material.opacity = stage * .9; ring.scale.setScalar(1 + .02 * Math.sin(tm));
+  const la = lab.light * Math.PI / 180; key.position.set(Math.cos(la) * 6, 4.5, Math.sin(la) * 6); key.intensity = .45 + .6 * LA; eff.light = lab.light;
+  rimA.position.set(Math.cos(la + 2.6) * 6, 1.5, Math.sin(la + 2.6) * 6);
+  // ---- camera
+  camAt(p, cv); tP.set(cv[0], cv[1], cv[2]); tL.set(cv[3], cv[4], cv[5]); const par = (1 - sm(0, .1, p)) * .5 + .18; tP.x += mouseS.x * .12 * par; tP.y += mouseS.y * .08 * par;
+  if (camera.aspect < 1.1 && tP.distanceTo(tL) > 2.2) { const kk = 1 + Math.min(1, (1.1 - camera.aspect) / .7) * .65; tP.sub(tL).multiplyScalar(kk).add(tL); }
+  camera.position.copy(tP); camera.lookAt(tL); if (Math.abs(camera.fov - cv[6]) > .01) { camera.fov = cv[6]; camera.updateProjectionMatrix(); }
+  // ---- DOM
+  for (const c of chs) { const f = sm(c.a, c.a + .018, p) * (1 - sm(c.b - .018, c.b, p)); c.el.style.visibility = f > .005 ? "visible" : "hidden"; if (f <= .005) continue; c.el.style.opacity = Math.min(1, f * 1.4);
+    for (const s of c.letters) { const d = +s.dataset.i * .45; const lf = clamp((f - d * .6) / .55, 0, 1); const e = lf * lf * (3 - 2 * lf); s.style.opacity = e; s.style.transform = `translate3d(0,${(1 - e) * 40}px,0) scale(${1 + (1 - e) * .3})`; s.style.filter = e < .98 ? `blur(${(1 - e) * 10}px)` : "none"; } }
+  const lfa = sm(.865, .885, p) * (1 - sm(.925, .94, p)); labEl.style.opacity = lfa; labEl.style.visibility = lfa > .01 ? "visible" : "hidden"; labEl.classList.toggle("live", lfa > .6);
+  railFill.style.width = (p * 100).toFixed(2) + "%"; const ci = chOf(p); idxBtns.forEach((b, i) => b.classList.toggle("on", i === ci));
+  if (indEl.dataset.k !== String(ci)) { indEl.dataset.k = ci; indEl.innerHTML = `<b>${String(ci + 1).padStart(2, "0")}</b> / 12 <span>— ${CH[ci]}</span>`; }
+}
+const render = () => renderer.render(scene, camera);
+let lastT = performance.now(), first = true, tmpSave = 0;
+function loop(now) {
+  requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, .05); lastT = now; if (document.hidden) return; stepAnim(now); update(dt); render();
+  dts.push(dt); if (dts.length > 45) { const avg = dts.reduce((a, b) => a + b) / dts.length; dts.length = 0; if (avg > .036 && qual > .55) { qual = Math.max(.55, qual - .1); applyRes(); } else if (avg < .019 && qual < 1) { qual = Math.min(1, qual + .05); applyRes(); } }
+  if (first) { first = false; setTimeout(() => $("#veil").classList.add("off"), 300); }
+  if (now - tmpSave > 600) { tmpSave = now; try { sessionStorage.setItem("bloom_p", String(targetP)); sessionStorage.setItem("bloom_lab", JSON.stringify(lab)); } catch (e) {} }
+}
+try { scene.environment = buildEnv(); } catch (e) { console.error(e); }
+try { const sl = JSON.parse(sessionStorage.getItem("bloom_lab") || "null"); if (sl) Object.assign(lab, sl); } catch (e) {} syncLab();
+let sp = 0; try { sp = parseFloat(sessionStorage.getItem("bloom_p") || "0") || 0; } catch (e) {}
+requestAnimationFrame(() => { if (sp > .001) { scrollTo(0, sp * maxScroll()); targetP = sp; P = sp; lastP = sp; } });
+window.__bloom = { renderAt(p) { targetP = P = lastP = p; update(.016); render(); }, state: () => ({ P, qual, PET, NS }), setQ(q) { qual = q; applyRes(); }, lab, setSound };
+if (!window.__bloomManual) requestAnimationFrame(loop); else $("#veil").classList.add("off");
+})();
+</script>

@@ -1,0 +1,478 @@
+<title>MIRAGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;300;400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one fixed WebGL canvas; a ray-marching fragment shader renders all 12 scenes from one progress value; 1200vh of scroll is the timeline. */
+  :root{--obsidian:#090909;--ivory:#F1EEE7;--crimson:#A82B20;--burnt:#671810;--fg:#F1EEE7;--line:rgba(241,238,231,.25);
+    --sans:"Hanken Grotesk","Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif;color-scheme:dark}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--obsidian)}
+  body{background:var(--obsidian);color:var(--ivory);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.lock{overflow:hidden}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:pan-y}
+  #spacer{height:1200vh}
+  header{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;justify-content:space-between;align-items:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,3.2vw) 16px;color:var(--fg);transition:color .3s}
+  .logo{font:600 .95rem var(--sans);letter-spacing:.5em;background:none;border:0;color:inherit;cursor:pointer}
+  .cn{position:absolute;left:50%;transform:translateX(-50%);font:300 .62rem var(--sans);letter-spacing:.34em;opacity:.85}
+  .tools{display:flex;gap:1.4rem;align-items:center}
+  .tl{font:400 .6rem var(--sans);letter-spacing:.28em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid transparent;color:inherit;cursor:pointer;padding:.4rem 0}
+  .tl:hover,.tl[aria-pressed="true"]{border-bottom-color:currentColor}
+  button:focus-visible,a:focus-visible{outline:2px solid #aaa;outline-offset:3px}
+  .ch{position:fixed;z-index:10;pointer-events:none;visibility:hidden;color:var(--fg);left:max(16px,4.5vw);right:max(16px,4.5vw);text-shadow:0 0 30px rgba(0,0,0,.25)}
+  .ch.r{text-align:right}.ch.c{text-align:center}
+  .ch .lab{font:400 .6rem var(--sans);letter-spacing:.42em;text-transform:uppercase;opacity:.7;display:block;margin-bottom:1.1rem}
+  .ch .big{font:200 clamp(2rem,7vw,7rem)/1 var(--sans);letter-spacing:.04em;text-transform:uppercase;display:block}
+  .ch .big.xl{font-size:clamp(3rem,13vw,13rem);letter-spacing:.12em;font-weight:200;line-height:.9}
+  .ch .sm{font:300 clamp(.7rem,1vw,.9rem)/1.9 var(--sans);letter-spacing:.34em;text-transform:uppercase;opacity:.8;display:block;margin-top:1.3rem}
+  .ch .l{display:inline-block;will-change:transform,opacity,filter}.ch .w{display:inline-block;white-space:nowrap}
+  .c1{bottom:12vh}.c2{top:20vh}.c3{bottom:13vh}.c4{top:18vh}.c5{bottom:14vh}.c6{top:18vh}.c7{bottom:13vh}.c8{top:18vh}.c9{bottom:13vh}.c10{top:18vh}.c11{bottom:14vh}.c12{top:50%;transform:translateY(-50%)}
+  .navs{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;pointer-events:auto}
+  .btn{font:500 .62rem var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--ivory);background:transparent;border:1px solid var(--ivory);padding:.95rem 1.4rem;cursor:pointer;pointer-events:auto;transition:background .25s,color .25s}
+  .btn:hover{background:var(--ivory);color:var(--obsidian)}
+  .hint{position:fixed;right:max(24px,4vw);bottom:calc(34px + env(safe-area-inset-bottom,0px));z-index:20;font:400 .58rem var(--sans);letter-spacing:.4em;text-transform:uppercase;color:var(--ivory);opacity:.7;pointer-events:none;transition:opacity .5s}
+  .hint::after{content:"";display:block;width:1px;height:30px;margin:10px auto 0;background:var(--ivory);animation:dr 1.8s ease-in infinite}
+  @keyframes dr{0%{transform:scaleY(0);transform-origin:top}60%{transform:scaleY(1);transform-origin:top}61%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+  nav.idx{position:fixed;right:max(10px,1.6vw);top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:2px;color:var(--fg)}
+  nav.idx button{background:none;border:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:.6rem;color:inherit;opacity:.5;font:400 .56rem var(--sans);letter-spacing:.2em;padding:5px 2px}
+  nav.idx button i{display:block;width:12px;height:1px;background:currentColor;transition:width .3s}
+  nav.idx button span{pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+  nav.idx button:hover span,nav.idx button.on span{opacity:1}nav.idx button.on{opacity:1}nav.idx button.on i{width:28px}
+  .rail{position:fixed;left:max(16px,3.2vw);right:max(16px,3.2vw);bottom:calc(12px + env(safe-area-inset-bottom,0px));height:1px;background:rgba(127,127,127,.35);z-index:20;pointer-events:none}
+  .rail i{position:absolute;left:0;top:0;height:1px;width:0;background:var(--fg)}
+  .notice{position:fixed;left:max(16px,3.2vw);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;font:400 .54rem var(--sans);letter-spacing:.28em;text-transform:uppercase;color:var(--fg);opacity:.55;pointer-events:none}
+  .ov{position:fixed;inset:0;z-index:200;background:var(--obsidian);color:var(--ivory);display:none;overflow:auto;padding:calc(84px + env(safe-area-inset-top,0px)) max(16px,4vw) 48px}
+  .ov.open{display:block}.ov .x{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:max(16px,3.2vw)}
+  .mg{max-width:64rem;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:3rem}
+  .mg h4{font:500 .6rem var(--sans);letter-spacing:.38em;text-transform:uppercase;color:var(--crimson);margin-bottom:1rem}
+  .mg h2{font:200 clamp(2rem,5vw,4rem)/1 var(--sans);letter-spacing:.03em;text-transform:uppercase;margin-bottom:1.4rem}
+  .mg p{font:300 1rem/1.9 var(--sans);color:rgba(241,238,231,.78);margin-bottom:1rem;max-width:34rem}
+  .cl{list-style:none}.cl button{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ivory);font:300 clamp(1rem,2vw,1.4rem) var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:.6rem 0;display:flex;gap:1.2rem;cursor:pointer}
+  .cl button:hover{padding-left:.5rem;color:var(--crimson)}.cl small{font:500 .58rem var(--sans);letter-spacing:.2em;opacity:.6;align-self:center;min-width:1.8rem}
+  .wk{list-style:none}.wk li{display:grid;grid-template-columns:3rem 1fr auto;gap:1rem;border-bottom:1px solid var(--line);padding:1rem 0;align-items:baseline}
+  .wk b{font:300 1.3rem var(--sans);letter-spacing:.06em;text-transform:uppercase}.wk span{font:300 .85rem var(--sans);opacity:.7}.wk small{font:500 .6rem var(--sans);letter-spacing:.2em;opacity:.6}
+  .mail{font:300 1.2rem var(--sans);border:1px solid var(--ivory);padding:1rem;display:flex;justify-content:space-between;gap:1rem;align-items:center;max-width:30rem;user-select:all}
+  #veil{position:fixed;inset:0;z-index:90;background:var(--obsidian);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;transition:opacity 1s,visibility 1s;font:400 .62rem var(--sans);letter-spacing:.5em;text-transform:uppercase;color:#888}
+  #veil.off{opacity:0;visibility:hidden;pointer-events:none}#veil b{font:200 1.4rem var(--sans);letter-spacing:.5em;color:var(--ivory)}
+  #nogl{position:fixed;inset:0;z-index:99;background:linear-gradient(#671810,#A82B20 60%,#671810);display:none;align-items:center;justify-content:center;flex-direction:column;gap:2rem;text-align:center;padding:2rem}
+  #nogl i{display:block;width:70px;height:130px;background:#F1EEE7;border:6px solid #cfcfcf;box-shadow:0 0 60px rgba(241,238,231,.4)}
+  #nogl p{font:300 .95rem/1.9 var(--sans);color:#F1EEE7}
+  @media (max-width:820px){.tools .tl{white-space:nowrap;font-size:.54rem;letter-spacing:.18em}.tools [data-open=work],.tools [data-open=contact]{display:none}.mg{grid-template-columns:1fr;gap:2rem}nav.idx button span{display:none}.wk li{grid-template-columns:2rem 1fr}.wk small{display:none}.tools .tl.x{display:none}.tools{gap:1rem}.cn{display:none}.ch .big.xl{letter-spacing:.06em}}
+  @media (prefers-reduced-motion:reduce){#veil{transition:none}.hint::after{animation:none}}
+</style>
+
+<canvas id="gl" role="img" aria-label="赤い砂漠に立つ巨大な鏡を通り抜け、錯覚の世界を旅する3D映像。スクロールで進みます。"></canvas>
+<div id="veil"><b>MIRAGE</b><span>Aligning</span></div>
+<div id="nogl"><i></i><p><b>MIRAGE</b><br>WebGL に対応したブラウザで開くと、鏡の向こうの世界を旅できます。<br>Please open this page in a WebGL-capable browser.</p></div>
+
+<header>
+  <button class="logo" id="logo" aria-label="先頭へ">MIRAGE</button><div class="cn" id="cn">01 / 12</div>
+  <div class="tools"><button class="tl" data-open="work">Projects</button><button class="tl" data-open="about">About</button><button class="tl" data-open="contact">Contact</button><button class="tl x" data-open="index">Index</button><button class="tl" id="snd" aria-pressed="false">Sound off</button></div>
+</header>
+<nav class="idx" id="idx" aria-label="章"></nav>
+<div class="hint" id="hint">Scroll</div>
+
+<section class="ch c1" data-a="-1" data-b="0.074"><span class="lab">01 / The first reflection</span><span class="big xl" data-t="Mirage"></span><span class="sm">Reality is an illusion.</span></section>
+<section class="ch c2 r" data-a="0.092" data-b="0.158"><span class="lab">02 / Cross the surface</span><span class="big" data-t="Cross the surface."></span></section>
+<section class="ch c3" data-a="0.175" data-b="0.241"><span class="lab">03 / The impossible corridor</span><span class="big" data-t="The impossible corridor."></span><span class="sm">Watch the far mirror. It is ahead of you.</span></section>
+<section class="ch c4 r" data-a="0.258" data-b="0.324"><span class="lab">04 / Gravity error</span><span class="big" data-t="Gravity error."></span></section>
+<section class="ch c5" data-a="0.342" data-b="0.408"><span class="lab">05 / The red ocean</span><span class="big" data-t="The red ocean."></span><span class="sm">Move the cursor across the surface.</span></section>
+<section class="ch c6 r" data-a="0.425" data-b="0.491"><span class="lab">06 / Hidden dimensions</span><span class="big" data-t="Hidden dimensions."></span><span class="sm">Look for the one angle where it is whole.</span></section>
+<section class="ch c7" data-a="0.508" data-b="0.574"><span class="lab">07 / Fractured reality</span><span class="big" data-t="Fractured reality."></span></section>
+<section class="ch c8 r" data-a="0.592" data-b="0.658"><span class="lab">08 / The infinite fall</span><span class="big" data-t="The infinite fall."></span></section>
+<section class="ch c9" data-a="0.675" data-b="0.741"><span class="lab">09 / The second sun</span><span class="big" data-t="The second sun."></span></section>
+<section class="ch c10 r" data-a="0.758" data-b="0.824"><span class="lab">10 / The world folds</span><span class="big" data-t="The world folds."></span></section>
+<section class="ch c11 c" data-a="0.842" data-b="0.905"><span class="lab">11 / The revelation</span><span class="big" data-t="You were never outside."></span></section>
+<section class="ch c12 c" data-a="0.945" data-b="2"><span class="lab">12 / Mirage</span><span class="big xl" data-t="Mirage"></span><span class="sm">Reality is an illusion.</span><div class="navs"><button class="btn" id="again">Restart experience</button><button class="btn" data-open="work">Explore projects</button><button class="btn" data-open="about">About Mirage</button><button class="btn" data-open="contact">Contact</button></div></section>
+
+<div class="rail"><i id="railFill"></i></div>
+<div class="notice">Fictional studio · Mirage</div>
+
+<div id="ov-index" class="ov" role="dialog" aria-modal="true" aria-label="Index"><button class="btn x">Close</button><div class="mg"><div><h4>Index</h4></div><div><ul class="cl" id="chl"></ul></div></div></div>
+<div id="ov-about" class="ov" role="dialog" aria-modal="true" aria-label="About"><button class="btn x">Close</button><div class="mg"><div><h4>About</h4><h2>Reality<br>is an illusion.</h2></div><div><p><b>MIRAGE は架空のデジタルアート・スタジオです。</b>このサイトは、鏡を通り抜けて世界が入れ替わる体験を、ひとつの映像作品として作った実験です。</p><p>映像はすべてリアルタイムのシェーダーで描いています。鏡の中の世界は、現実とは別の世界として同じ場所で描き分けています。物理的に正しい反射の計算ではなく、見た目を狙った近似です。</p><p>音はSound onを押したときだけ鳴ります。</p></div></div></div>
+<div id="ov-work" class="ov" role="dialog" aria-modal="true" aria-label="Projects"><button class="btn x">Close</button><div class="mg"><div><h4>Projects</h4><h2>Selected<br>illusions.</h2></div><div><ul class="wk">
+<li><small>01</small><div><b>Second Horizon</b><br><span>A desert installation where the horizon appears twice.</span></div><small>2025</small></li>
+<li><small>02</small><div><b>The Wrong Floor</b><br><span>A staircase that changes direction when you stop looking.</span></div><small>2025</small></li>
+<li><small>03</small><div><b>Red Water</b><br><span>A pool that reflects a room that is not there.</span></div><small>2024</small></li>
+<li><small>04</small><div><b>One Angle</b><br><span>Four thousand fragments that read as a word from a single point.</span></div><small>2024</small></li>
+<li><small>05</small><div><b>Fold</b><br><span>A street that curls up into a tunnel over twelve minutes.</span></div><small>2023</small></li>
+</ul><p style="margin-top:1.4rem;font-size:.8rem;opacity:.6">Fictional projects.</p></div></div></div>
+<div id="ov-contact" class="ov" role="dialog" aria-modal="true" aria-label="Contact"><button class="btn x">Close</button><div class="mg"><div><h4>Contact</h4><h2>Say<br>something.</h2></div><div><p>これは架空のスタジオで、このデモには送信先がありません。フォームは置いていません（送信されたように見せないため）。</p><div class="mail"><span id="mailTxt">hello@mirage.example</span><button class="btn" id="copyMail">Copy</button></div><p id="copyMsg" style="margin-top:.8rem;font-size:.85rem;min-height:1.4em"></p></div></div></div>
+<div id="spacer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobile = matchMedia("(max-width:820px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x)), mix = (a, b, t) => a + (b - a) * t;
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const canvas = $("#gl"); let renderer;
+function noGL() { $("#nogl").style.display = "flex"; $("#veil").classList.add("off"); }
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" }); } catch (e) { noGL(); return; }
+if (!renderer.capabilities.isWebGL2) { noGL(); return; }
+renderer.setClearColor(0x090909);
+// the word for the anamorphic reveal (chapter 6)
+const c1 = document.createElement("canvas"); c1.width = 2048; c1.height = 1024; const T1 = new THREE.CanvasTexture(c1); T1.minFilter = THREE.LinearFilter; T1.generateMipmaps = false;
+function drawWord() { const g = c1.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, 2048, 1024); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "alphabetic"; const fam = '"Hanken Grotesk","Arial Black",Arial,sans-serif'; let fs = 600; g.font = `800 ${fs}px ${fam}`; fs *= 1900 / g.measureText("MIRAGE").width; g.font = `800 ${fs}px ${fam}`; const m = g.measureText("MIRAGE"); g.fillText("MIRAGE", 1024, 512 + (m.actualBoundingBoxAscent || fs * .72) / 2); T1.needsUpdate = true; }
+drawWord(); try { document.fonts.load('800 200px "Hanken Grotesk"').then(drawWord).catch(() => {}); document.fonts.ready.then(drawWord); } catch (e) {}
+
+// ================================================================ the shader
+const FS = `
+precision highp float;
+#define PI 3.14159265
+uniform vec2 uRes,uMouse; uniform float uTime,uP,uAsp,uSF,uQ,uVel; uniform sampler2D uT1;
+float PX;
+const vec3 SANDA=vec3(.659,.169,.125); const vec3 SANDB=vec3(.404,.094,.063); const vec3 IVORY=vec3(.945,.933,.906); const vec3 OBS=vec3(.035);
+const vec3 SUN=vec3(-.5011,.2004,-.8418);
+float ss(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.,1.); return t*t*(3.-2.*t); }
+float hash(float n){ return fract(sin(n)*43758.5453); }
+float hash2(vec2 p){ vec3 p3=fract(vec3(p.xyx)*.1031); p3+=dot(p3,p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
+float hash3(vec3 p){ p=fract(p*.3183099+.1); p*=17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float noise(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(hash2(i),hash2(i+vec2(1.,0.)),f.x),mix(hash2(i+vec2(0.,1.)),hash2(i+vec2(1.,1.)),f.x),f.y); }
+float noise3(vec3 p){ vec3 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(hash3(i),hash3(i+vec3(1,0,0)),f.x),mix(hash3(i+vec3(0,1,0)),hash3(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash3(i+vec3(0,0,1)),hash3(i+vec3(1,0,1)),f.x),mix(hash3(i+vec3(0,1,1)),hash3(i+vec3(1,1,1)),f.x),f.y),f.z); }
+float fbm3(vec2 p){ float s=0.,a=.5; for(int i=0;i<3;i++){ s+=a*noise(p); p=mat2(1.6,1.2,-1.2,1.6)*p; a*=.5; } return s; }
+mat3 rotX(float a){ float c=cos(a),s=sin(a); return mat3(1.,0.,0.,0.,c,s,0.,-s,c); }
+mat3 rotY(float a){ float c=cos(a),s=sin(a); return mat3(c,0.,-s,0.,1.,0.,s,0.,c); }
+mat3 rotZ(float a){ float c=cos(a),s=sin(a); return mat3(c,s,0.,-s,c,0.,0.,0.,1.); }
+float sdBox(vec3 p,vec3 b){ vec3 q=abs(p)-b; return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.); }
+vec3 camRay(vec2 p,vec3 ro,vec3 ta,float roll,out vec3 fwd){ fwd=normalize(ta-ro); vec3 up=vec3(sin(roll),cos(roll),0.); vec3 r=normalize(cross(fwd,up)); vec3 u=cross(r,fwd); return normalize(p.x*r+p.y*u+1.8*fwd); }
+// ---------- desert
+float duneH(vec2 q){ float h=.9*sin(q.x*.11+1.7*sin(q.y*.07+1.))+.45*sin(q.y*.19+q.x*.06+2.)+.25*sin(q.x*.31-q.y*.17)+.04*noise(q*1.3); return h*ss(2.5,14.,length(q)); }
+float mapR(vec3 p,float ero){ float d=(p.y-duneH(p.xz))*.7; if(ero>.001){ float n=noise3(p*.4); d=max(d,(n-(1.-ero*.9))*1.2); } return d; }
+vec3 skyR(vec3 rd,vec3 sd){ float t=clamp(rd.y,0.,1.); vec3 c=mix(vec3(.88,.36,.21),vec3(.16,.025,.04),pow(t,.45)); float s=max(dot(rd,sd),0.); c+=vec3(1.,.55,.3)*pow(s,6.)*.5+vec3(1.,.9,.75)*pow(s,300.)*3.; if(rd.y<0.) c=mix(c,vec3(.4,.1,.07),clamp(-rd.y*4.,0.,1.)); return c; }
+vec3 sandCol(vec3 pos,vec3 n){ float r=noise(pos.xz*7.)*.5+noise(pos.xz*23.)*.5; float rip=.5+.5*sin(pos.x*.9+noise(pos.xz*.5)*6.); return mix(SANDB,SANDA,clamp(.45+.4*n.y+.25*(r-.5)+.12*rip,0.,1.)); }
+// ---------- white architecture
+float mapW(vec3 p){ float d=min(p.y,14.-p.y); vec2 c=mod(p.xz,16.)-8.; d=min(d,max(abs(c.x),abs(c.y))-1.2);
+  float bm=max(abs(p.y-12.)-.7,min(abs(mod(p.z,16.)-8.)-.9,abs(mod(p.x,16.)-8.)-.9)); return min(d,bm); }
+float mapWnf(vec3 p){ float d=14.-p.y; vec2 c=mod(p.xz,16.)-8.; d=min(d,max(abs(c.x),abs(c.y))-1.2); float bm=max(abs(p.y-12.)-.7,min(abs(mod(p.z,16.)-8.)-.9,abs(mod(p.x,16.)-8.)-.9)); return min(d,bm); }
+vec3 shadeW(vec3 p,vec3 rd,float t){
+  vec2 e=vec2(.01,-.01); vec3 n=normalize(e.xyy*mapW(p+e.xyy)+e.yyx*mapW(p+e.yyx)+e.yxy*mapW(p+e.yxy)+e.xxx*mapW(p+e.xxx));
+  vec3 L=normalize(vec3(.3,1.,.25)); float ao=clamp(mapW(p+n*.6)/.6,0.,1.)*.5+.5; float diff=max(dot(n,L),0.);
+  vec3 c=IVORY*(.5+.5*diff)*ao*(.9+.1*n.y); return mix(c,IVORY*.97,1.-exp(-t*.012));
+}
+// ---------- the mirror (portal between two worlds)
+float sdFrame(vec3 p,float sc){ p/=sc; float o=sdBox(p,vec3(1.2,2.4,.09)); float i=sdBox(p,vec3(1.06,2.26,.3)); return max(o,-i)*sc; }
+float mapMain(int w,vec3 p,float ero){ if(w==0) return mapR(p,ero); if(w==1) return mapW(p); return 1e3; }
+float mapF(int w,vec3 p,float ero,mat3 Ri,vec3 cen,float sc){ return min(mapMain(w,p,ero),sdFrame(Ri*(p-cen),sc)); }
+vec3 envMain(int w,vec3 rd){ if(w==0) return skyR(rd,SUN); if(w==1) return mix(IVORY*.8,IVORY,rd.y*.5+.5); if(w==2) return IVORY*.96; float st=ss(.12,0.,abs(rd.y-.45)-.08)*ss(1.2,.3,abs(atan(rd.z,rd.x)-.7)); return vec3(.02)+vec3(.9)*st*.8+vec3(.4,.08,.05)*ss(.25,0.,abs(rd.y+.3))*.4; }
+vec3 renderOther(int w,vec3 ro,vec3 rd){
+  if(w>=2) return envMain(w,rd);
+  float t=0.,hit=-1.; for(int i=0;i<64;i++){ float d=(w==0)?mapR(ro+rd*t,0.):mapW(ro+rd*t); if(d<.002*t+.001){ hit=t; break; } t+=d*(w==0?.8:.9); if(t>90.) break; }
+  if(hit<0.){ return w==0?skyR(rd,SUN):IVORY*.97; }
+  vec3 pos=ro+rd*hit;
+  if(w==1) return shadeW(pos,rd,hit);
+  vec2 e=vec2(.02,-.02); vec3 n=normalize(e.xyy*mapR(pos+e.xyy,0.)+e.yyx*mapR(pos+e.yyx,0.)+e.yxy*mapR(pos+e.yxy,0.)+e.xxx*mapR(pos+e.xxx,0.));
+  vec3 c=sandCol(pos,n)*(.25+.9*max(dot(n,SUN),0.)); return mix(c,skyR(rd,SUN)*.9,1.-exp(-hit*.012));
+}
+vec3 mirrorScene(vec2 p,vec3 ro,vec3 rd,int mainW,int otherW,float L,float psi,float sc,float ex,float ero,vec3 cen){
+  mat3 Ri=rotY(-psi); mat3 Rt=rotY(psi);
+  float t=0.,hit=-1.; for(int i=0;i<72;i++){ float d=mapF(mainW,ro+rd*t,ero,Ri,cen,sc); if(d<.0015*t+.001){ hit=t; break; } t+=d*.85; if(t>120.) break; }
+  vec3 rl=Ri*(ro-cen), dl=Ri*rd; float tp=1e9; bool front=rl.z>0.; vec3 hpl=vec3(0.);
+  if(dl.z*rl.z<0.){ float tz=-rl.z/dl.z; hpl=rl+dl*tz; if(abs(hpl.x)<1.06*sc&&abs(hpl.y)<2.26*sc) tp=tz; }
+  vec3 col;
+  if(tp<1e8&&(hit<0.||tp<hit)){
+    vec3 nW=Rt*vec3(0.,0.,front?1.:-1.);
+    if(front){
+      vec2 q=hpl.xy/sc; float rr=length(q); float md=length(p-uMouse*.8);
+      float wave=sin(rr*14.-uTime*4.)*exp(-rr*.7)*L+sin(md*22.-uTime*6.)*exp(-md*2.5)*.35*L;
+      vec2 gr=normalize(q+1e-4)*cos(rr*14.-uTime*4.)*exp(-rr*.7)*L*.14+normalize(p-uMouse*.8+1e-4)*cos(md*22.-uTime*6.)*exp(-md*2.5)*L*.06;
+      vec3 dl2=normalize(dl+vec3(gr,0.)); vec3 rd2=Rt*dl2; vec3 hp=ro+rd*tp;
+      vec3 oth=renderOther(otherW,hp+rd2*.02,rd2);
+      float F=.05+.55*pow(1.-clamp(abs(dl.z),0.,1.),3.)+.12*L*abs(wave); vec3 rf=envMain(mainW,reflect(rd2,nW))*(mainW==0?ex:1.);
+      col=mix(oth,rf,F)*(1.-.12*ss(.7,1.,max(abs(q.x)/1.06,abs(q.y)/2.26))); col+=vec3(.9,.95,1.)*.12*L*ss(.4,1.,wave);
+    } else { col=OBS*.6+vec3(.04)*pow(1.-abs(dl.z),3.); }
+  } else if(hit>0.){
+    vec3 pos=ro+rd*hit; vec2 e=vec2(.004,-.004); vec3 n=normalize(e.xyy*mapF(mainW,pos+e.xyy,ero,Ri,cen,sc)+e.yyx*mapF(mainW,pos+e.yyx,ero,Ri,cen,sc)+e.yxy*mapF(mainW,pos+e.yxy,ero,Ri,cen,sc)+e.xxx*mapF(mainW,pos+e.xxx,ero,Ri,cen,sc));
+    float dF=sdFrame(Ri*(pos-cen),sc), dW=mapMain(mainW,pos,ero);
+    if(dF<dW){ vec3 rf=reflect(rd,n); float fr=pow(1.-clamp(dot(n,-rd),0.,1.),4.); col=envMain(mainW,rf)*(.55+.45*fr)*vec3(.95,.93,.9); if(mainW==0) col*=ex; }
+    else if(mainW==0){
+      vec3 c=sandCol(pos,n); float sh=1.,tt=.05; for(int i=0;i<22;i++){ float h=mapF(mainW,pos+n*.03+SUN*tt,ero,Ri,cen,sc); sh=min(sh,7.*h/tt); tt+=clamp(h,.08,2.); if(sh<.01||tt>30.) break; } sh=clamp(sh,0.,1.);
+      c*=(.22+1.05*max(dot(n,SUN),0.)*sh); c=mix(c,skyR(rd,SUN)*.85,1.-exp(-hit*.011)); col=c*ex; }
+    else if(mainW==1) col=shadeW(pos,rd,hit);
+    else col=IVORY;
+  } else {
+    col=envMain(mainW,rd); if(mainW==0) col*=ex;
+  }
+  return col;
+}
+// ---------- 01/02
+vec3 sceneMirror12(vec2 p,float l,int id){
+  float ex=1.,L=0.; vec3 ro,ta; int mw=0,ow=1;
+  if(id==0){ float e=ss(0.,1.,l); ro=vec3(uMouse.x*.8,2.2+uMouse.y*.4,mix(5.,26.,e)); ta=vec3(0.,2.6,0.); ex=ss(0.,.75,l)*.95+.05; }
+  else { float e=ss(0.,1.,l); ro=vec3(0.,2.2,mix(26.,-14.,e)); ta=mix(vec3(0.,2.6,0.),ro+vec3(0.,.1,-6.),ss(.3,.72,l)); L=ss(.3,.62,l)*(1.-ss(.8,.98,l)); mw=ro.z>0.?0:1; ow=1-mw; }
+  vec3 f; vec3 rd=camRay(p,ro,ta,0.,f);
+  vec3 col=mirrorScene(p,ro,rd,mw,ow,L,0.,1.,ex,0.,vec3(0.,2.4,0.));
+  if(id==0){ float line=exp(-pow(p.x/(.01+.5*ss(0.,.4,l)),2.))*(1.-ss(0.,.3,l)); col+=vec3(.95,.93,.9)*line*.5*step(0.,1.-l*.0); }
+  return col;
+}
+// ---------- 03 THE IMPOSSIBLE CORRIDOR
+float mapC(vec3 p,float wd,float tm){
+  float d=min(min(p.y,7.-p.y),wd-abs(p.x)); float zc=mod(p.z,6.)-3.; float cin=max(abs(p.x)-(wd-.4),abs(p.y-3.5)-3.1); d=min(d,max(abs(zc)-.2,-cin));
+  for(int k=0;k<3;k++){ float fk=float(k); float cz=-mod(tm*(2.2+fk)+fk*13.,80.); d=min(d,sdBox(p-vec3((fk-1.)*1.3,.7,cz),vec3(.7))); } return d;
+}
+vec3 shadeCsimple(vec3 p,float t,float wd,float tm){
+  vec2 e=vec2(.02,-.02); vec3 n=normalize(e.xyy*mapC(p+e.xyy,wd,tm)+e.yyx*mapC(p+e.yyx,wd,tm)+e.yxy*mapC(p+e.yxy,wd,tm)+e.xxx*mapC(p+e.xxx,wd,tm));
+  vec3 c=IVORY*(.45+.55*max(dot(n,normalize(vec3(.2,1.,.3))),0.)); return mix(c,IVORY,1.-exp(-t*.02));
+}
+vec3 shadeC(vec3 p,vec3 rd,float t,float wd,float tm){
+  vec2 e=vec2(.01,-.01); vec3 n=normalize(e.xyy*mapC(p+e.xyy,wd,tm)+e.yyx*mapC(p+e.yyx,wd,tm)+e.yxy*mapC(p+e.yxy,wd,tm)+e.xxx*mapC(p+e.xxx,wd,tm));
+  float ao=clamp(mapC(p+n*.5,wd,tm)/.5,0.,1.)*.5+.5; vec3 c=IVORY*(.45+.55*max(dot(n,normalize(vec3(.2,1.,.3))),0.))*ao;
+  float strip=ss(.12,0.,abs(abs(p.x)-(wd-.4))-.05)*step(abs(mod(p.z,6.)-3.),.25); c=mix(c,vec3(.66,.17,.12),strip*.8);
+  if(abs(n.x)>.9){ vec3 rf=reflect(rd,n); float tt=.08,hh=-1.; for(int i=0;i<36;i++){ float d=mapC(p+n*.05+rf*tt,wd,tm); if(d<.003*tt){ hh=tt; break; } tt+=d; if(tt>40.) break; }
+    vec3 rc=IVORY*.85; if(hh>0.) rc=shadeCsimple(p+n*.05+rf*hh,hh,wd,tm); c=mix(c,rc,.45); }
+  return mix(c,IVORY,1.-exp(-t*.02));
+}
+vec3 renderC(vec3 ro,vec3 rd,float wd,float tm,bool portal,out float tHit){
+  float t=0.,hit=-1.; for(int i=0;i<80;i++){ float d=mapC(ro+rd*t,wd,tm); if(d<.002*t+.001){ hit=t; break; } t+=d*.9; if(t>110.) break; } tHit=hit;
+  if(hit<0.) return IVORY; return shadeC(ro+rd*hit,rd,hit,wd,tm);
+}
+vec3 sceneCorridor(vec2 p,float l){
+  float wd=3.5+5.*ss(.1,.6,l); float roll=ss(.2,.85,l)*PI*.5; float zc=mix(0.,-33.,ss(0.,1.,l));
+  vec3 ro=vec3(sin(l*3.)*.6+uMouse.x*.3,3.5,zc); vec3 ta=ro+vec3(sin(l*2.)*.8,0.,-6.); vec3 f; vec3 rd=camRay(p,ro,ta,roll,f);
+  float tHit; vec3 col=renderC(ro,rd,wd,uTime,false,tHit);
+  float tz=(-38.-ro.z)/rd.z; vec3 hp=ro+rd*tz; if(rd.z<0.&&tz>0.&&(tHit<0.||tz<tHit)&&abs(hp.x)<wd-.4&&hp.y>.4&&hp.y<6.6){
+    float th2; vec3 oth=renderC(hp+rd*.05,rd,wd,uTime+2.6,true,th2); float fr=.1+.5*pow(1.-abs(rd.z),3.);
+    col=mix(oth*vec3(.95,.97,1.),IVORY*.9,fr*.4)*(.92+.08*sin(uTime*2.)); col=mix(col,vec3(.66,.17,.12),.08); }
+  return col;
+}
+// ---------- 04 GRAVITY ERROR
+float mapRoom(vec3 p,vec3 g){
+  vec3 q=abs(p); float d=7.-max(q.x,max(q.y,q.z));
+  d=min(d,sdBox(q-vec3(3.5,6.2,2.),vec3(1.5,.8,1.8))); d=min(d,sdBox(q.yxz-vec3(3.5,6.2,-2.),vec3(1.5,.8,1.8))); d=min(d,sdBox(q.zyx-vec3(-2.5,6.2,3.),vec3(1.2,.8,1.4)));
+  vec3 pq=p-g*uTime*.9; float cs=2.4; vec3 c=floor(pq/cs); vec3 lc=pq-(c+.5)*cs; float h=hash3(c); float d2=cs*.5-max(abs(lc.x),max(abs(lc.y),abs(lc.z)))*.9;
+  if(h>.7){ vec3 jit=(vec3(hash3(c+1.7),hash3(c+4.1),hash3(c+8.3))-.5)*.8; d2=sdBox(lc-jit,vec3(.08+.18*hash3(c+2.),.05+.1*h,.22)); }
+  return min(d,d2);
+}
+vec3 sceneGravity(vec2 p,float l){
+  float az=PI*.5*ss(0.,.33,l)+PI*.5*ss(.33,.66,l); float ax=PI*.5*ss(.66,1.,l); mat3 R=rotZ(az)*rotX(ax); vec3 g=R*vec3(0.,-1.,0.);
+  vec3 ro=vec3(sin(uTime*.2)*.8+uMouse.x*.3,cos(uTime*.17)*.5,1.5); vec3 f; vec3 rd=camRay(p,ro,vec3(0.,0.,-5.),0.,f); rd=R*rd; ro=R*ro;
+  float t=0.,hit=-1.; for(int i=0;i<90;i++){ float d=mapRoom(ro+rd*t,g); if(d<.002*t+.001){ hit=t; break; } t+=d*.85; if(t>40.) break; }
+  if(hit<0.) return IVORY*.9; vec3 pos=ro+rd*hit; vec2 e=vec2(.01,-.01); vec3 n=normalize(e.xyy*mapRoom(pos+e.xyy,g)+e.yyx*mapRoom(pos+e.yyx,g)+e.yxy*mapRoom(pos+e.yxy,g)+e.xxx*mapRoom(pos+e.xxx,g));
+  vec3 lp=vec3(0.,6.6,0.); vec3 ld=lp-pos; float dist=length(ld); ld/=dist; vec3 c=IVORY*(.28+.8*max(dot(n,ld),0.)*(14./(14.+dist*dist*.12)));
+  float ao=clamp(mapRoom(pos+n*.5,g)/.5,0.,1.)*.45+.55; c*=ao;
+  if(n.y>.9&&pos.y<-6.8){ float ck=mod(floor(pos.x*.5)+floor(pos.z*.5),2.); float rr=length(pos.xz); c=mix(c,mix(OBS*3.,IVORY,ck)*(.3+.7*max(dot(n,ld),0.)),.9); c=mix(c,vec3(.66,.17,.12),ss(.1,0.,abs(rr-3.)-.25)); }
+  float db=length(pos)<6.?1.:0.; if(abs(pos.x)<6.5&&abs(pos.y)<6.5&&abs(pos.z)<6.5&&max(abs(n.x),max(abs(n.y),abs(n.z)))<.99) c=mix(c,vec3(.66,.17,.12)*.9,.15);
+  return c;
+}
+// ---------- 05 THE RED OCEAN
+float oceanH(vec2 xz,float l,float lm){ float r=length(xz-vec2(0.,-5.)); float rw=ss(.08,.9,l)*130.; float m=1.-ss(rw-4.,rw,r);
+  float h=.07*sin(r*2.4-uTime*3.)*exp(-.03*r)+.02*noise(xz*3.+uTime*.6)+.015*sin(xz.x*.8+uTime)*sin(xz.y*.6-uTime*.7); return h*m; }
+vec3 sceneOcean(vec2 p,float l){
+  float cy=mix(5.,.45,ss(.05,.5,l)); float fz=mix(3.,-70.,pow(ss(.2,1.,l),1.2)); vec3 ro=vec3(sin(l*2.)*1.5+uMouse.x*.4,cy,fz);
+  vec3 ta=mix(vec3(0.,0.,-5.),ro+vec3(0.,-.25,-6.),ss(.1,.45,l)); vec3 f; vec3 rd=camRay(p,ro,ta,0.,f);
+  // hall (columns, ceiling)
+  float t=0.,hit=-1.; for(int i=0;i<72;i++){ float d=mapWnf(ro+rd*t); if(d<.003*t+.001){ hit=t; break; } t+=d*.9; if(t>140.) break; }
+  float tf=rd.y<-.0001?(0.-ro.y)/rd.y:1e5; vec3 col=IVORY*.97;
+  float rwv=ss(.08,.9,l)*130.;
+  if(tf>0.&&(hit<0.||tf<hit)){
+    vec3 pos=ro+rd*tf; for(int k=0;k<3;k++){ float h=oceanH(pos.xz,l,1.); tf=(ro.y-h)/-rd.y; pos=ro+rd*tf; }
+    float r=length(pos.xz-vec2(0.,-5.)); float m=1.-ss(rwv-4.,rwv,r); vec2 e=vec2(.05,0.);
+    float hx=oceanH(pos.xz+e.xy,l,1.)-oceanH(pos.xz-e.xy,l,1.), hz=oceanH(pos.xz+e.yx,l,1.)-oceanH(pos.xz-e.yx,l,1.);
+    vec3 mr=ro+rd*0.; vec2 md=pos.xz-(ro.xz+normalize(vec2(uMouse.x*.9,-1.))*(4.+(1.-uMouse.y)*12.)); float mrr=length(md); float mw=sin(mrr*9.-uTime*7.)*exp(-mrr*.5)*.05*ss(.12,.3,l);
+    vec3 n=normalize(vec3(-(hx+mw*md.x/(mrr+.01)*.3)*10.,1.,-(hz+mw*md.y/(mrr+.01)*.3)*10.));
+    vec3 fl=mix(IVORY*(.9+.04*noise(pos.xz*.5)),IVORY*.9,.0); fl*=1.-.1*ss(0.,40.,tf)*0.;
+    vec3 rf=reflect(rd,n); float tt=.06,hh=-1.; vec3 pr=pos+n*.04; for(int i=0;i<40;i++){ float d=mapWnf(pr+rf*tt); if(d<.004*tt){ hh=tt; break; } tt+=d; if(tt>80.) break; }
+    vec3 rc=IVORY*.95; if(hh>0.){ vec3 pp=pr+rf*hh; vec2 e2=vec2(.02,-.02); vec3 n2=normalize(e2.xyy*mapWnf(pp+e2.xyy)+e2.yyx*mapWnf(pp+e2.yyx)+e2.yxy*mapWnf(pp+e2.yxy)+e2.xxx*mapWnf(pp+e2.xxx)); rc=IVORY*(.4+.6*max(dot(n2,normalize(vec3(.3,1.,.25))),0.))*.95; }
+    float fr=.12+.88*pow(1.-clamp(dot(n,-rd),0.,1.),4.); vec3 liq=mix(vec3(.26,.025,.04),rc*vec3(.9,.26,.22),.35+.55*fr); liq+=pow(max(dot(rf,normalize(vec3(.3,1.,.25))),0.),50.)*.5;
+    col=mix(fl,liq,m*ss(.0,.04,m)); col=mix(col,IVORY*.97,1.-exp(-tf*.006));
+  } else if(hit>0.){
+    vec3 pos=ro+rd*hit; vec2 e=vec2(.02,-.02); vec3 n=normalize(e.xyy*mapWnf(pos+e.xyy)+e.yyx*mapWnf(pos+e.yyx)+e.yxy*mapWnf(pos+e.yxy)+e.xxx*mapWnf(pos+e.xxx));
+    float r=length(pos.xz-vec2(0.,-5.)); float lm=1.-ss(rwv-4.,rwv,r)*1.; vec3 c=IVORY*(.4+.6*max(dot(n,normalize(vec3(.3,1.,.25))),0.));
+    c=mix(c,c*vec3(1.,.55,.5),ss(2.5,0.,pos.y)*lm*.7); col=mix(c,IVORY*.97,1.-exp(-hit*.007));
+  }
+  // the falling drop
+  if(l<.14){ float dy=mix(7.,.2,pow(ss(0.,.12,l),2.)); vec3 oc=ro-vec3(0.,dy,-5.); float b=dot(oc,rd),c=dot(oc,oc)-.04,h=b*b-c; if(h>0.){ float td=-b-sqrt(h); if(td>0.){ col=mix(col,vec3(.4,.04,.06)+.3*pow(max(dot(normalize(oc+rd*td),vec3(.3,.8,.3)),0.),8.),1.-ss(.115,.135,l)); } } }
+  return col;
+}
+// ---------- 06 HIDDEN DIMENSIONS
+const vec3 SWP=vec3(0.,2.4,13.); const vec3 SWT=vec3(0.,9.,-6.);
+float mapFrag(vec3 p){
+  vec3 f=normalize(SWT-SWP); vec3 r=normalize(cross(f,vec3(0.,1.,0.))); vec3 u=cross(r,f);
+  float cs=.9; vec3 c=floor(p/cs); vec3 lc=p-(c+.5)*cs; float bd=cs*.5-max(abs(lc.x),max(abs(lc.y),abs(lc.z)))+.2;
+  vec3 cc=(c+.5)*cs; vec3 rel=cc-SWP; float zf=dot(rel,f); float zf0=dot(p-SWP,f); if(zf<14.) return max(bd,(zf0-1.-0.)*0.+(14.-zf0-1.2)*.9); if(zf>27.||length(cc-vec3(0.,2.8,0.))<2.8||cc.y<.4) return bd;
+  vec2 sp=vec2(dot(rel,r),dot(rel,u))/zf*1.8; vec2 uv=sp/vec2(3.4,1.7)+.5; if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.) return bd;
+  float m=textureLod(uT1,uv,0.).r; float hh=hash3(c); if(m<.5||hh>.62) return bd;
+  vec3 jit=(vec3(hash3(c+1.3),hash3(c+5.1),hash3(c+9.7))-.5)*.08; return min(bd,sdBox(lc-jit,vec3(.12+.05*hh,.12+.05*hash3(c+3.),.05+.04*hh)));
+}
+float mapH(vec3 p){ return min(mapR(p,0.),mapFrag(p)); }
+float cityMap(vec3 q){ float d=q.y+6.; vec2 c=floor(q.xz/2.2); float h=hash2(c)*8.+1.; vec2 lc=q.xz-(c+.5)*2.2; d=min(d,sdBox(vec3(lc.x,q.y+6.-h*.5,lc.y),vec3(.75,h*.5,.75))); return d; }
+vec3 sceneHidden(vec2 p,float l){
+  vec3 cen=vec3(0.,2.8,0.); float a=-1.1+ss(0.,.55,l)*2.2; vec3 orb=vec3(sin(a)*9.5,3.4,cos(a)*9.5+1.);
+  float k=ss(.5,.78,l); vec3 ro=mix(orb,SWP,k); vec3 ta=mix(cen,SWT,k); ro=mix(ro,SWP+vec3(7.,1.5,-4.),ss(.86,1.,l)); ro+=vec3(uMouse*.15,0.);
+  vec3 f; vec3 rd=camRay(p,ro,ta,0.,f);
+  float t=0.,hit=-1.; for(int i=0;i<160;i++){ float d=mapH(ro+rd*t); if(d<.002*t+.001){ hit=t; break; } t+=max(d*.8,.01); if(t>110.) break; }
+  vec3 col=skyR(rd,SUN);
+  if(hit>0.){ vec3 pos=ro+rd*hit; vec2 e=vec2(.02,-.02); vec3 n=normalize(e.xyy*mapH(pos+e.xyy)+e.yyx*mapH(pos+e.yyx)+e.yxy*mapH(pos+e.yxy)+e.xxx*mapH(pos+e.xxx));
+    if(mapFrag(pos)<mapR(pos,0.)-.0){ vec3 rf=reflect(rd,n); float fr=pow(1.-clamp(dot(n,-rd),0.,1.),3.); col=mix(vec3(.9,.86,.8),skyR(rf,SUN),.55)*(.55+.5*fr); col=mix(col,IVORY,.15); }
+    else { vec3 c=sandCol(pos,n)*(.22+1.05*max(dot(n,SUN),0.)); col=mix(c,skyR(rd,SUN)*.85,1.-exp(-hit*.011)); } }
+  // the floating mirror cube (analytic) with a city inside
+  mat3 Rc=rotY(uTime*.15+.5); vec3 oc=Rc*(ro-cen), dc=Rc*rd; vec3 inv=1./dc; vec3 t1=(-vec3(1.5)-oc)*inv, t2=(vec3(1.5)-oc)*inv; vec3 tn=min(t1,t2), tx=max(t1,t2); float tN=max(max(tn.x,tn.y),tn.z), tF=min(min(tx.x,tx.y),tx.z);
+  if(tF>max(tN,0.)&&tN>0.&&(hit<0.||tN<hit)){
+    vec3 hp=oc+dc*tN; vec3 nl=-sign(dc)*step(tn.yzx,tn.xyz)*step(tn.zxy,tn.xyz); vec3 nw=transpose(Rc)*nl;
+    vec3 q=hp*4.+vec3(0.,0.,0.); vec3 rq=dc; float tt=0.; vec3 cc=vec3(.95,.93,.9); vec3 inside=mix(IVORY,vec3(.75,.3,.22),ss(.2,-1.,rq.y)*.3);
+    for(int i=0;i<44;i++){ float d=cityMap(q+rq*tt); if(d<.01){ vec3 pp=q+rq*tt; vec2 e2=vec2(.02,-.02); vec3 n2=normalize(e2.xyy*cityMap(pp+e2.xyy)+e2.yyx*cityMap(pp+e2.yyx)+e2.yxy*cityMap(pp+e2.yxy)+e2.xxx*cityMap(pp+e2.xxx)); inside=IVORY*(.35+.65*max(dot(n2,normalize(vec3(.4,1.,.3))),0.))*(1.-ss(10.,40.,tt)*.4); inside=mix(inside,vec3(.66,.17,.12),ss(3.5,6.,pp.y+6.)*.4*step(.5,hash2(floor(pp.xz/2.2)))); break; } tt+=d*.9; if(tt>45.){ inside=mix(IVORY,vec3(.9,.55,.4),.2); break; } }
+    float fr=.08+.6*pow(1.-clamp(dot(nw,-rd),0.,1.),3.); col=mix(inside,skyR(reflect(rd,nw),SUN),fr);
+    float ed=ss(.07,0.,min(min(abs(abs(hp.x)-1.5),abs(abs(hp.y)-1.5)),abs(abs(hp.z)-1.5))-.0); col=mix(col,vec3(.9,.88,.85),ed*.5); }
+  return col;
+}
+// ---------- 07 FRACTURED REALITY
+float mapSh(vec3 p,float F,out int id){
+  float d=1e5; id=0;
+  for(int i=0;i<36;i++){ float fi=float(i); vec3 h=vec3(hash(fi*1.1),hash(fi*2.3+1.),hash(fi*3.7+2.)); vec3 c0=vec3((mod(fi,6.)-2.5)*2.2,floor(fi/6.)*2.2+1.5,0.); vec3 cr=(h-.5)*vec3(15.,9.,15.); cr.y+=5.;
+    vec3 c=mix(c0,cr,F); vec3 q=p-c; q=rotY(F*h.x*6.28+uTime*.04*(h.y-.5))*(rotX(F*h.y*3.+.0)*q); vec3 sz=vec3(1.05,1.05,.035)*mix(1.,.75+.5*h.z,F); float di=sdBox(q,sz); if(di<d){ d=di; id=i; } }
+  return d;
+}
+vec3 envShard(vec3 rf,int id){
+  int k=id-(id/6)*6; float y=rf.y*.5+.5;
+  if(k==0) return skyR(rf,SUN); if(k==1) return mix(IVORY*.7,IVORY,y)*(1.-.5*ss(.1,0.,abs(sin(rf.x*9.))-.12));
+  if(k==2) return vec3(.02)+vec3(1.,.4,.25)*pow(max(dot(rf,normalize(vec3(.3,.4,-.8))),0.),60.)*2.;
+  if(k==3) return mix(SANDB,SANDA,y)*1.2+IVORY*pow(max(dot(rf,normalize(vec3(-.4,.3,-.8))),0.),200.);
+  if(k==4) return IVORY*.97-vec3(.9)*pow(max(dot(rf,normalize(vec3(.2,.5,-.8))),0.),120.);
+  return OBS*1.5+IVORY*ss(.06,0.,abs(fract(rf.x*5.)-.5)-.45)*.5+vec3(.4,.08,.05)*y;
+}
+vec3 sceneShards(vec2 p,float l){
+  float F=ss(0.,.45,l); vec3 ro=vec3(sin(l*2.1)*3.5+uMouse.x*.5,3.5+sin(l*3.)*1.,mix(15.,-16.,ss(0.,1.,l))); vec3 ta=ro+vec3(sin(l*2.1+1.)*2.,0.,-6.); vec3 f; vec3 rd=camRay(p,ro,ta,sin(l*3.)*.15,f);
+  float t=0.,hit=-1.; int hid=0; for(int i=0;i<80;i++){ int id; float d=mapSh(ro+rd*t,F,id); if(d<.002*t+.001){ hit=t; hid=id; break; } t+=d*.9; if(t>60.) break; }
+  vec3 col=skyR(rd,SUN); if(rd.y<-.001){ float tg=-ro.y/rd.y; vec3 gp=ro+rd*tg; col=mix(sandCol(gp,vec3(0.,1.,0.))*(.3+.7*max(SUN.y,0.)),skyR(rd,SUN)*.8,1.-exp(-tg*.012)); }
+  if(hit>0.){ int id; vec3 pos=ro+rd*hit; mapSh(pos,F,id); float fi=float(id); vec3 h=vec3(hash(fi*1.1),hash(fi*2.3+1.),hash(fi*3.7+2.));
+    mat3 Rs=rotY(F*h.x*6.28+uTime*.04*(h.y-.5))*rotX(F*h.y*3.); vec3 n=transpose(Rs)*vec3(0.,0.,1.); if(dot(n,rd)>0.) n=-n; vec3 rf=reflect(rd,n);
+    float fr=pow(1.-clamp(dot(n,-rd),0.,1.),4.); col=envShard(rf,id)*(.85+.3*fr); vec3 c0=vec3((mod(fi,6.)-2.5)*2.2,floor(fi/6.)*2.2+1.5,0.); vec3 cr=(h-.5)*vec3(15.,9.,15.); cr.y+=5.; vec3 cc=mix(c0,cr,F); vec3 q=Rs*(pos-cc)*0.; col=mix(col,col*vec3(.55),ss(.0,.06,.0)); }
+  return col;
+}
+// ---------- 08 THE INFINITE FALL
+float mapShaft(vec3 p){ float W=5.; float d=W-max(abs(p.x),abs(p.z)); float ly=mod(p.y+3.,6.)-3.; float slab=max(abs(ly)-.22,2.3-max(abs(p.x),abs(p.z))); float pil=max(abs(abs(p.x)-W)-.5,abs(abs(p.z)-W)-.5); return min(min(d,slab),pil); }
+vec3 sceneFall(vec2 p,float l){
+  float yc=-(l*55.+10.*sin(l*6.)); float roll=PI*ss(.45,.75,l); vec3 ro=vec3(uMouse.x*.5,yc,uMouse.y*.4); vec3 ta=ro+vec3(sin(l*5.)*1.6,-6.,cos(l*4.)*1.6); vec3 f; vec3 rd=camRay(p,ro,ta,roll,f);
+  float t=0.,hit=-1.; for(int i=0;i<90;i++){ float d=mapShaft(ro+rd*t); if(d<.003*t+.001){ hit=t; break; } t+=d*.9; if(t>90.) break; }
+  if(hit<0.) return OBS; vec3 pos=ro+rd*hit; vec2 e=vec2(.01,-.01); vec3 n=normalize(e.xyy*mapShaft(pos+e.xyy)+e.yyx*mapShaft(pos+e.yyx)+e.yxy*mapShaft(pos+e.yxy)+e.xxx*mapShaft(pos+e.xxx));
+  float ao=clamp(mapShaft(pos+n*.6)/.6,0.,1.)*.5+.5; float ly=mod(pos.y+3.,6.)-3.; float up=.5+.5*n.y; vec3 c=IVORY*(.3+.5*up)*ao;
+  float edge=ss(.12,0.,abs(max(abs(pos.x),abs(pos.z))-2.3))*ss(.3,.2,abs(ly)); c=mix(c,vec3(.8,.2,.14)*1.6,edge*.9);
+  float fog=exp(-hit*.04); return mix(OBS,c,fog);
+}
+// ---------- 09 THE SECOND SUN
+const vec3 SUN2=vec3(.5,.3,.81);
+float mapM(vec3 p){ float d=mapR(p,0.); d=min(d,sdBox(p-vec3(-4.,2.6,-6.),vec3(.8,2.6,.8))); d=min(d,sdBox(p-vec3(3.,3.2,-12.),vec3(1.,3.2,1.))); d=min(d,sdBox(p-vec3(7.,2.,-3.),vec3(.7,2.,.7))); return d; }
+vec3 skySun2(vec3 rd){ vec3 c=skyR(rd,SUN); vec3 d2=normalize(vec3(.4,.34,-.85)); float a=acos(clamp(dot(rd,d2),-1.,1.)); float inR=ss(.215,.2,a); c=mix(c,mix(vec3(.9,.92,.96),vec3(1.),ss(.1,0.,a))*1.1,inR); c=mix(c,vec3(.75,.75,.75),ss(.01,0.,abs(a-.218))*.9); return c; }
+vec3 sceneSuns(vec2 p,float l){
+  vec3 ro=vec3(sin(l*2.)*3.+uMouse.x*.4,1.4+.8*l,mix(14.,-6.,ss(0.,1.,l))); vec3 ta=vec3(0.,2.4,-20.); vec3 f; vec3 rd=camRay(p,ro,ta,0.,f);
+  float t=0.,hit=-1.; for(int i=0;i<100;i++){ float d=mapM(ro+rd*t); if(d<.002*t+.001){ hit=t; break; } t+=d*.8; if(t>120.) break; }
+  vec3 col=skySun2(rd);
+  if(hit>0.){ vec3 pos=ro+rd*hit; vec2 e=vec2(.02,-.02); vec3 n=normalize(e.xyy*mapM(pos+e.xyy)+e.yyx*mapM(pos+e.yyx)+e.yxy*mapM(pos+e.yxy)+e.xxx*mapM(pos+e.xxx));
+    float s1=1.,s2=1.,tt=.05; for(int i=0;i<24;i++){ float h=mapM(pos+n*.03+SUN*tt); s1=min(s1,7.*h/tt); tt+=clamp(h,.1,2.); if(s1<.01||tt>35.) break; } tt=.05;
+    for(int i=0;i<24;i++){ float h=mapM(pos+n*.03+SUN2*tt); s2=min(s2,7.*h/tt); tt+=clamp(h,.1,2.); if(s2<.01||tt>35.) break; } s1=clamp(s1,0.,1.); s2=clamp(s2,0.,1.);
+    float mono=step(pos.y,.0)==0.&&abs(pos.y-duneH(pos.xz))>.4?1.:0.;
+    vec3 c; if(mono>.5){ vec3 rf=reflect(rd,n); c=skySun2(rf)*(.5+.5*pow(1.-clamp(dot(n,-rd),0.,1.),3.))*.7+OBS; c+=vec3(1.,.7,.5)*s1*pow(max(dot(rf,SUN),0.),40.)*.5+vec3(.9,.95,1.)*s2*pow(max(dot(rf,SUN2),0.),40.)*.5; }
+    else { c=sandCol(pos,n)*(.14+1.0*max(dot(n,SUN),0.)*s1*vec3(1.,.8,.6)+.8*max(dot(n,SUN2),0.)*s2*vec3(.75,.85,1.)); }
+    col=mix(c,skySun2(rd)*.85,1.-exp(-hit*.009)); }
+  return col;
+}
+// ---------- 10 THE WORLD FOLDS
+float mapFlat(vec3 q){
+  float d=(q.y-duneH(q.xz)*.5)*.6; float cs=10.; vec2 c=floor(q.xz/cs); vec2 lc=q.xz-(c+.5)*cs; float h=hash2(c); float bd=cs*.5-max(abs(lc.x),abs(lc.y))*1.0;
+  float d2=bd+3.; if(h>.3){ float hh=2.+h*5.; d2=min(sdBox(vec3(lc.x,q.y-hh,lc.y),vec3(1.1,hh,1.1)),bd+3.); }
+  return min(d,d2);
+}
+float mapFold(vec3 p,float Rr){ float r=length(vec2(Rr-p.y,p.z)); float phi=atan(p.z,Rr-p.y); return mapFlat(vec3(p.x,Rr-r,phi*Rr))*.5; }
+vec3 sceneFold(vec2 p,float l){
+  float Rr=mix(300.,7.5,pow(ss(.05,.7,l),1.4)); float roll=PI*.7*ss(.2,1.,l); vec3 ro=vec3(mix(-10.,45.,l),1.7,0.); vec3 ta=ro+vec3(10.,.6*(1.-ss(.2,.7,l)),0.); vec3 f; vec3 rd=camRay(p,ro,ta,roll,f);
+  float t=0.,hit=-1.; for(int i=0;i<100;i++){ float d=mapFold(ro+rd*t,Rr); if(d<.003*t+.001){ hit=t; break; } t+=d; if(t>140.) break; }
+  vec3 col=skyR(rd,SUN)*mix(1.,.0,ss(.5,.9,l)*.0);
+  if(hit>0.){ vec3 pos=ro+rd*hit; vec2 e=vec2(.01,-.01); vec3 n=normalize(e.xyy*mapFold(pos+e.xyy,Rr)+e.yyx*mapFold(pos+e.yyx,Rr)+e.yxy*mapFold(pos+e.yxy,Rr)+e.xxx*mapFold(pos+e.xxx,Rr));
+    vec3 toAxis=normalize(vec3(pos.x,Rr,0.)-pos); vec3 Lg=normalize(mix(vec3(-.3,.85,-.35),toAxis,ss(.2,.7,l))); vec3 q=vec3(pos.x,Rr-length(vec2(Rr-pos.y,pos.z)),0.);
+    float fh=mapFlat(vec3(pos.x,Rr-length(vec2(Rr-pos.y,pos.z)),atan(pos.z,Rr-pos.y)*Rr)); float arch=ss(.06,0.,fh)*0.;
+    float yy=Rr-length(vec2(Rr-pos.y,pos.z)); float zq=atan(pos.z,Rr-pos.y)*Rr; vec2 cq=floor(vec2(pos.x,zq)/10.); vec2 lq=vec2(pos.x,zq)-(cq+.5)*10.; bool pillar=hash2(cq)>.3&&abs(lq.x)<1.25&&abs(lq.y)<1.25&&yy>.05; vec3 base=pillar?IVORY*.95:sandCol(pos,n)*1.; if(pillar) base=mix(base,vec3(.7,.25,.18),ss(.5,5.,yy)*.0);
+    float ao=clamp(mapFold(pos+n*.5,Rr)/.5,0.,1.)*.5+.5; vec3 c=base*(.42+.85*max(dot(n,Lg),0.))*ao; col=mix(c,skyR(rd,SUN)*.8,1.-exp(-hit*.012*(1.-.7*ss(.3,.7,l)))); }
+  return col;
+}
+// ---------- 11 THE REVELATION / 12 MIRAGE
+vec3 sceneReveal(vec2 p,float l){
+  float e=ss(0.,1.,l); vec3 ro=vec3(uMouse.x*.5,mix(2.4,3.2,e),mix(6.,40.,e)); vec3 ta=vec3(0.,2.4,0.); float ero=ss(.0,.65,l)*1.35; vec3 f; vec3 rd=camRay(p,ro,ta,0.,f);
+  vec3 col=mirrorScene(p,ro,rd,0,1,0.,0.,1.,1.,ero,vec3(0.,2.4,0.));
+  float fadeV=ss(.55,1.,l); return mix(col,mix(col,vec3(.02),.0),fadeV);
+}
+vec3 sceneMirage(vec2 p,float l){
+  float psi=PI*ss(.12,.85,l); vec3 ro=vec3(uMouse.x*.4,2.4+uMouse.y*.2,mix(5.5,7.5,l)); vec3 ta=vec3(0.,2.4,0.); vec3 f; vec3 rd=camRay(p,ro,ta,0.,f);
+  vec3 col=mirrorScene(p,ro,rd,3,0,0.,psi,1.,1.,0.,vec3(0.,2.4,0.)); return col;
+}
+vec3 scene(int id,vec2 p,float l){
+  if(id==0) return sceneMirror12(p,l,0); if(id==1) return sceneMirror12(p,l,1); if(id==2) return sceneCorridor(p,l); if(id==3) return sceneGravity(p,l);
+  if(id==4) return sceneOcean(p,l); if(id==5) return sceneHidden(p,l); if(id==6) return sceneShards(p,l); if(id==7) return sceneFall(p,l);
+  if(id==8) return sceneSuns(p,l); if(id==9) return sceneFold(p,l); if(id==10) return sceneReveal(p,l); return sceneMirage(p,l);
+}
+void main(){
+  PX=2.*uSF/uRes.y; vec2 p=(gl_FragCoord.xy-.5*uRes)/uRes.y*2.*uSF;
+  float P=clamp(uP,0.,1.); float x=P*12.; int ci=int(min(floor(x),11.)); float l=P>=1.?1.:fract(x);
+  vec3 col=scene(ci,p,l);
+  if(ci<11){ float tr=ss(.9,1.,l); if(tr>0.){ vec3 c2=scene(ci+1,p,0.); float rr=length(p)/length(vec2(uAsp*uSF,1.)); float edge=tr*1.3-.15; float m=1.-ss(edge-.05,edge+.05,rr+.05*fbm3(p*3.+uTime*.2));
+    col=mix(col,c2,m); col+=vec3(.95,.9,.85)*exp(-pow((rr-edge)*14.,2.))*.35*(1.-ss(.85,1.,tr)); } }
+  float vg=1.-.28*pow(length(p/vec2(uAsp*uSF,1.))*.7,2.); col*=vg; col+=(hash2(gl_FragCoord.xy+fract(uTime)*91.)-.5)*.02; gl_FragColor=vec4(clamp(col,0.,1.),1.);
+}`;
+const U = { uRes: { value: new THREE.Vector2(1, 1) }, uMouse: { value: new THREE.Vector2(0, 0) }, uTime: { value: 0 }, uP: { value: 0 }, uAsp: { value: 1.78 }, uSF: { value: 1 }, uQ: { value: 1 }, uVel: { value: 0 }, uT1: { value: T1 } };
+const mat = new THREE.ShaderMaterial({ vertexShader: "void main(){ gl_Position=vec4(position.xy,0.,1.); }", fragmentShader: FS, uniforms: U, depthTest: false, depthWrite: false });
+const scene = new THREE.Scene(); const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false; scene.add(quad); const cam = new THREE.Camera();
+
+// ================================================================ state / UI
+let P = 0, targetP = 0, tm = 0, paused = false, vel = 0, lastP = 0; let SF = 1;
+const mouse = { x: 0, y: 0 }, mouseS = { x: 0, y: 0 }; let mouseSeen = false;
+const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
+addEventListener("scroll", () => { targetP = clamp(scrollY / maxScroll(), 0, 1); $("#hint").style.opacity = scrollY > 30 ? 0 : .7; }, { passive: true });
+let anim = null; const E3 = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const stepAnim = now => { if (!anim) return; const k = clamp((now - anim.t0) / anim.dur, 0, 1); scrollTo(0, anim.from + (anim.to - anim.from) * E3(k)); if (k >= 1) anim = null; };
+addEventListener("wheel", () => { anim = null; }, { passive: true }); addEventListener("touchstart", () => { anim = null; }, { passive: true });
+const goTo = (p, dur) => { const to = p * maxScroll(); if (reduce) scrollTo(0, to); else anim = { from: scrollY, to, t0: performance.now(), dur: dur || 1700 + Math.abs(p - targetP) * 2600 }; };
+const CH = ["The first reflection", "Cross the surface", "The impossible corridor", "Gravity error", "The red ocean", "Hidden dimensions", "Fractured reality", "The infinite fall", "The second sun", "The world folds", "The revelation", "Mirage"];
+const FG = ["#F1EEE7", "#F1EEE7", "#090909", "#090909", "#F1EEE7", "#F1EEE7", "#F1EEE7", "#F1EEE7", "#F1EEE7", "#F1EEE7", "#F1EEE7", "#F1EEE7"];
+const chOf = p => Math.min(11, Math.floor(p * 12)); const chMid = i => (i + .5) / 12;
+const idx = $("#idx"), chl = $("#chl");
+CH.forEach((n, i) => { const b = document.createElement("button"); b.innerHTML = `<span>${String(i + 1).padStart(2, "0")} ${n}</span><i></i>`; b.setAttribute("aria-label", `${i + 1}章 ${n}`); b.addEventListener("click", () => goTo(i === 0 ? .004 : chMid(i))); idx.appendChild(b);
+  const li = document.createElement("li"); li.innerHTML = `<button><small>${String(i + 1).padStart(2, "0")}</small>${n}</button>`; li.firstChild.addEventListener("click", () => { closeOv(); goTo(i === 0 ? .004 : chMid(i)); }); chl.appendChild(li); });
+const idxBtns = $$("button", idx);
+$("#logo").addEventListener("click", () => goTo(0)); $("#again").addEventListener("click", () => goTo(0, 5200));
+let lastFocus = null;
+function openOv(name) { closeOv(true); const el = $("#ov-" + name); lastFocus = document.activeElement; el.classList.add("open"); document.body.classList.add("lock"); $(".x", el).focus(); }
+function closeOv(keep) { $$(".ov.open").forEach(e => e.classList.remove("open")); document.body.classList.remove("lock"); if (!keep && lastFocus) lastFocus.focus(); }
+$$("[data-open]").forEach(b => b.addEventListener("click", () => openOv(b.dataset.open))); $$(".ov .x").forEach(b => b.addEventListener("click", () => closeOv()));
+addEventListener("keydown", e => { if ($$(".ov.open").length) { if (e.key === "Escape") closeOv(); return; } if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); goTo(chMid(Math.min(11, chOf(targetP) + 1))); } if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); goTo(Math.max(.004, chMid(Math.max(0, chOf(targetP) - 1)))); } });
+$("#copyMail").addEventListener("click", async () => { const t = $("#mailTxt").textContent; try { await navigator.clipboard.writeText(t); $("#copyMsg").textContent = "コピーしました。"; } catch (e) { const r = document.createRange(); r.selectNodeContents($("#mailTxt")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copyMsg").textContent = "選択しました。コピーしてください。"; } });
+const chs = $$(".ch").map(el => ({ el, a: +el.dataset.a, b: +el.dataset.b, letters: [] }));
+chs.forEach(c => { $$(".big", c.el).forEach(big => { const t = big.dataset.t; big.textContent = ""; t.split(" ").forEach((w, wi, arr) => { const ws = document.createElement("span"); ws.className = "w"; [...w].forEach(ch => { const s = document.createElement("span"); s.className = "l"; s.textContent = ch; ws.appendChild(s); c.letters.push(s); }); big.appendChild(ws); if (wi < arr.length - 1) big.appendChild(document.createTextNode(" ")); }); }); c.letters.forEach((s, i) => s.dataset.i = i / Math.max(1, c.letters.length - 1)); });
+addEventListener("pointermove", e => { const h = innerHeight; mouse.x = (e.clientX - innerWidth / 2) / h * 2 * SF; mouse.y = -(e.clientY - h / 2) / h * 2 * SF; mouseSeen = true; });
+addEventListener("pointerleave", () => { mouseSeen = false; });
+const aud = { ctx: null, g: null, on: false };
+function setSound(on) { if (on && !aud.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const c = aud.ctx = new AC(); aud.g = c.createGain(); aud.g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 300; [55, 82.4, 110.2, 164.9].forEach((f, i) => { const o = c.createOscillator(); o.type = i ? "sine" : "triangle"; o.frequency.value = f; const g = c.createGain(); g.gain.value = .06 / (i + 1); o.connect(g); g.connect(lp); o.start(); }); lp.connect(aud.g); aud.g.connect(c.destination); }
+  aud.on = on; if (aud.ctx) { if (on) aud.ctx.resume(); aud.g.gain.setTargetAtTime(on ? .5 : 0, aud.ctx.currentTime, .1); } $("#snd").setAttribute("aria-pressed", String(on)); $("#snd").textContent = on ? "Sound on" : "Sound off"; }
+function chime(f, v) { if (!aud.ctx || !aud.on) return; const c = aud.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + 1.4); o.connect(g); g.connect(aud.g); o.start(t); o.stop(t + 1.5); }
+$("#snd").addEventListener("click", () => setSound(!aud.on)); addEventListener("pagehide", () => { try { aud.ctx && aud.ctx.close(); } catch (e) {} });
+let prevEv = 0; const EVENTS = [[.1, () => { chime(660, .25); setTimeout(() => chime(990, .15), 120); }], [.5, () => chime(330, .2)], [.917, () => chime(440, .25)]];
+let dprBase = Math.min(devicePixelRatio, mobile ? 1.25 : 1.5), qual = mobile ? .6 : .8;
+function applyRes() { const r = dprBase * qual; renderer.setPixelRatio(r); renderer.setSize(innerWidth, innerHeight, false); const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); U.uRes.value.copy(sz); const asp = innerWidth / innerHeight; U.uAsp.value = asp; SF = Math.max(1, 1 / (asp * 1.3)); U.uSF.value = SF; }
+addEventListener("resize", applyRes); applyRes();
+const railFill = $("#railFill"), cnEl = $("#cn"); const dts = []; let first = true;
+function update(dt) {
+  if (!paused) tm += dt * (reduce ? .25 : 1);
+  P += (targetP - P) * (1 - Math.exp(-dt * (reduce ? 25 : 6))); vel += ((P - lastP) / Math.max(dt, .001) - vel) * (1 - Math.exp(-dt * 8)); lastP = P;
+  mouseS.x += (mouse.x - mouseS.x) * (1 - Math.exp(-dt * 6)); mouseS.y += (mouse.y - mouseS.y) * (1 - Math.exp(-dt * 6));
+  U.uP.value = P; U.uTime.value = tm; U.uMouse.value.set(mouseSeen ? mouseS.x : mouseS.x * .98, mouseSeen ? mouseS.y : mouseS.y * .98); U.uVel.value = vel; U.uQ.value = mobile ? .3 + .4 * qual : qual;
+  const x = P * 12, ci = chOf(P), nx = Math.min(11, ci + 1), tr = ss(.9, 1., x - ci); const fgc = tr > .5 ? FG[nx] : FG[ci]; document.body.style.setProperty("--fg", fgc);
+  for (const c of chs) { const f = ss(c.a, c.a + .014, P) * (1 - ss(c.b - .014, c.b, P)); c.el.style.visibility = f > .005 ? "visible" : "hidden"; if (f <= .005) continue; c.el.style.opacity = Math.min(1, f * 1.4);
+    for (const s of c.letters) { const d = +s.dataset.i * .45; const lf = clamp((f - d * .6) / .55, 0, 1); const e = lf * lf * (3 - 2 * lf); s.style.opacity = e; s.style.transform = `translate3d(0,${(1 - e) * 36}px,0)`; s.style.filter = e < .98 ? `blur(${(1 - e) * 9}px)` : "none"; } }
+  railFill.style.width = (P * 100).toFixed(2) + "%"; idxBtns.forEach((b, i) => b.classList.toggle("on", i === ci)); cnEl.textContent = `${String(ci + 1).padStart(2, "0")} / 12`;
+  if (aud.on) for (const [t, fn] of EVENTS) if (prevEv < t && P >= t) fn(); prevEv = P;
+}
+const render = () => renderer.render(scene, cam);
+let lastT = performance.now(), saveT = 0;
+function loop(now) {
+  requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, .05); lastT = now; if (document.hidden) return; stepAnim(now); update(dt); render();
+  dts.push(dt); if (dts.length > 45) { const avg = dts.reduce((a, b) => a + b) / dts.length; dts.length = 0; if (avg > .036 && qual > .4) { qual = Math.max(.4, qual - .1); applyRes(); } else if (avg < .019 && qual < (mobile ? .75 : .95)) { qual = Math.min(mobile ? .75 : .95, qual + .05); applyRes(); } }
+  if (first) { first = false; setTimeout(() => $("#veil").classList.add("off"), 300); }
+  if (now - saveT > 800) { saveT = now; try { sessionStorage.setItem("mirage_p", String(targetP)); } catch (e) {} }
+}
+let sp = 0; try { sp = parseFloat(sessionStorage.getItem("mirage_p") || "0") || 0; } catch (e) {}
+requestAnimationFrame(() => { if (sp > .001) { scrollTo(0, sp * maxScroll()); targetP = sp; P = sp; lastP = sp; prevEv = sp; } });
+window.__mirage = { renderAt(p) { targetP = P = lastP = prevEv = p; update(.016); render(); }, state: () => ({ P, qual }), setQ(q) { qual = q; applyRes(); }, setSound, setMouse(x, y) { mouse.x = mouseS.x = x; mouse.y = mouseS.y = y; mouseSeen = true; } };
+if (!window.__mirageManual) requestAnimationFrame(loop); else $("#veil").classList.add("off");
+})();
+</script>
