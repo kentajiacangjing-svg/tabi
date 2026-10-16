@@ -1,0 +1,305 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { businessSignupAction, updateCompanyProfileAction } from "@/app/actions/business";
+import { Button, Field, Input, Notice, Select, Textarea, cx } from "./ui";
+
+export interface CompanyFormValues {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  contact_person: string;
+  tagline: string;
+  description: string;
+  specialties: string;
+  warranty: string;
+  website_url: string;
+  sns_url: string;
+  business_hours: string;
+  license_number: string;
+  corporate_number: string;
+  qualifications: string;
+  price_band_min: number;
+  price_band_max: number;
+  lead_time_weeks: number;
+  self_construction: number;
+  category_works: Record<string, number>; // selected category ids -> works count
+  area_ids: string[];
+}
+
+export const EMPTY_COMPANY: CompanyFormValues = {
+  name: "",
+  address: "",
+  phone: "",
+  email: "",
+  contact_person: "",
+  tagline: "",
+  description: "",
+  specialties: "",
+  warranty: "",
+  website_url: "",
+  sns_url: "",
+  business_hours: "",
+  license_number: "",
+  corporate_number: "",
+  qualifications: "",
+  price_band_min: 0,
+  price_band_max: 0,
+  lead_time_weeks: 4,
+  self_construction: 1,
+  category_works: {},
+  area_ids: [],
+};
+
+interface Opt {
+  id: string;
+  name: string;
+  sub?: string;
+}
+
+export function CompanyForm({
+  mode,
+  initial,
+  categories,
+  areas,
+  plans,
+  defaultPlan,
+}: {
+  mode: "signup" | "edit";
+  initial: CompanyFormValues;
+  categories: Opt[];
+  areas: Opt[];
+  plans?: { code: string; label: string }[];
+  defaultPlan?: string;
+}) {
+  const router = useRouter();
+  const [cats, setCats] = useState<Record<string, number>>(initial.category_works);
+  const [areaIds, setAreaIds] = useState<string[]>(initial.area_ids);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [pending, start] = useTransition();
+
+  return (
+    <form
+      action={(fd) =>
+        start(async () => {
+          setError(null);
+          setSaved(false);
+          Object.entries(cats).forEach(([id, n]) => {
+            fd.append("category_ids", id);
+            fd.set(`works_${id}`, String(n));
+          });
+          areaIds.forEach((id) => fd.append("area_ids", id));
+          const r = mode === "signup" ? await businessSignupAction(fd) : await updateCompanyProfileAction(fd);
+          if (!r.ok) {
+            setError(r.error);
+            return;
+          }
+          if (mode === "signup" && "redirect" in r) {
+            router.push(r.redirect as string);
+            router.refresh();
+          } else {
+            setSaved(true);
+            router.refresh();
+          }
+        })
+      }
+      className="space-y-8"
+    >
+      <Section title="会社情報">
+        <Field label="会社名" required>
+          <Input name="name" defaultValue={initial.name} required maxLength={80} />
+        </Field>
+        <Field label="キャッチコピー" hint="候補カードに表示されます（80文字まで）">
+          <Input name="tagline" defaultValue={initial.tagline} maxLength={80} placeholder="例: 塗装職人が直接伺う、湘南の外壁塗装専門店" />
+        </Field>
+        <Field label="会社説明">
+          <Textarea name="description" defaultValue={initial.description} rows={5} maxLength={2000} />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="所在地" required>
+            <Input name="address" defaultValue={initial.address} required />
+          </Field>
+          <Field label="営業時間">
+            <Input name="business_hours" defaultValue={initial.business_hours} placeholder="9:00〜18:00（日曜定休）" />
+          </Field>
+          <Field label="電話番号" hint="運営からの連絡用。お客様には公開されません。" required>
+            <Input name="phone" type="tel" defaultValue={initial.phone} required />
+          </Field>
+          <Field label="会社メールアドレス" hint="運営からの連絡用。お客様には公開されません。" required>
+            <Input name="email" type="email" defaultValue={initial.email} required />
+          </Field>
+          <Field label="担当者名" required>
+            <Input name="contact_person" defaultValue={initial.contact_person} required />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="対応カテゴリ・エリア" sub="選んだカテゴリ×エリアの相談だけが届きます。">
+        <div>
+          <div className="mb-2 text-[13px] font-semibold text-ink-2">対応カテゴリと施工実績数</div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {categories.map((c) => {
+              const on = c.id in cats;
+              return (
+                <div key={c.id} className={cx("flex items-center gap-3 rounded-2xl border px-3.5 py-2.5", on ? "border-brand bg-brand-soft/40" : "border-line")}>
+                  <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() =>
+                        setCats((x) => {
+                          const n = { ...x };
+                          if (on) delete n[c.id];
+                          else n[c.id] = 0;
+                          return n;
+                        })
+                      }
+                      className="size-4 accent-[var(--color-brand)]"
+                    />
+                    {c.name}
+                  </label>
+                  {on && (
+                    <span className="flex items-center gap-1 text-[12px] text-muted">
+                      実績
+                      <input
+                        type="number"
+                        min={0}
+                        value={cats[c.id]}
+                        onChange={(e) => setCats((x) => ({ ...x, [c.id]: Math.max(0, Number(e.target.value) || 0) }))}
+                        className="w-16 rounded-lg border border-line px-2 py-1 text-right text-sm text-ink"
+                        aria-label={`${c.name}の施工実績数`}
+                      />
+                      件
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <div className="mb-2 text-[13px] font-semibold text-ink-2">対応エリア</div>
+          <div className="flex flex-wrap gap-2">
+            {areas.map((a) => {
+              const on = areaIds.includes(a.id);
+              return (
+                <button
+                  type="button"
+                  key={a.id}
+                  onClick={() => setAreaIds((x) => (on ? x.filter((y) => y !== a.id) : [...x, a.id]))}
+                  className={cx("rounded-full border px-4 py-2 text-sm font-medium", on ? "border-ink bg-ink text-white" : "border-line bg-white hover:border-ink/20")}
+                >
+                  {a.name}
+                  {a.sub && <span className={cx("ml-1 text-[11px]", on ? "text-white/60" : "text-faint")}>{a.sub}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="強み・条件">
+        <Field label="得意工事" hint="カンマ区切り">
+          <Input name="specialties" defaultValue={initial.specialties} placeholder="外壁塗装, 屋根塗装, 防水" />
+        </Field>
+        <Field label="保証内容">
+          <Input name="warranty" defaultValue={initial.warranty} placeholder="外壁10年保証 / 定期点検あり" />
+        </Field>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Field label="価格帯（下限・円）">
+            <Input name="price_band_min" type="number" min={0} step={10000} defaultValue={initial.price_band_min || ""} />
+          </Field>
+          <Field label="価格帯（上限・円）">
+            <Input name="price_band_max" type="number" min={0} step={10000} defaultValue={initial.price_band_max || ""} />
+          </Field>
+          <Field label="着工までの目安（週）">
+            <Input name="lead_time_weeks" type="number" min={0} max={52} defaultValue={initial.lead_time_weeks} />
+          </Field>
+        </div>
+        <label className="flex items-center gap-2.5 text-sm">
+          <input type="checkbox" name="self_construction" defaultChecked={!!initial.self_construction} className="size-4 accent-[var(--color-brand)]" />
+          自社施工（自社の職人が施工する）
+        </label>
+      </Section>
+
+      <Section title="許可・資格・Web" sub="任意。登録すると信頼性の表示に使われます。">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="建設業許可番号">
+            <Input name="license_number" defaultValue={initial.license_number} />
+          </Field>
+          <Field label="法人番号（13桁）">
+            <Input name="corporate_number" inputMode="numeric" defaultValue={initial.corporate_number} />
+          </Field>
+          <Field label="資格">
+            <Input name="qualifications" defaultValue={initial.qualifications} placeholder="一級塗装技能士, 外装劣化診断士" />
+          </Field>
+          <Field label="自社サイトURL">
+            <Input name="website_url" type="url" defaultValue={initial.website_url} placeholder="https://" />
+          </Field>
+          <Field label="SNS URL">
+            <Input name="sns_url" type="url" defaultValue={initial.sns_url} placeholder="https://" />
+          </Field>
+        </div>
+        {mode === "edit" && (
+          <Field label="ロゴ画像" hint="正方形推奨・10MBまで">
+            <Input name="logo" type="file" accept="image/*" className="py-2.5 text-sm" />
+          </Field>
+        )}
+      </Section>
+
+      {mode === "signup" && (
+        <Section title="管理者アカウント" sub="ログインに使います。あとから担当者を追加できます。">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="管理者のお名前" required>
+              <Input name="owner_name" required />
+            </Field>
+            <Field label="ログイン用メールアドレス" required>
+              <Input name="login_email" type="email" autoComplete="email" required />
+            </Field>
+            <Field label="パスワード" hint="8文字以上" required>
+              <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
+            </Field>
+            {plans && (
+              <Field label="ご希望のプラン">
+                <Select name="plan_code" defaultValue={defaultPlan}>
+                  {plans.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
+          <label className="flex items-start gap-2.5 text-sm">
+            <input type="checkbox" name="agree" className="mt-0.5 size-4 accent-[var(--color-brand)]" required />
+            <span>
+              利用規約に同意します。お客様とのやり取り・見積もり・契約はSUMATCH内で行い、成約時は成功報酬の対象となることを理解しました。
+            </span>
+          </label>
+        </Section>
+      )}
+
+      {error && <Notice tone="danger" icon="alert">{error}</Notice>}
+      {saved && <Notice tone="ok" icon="check">保存しました。</Notice>}
+      <div className="sticky bottom-20 z-10 md:bottom-4">
+        <Button size="lg" className="w-full shadow-[var(--shadow-pop)] sm:w-auto" variant={mode === "signup" ? "dark" : "primary"} disabled={pending}>
+          {pending ? "送信中…" : mode === "signup" ? "登録して審査を申し込む" : "保存する"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
+      <h2 className="text-[17px] font-bold">{title}</h2>
+      {sub && <p className="mt-1 text-[13px] text-muted">{sub}</p>}
+      <div className="mt-5 space-y-4">{children}</div>
+    </section>
+  );
+}

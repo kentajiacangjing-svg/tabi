@@ -1,0 +1,341 @@
+// SUMATCH database schema.
+// Written in portable SQL (TEXT ids, ISO timestamps) so it can be moved to
+// Postgres / Supabase later with minimal changes. Every table has created_at.
+
+export const SCHEMA = /* sql */ `
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('customer','business','admin')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended')),
+  notify_email INTEGER NOT NULL DEFAULT 1,
+  notify_browser INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS plans (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  monthly_price INTEGER NOT NULL,
+  match_limit INTEGER NOT NULL,
+  success_fee_rate REAL NOT NULL DEFAULT 0.03,
+  description TEXT NOT NULL DEFAULT '',
+  active INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  group_name TEXT NOT NULL DEFAULT '住まい',
+  description TEXT NOT NULL DEFAULT '',
+  icon TEXT NOT NULL DEFAULT 'home',
+  price_min INTEGER NOT NULL DEFAULT 0,
+  price_max INTEGER NOT NULL DEFAULT 0,
+  price_note TEXT NOT NULL DEFAULT '',
+  concerns TEXT NOT NULL DEFAULT '[]',
+  active INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS service_areas (
+  id TEXT PRIMARY KEY,
+  prefecture TEXT NOT NULL,
+  city TEXT NOT NULL,
+  region TEXT NOT NULL DEFAULT '',
+  postal_prefixes TEXT NOT NULL DEFAULT '',
+  active INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  UNIQUE (prefecture, city)
+);
+
+CREATE TABLE IF NOT EXISTS companies (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_kana TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','suspended')),
+  address TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  contact_person TEXT NOT NULL DEFAULT '',
+  tagline TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  specialties TEXT NOT NULL DEFAULT '',
+  warranty TEXT NOT NULL DEFAULT '',
+  self_construction INTEGER NOT NULL DEFAULT 1,
+  price_band_min INTEGER NOT NULL DEFAULT 0,
+  price_band_max INTEGER NOT NULL DEFAULT 0,
+  lead_time_weeks INTEGER NOT NULL DEFAULT 4,
+  website_url TEXT NOT NULL DEFAULT '',
+  sns_url TEXT NOT NULL DEFAULT '',
+  business_hours TEXT NOT NULL DEFAULT '',
+  license_number TEXT NOT NULL DEFAULT '',
+  corporate_number TEXT NOT NULL DEFAULT '',
+  qualifications TEXT NOT NULL DEFAULT '',
+  founded_year INTEGER,
+  employees INTEGER,
+  works_total INTEGER NOT NULL DEFAULT 0,
+  rating_avg REAL NOT NULL DEFAULT 0,
+  review_count INTEGER NOT NULL DEFAULT 0,
+  avg_response_minutes INTEGER NOT NULL DEFAULT 120,
+  logo_file_id TEXT,
+  brand_color TEXT NOT NULL DEFAULT '#2557D6',
+  plan_id TEXT REFERENCES plans(id),
+  trial_ends_at TEXT,
+  web_interest INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  approved_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS company_members (
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  member_role TEXT NOT NULL DEFAULT 'staff' CHECK (member_role IN ('owner','staff')),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (company_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS company_categories (
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  works_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (company_id, category_id)
+);
+
+CREATE TABLE IF NOT EXISTS company_areas (
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  area_id TEXT NOT NULL REFERENCES service_areas(id) ON DELETE CASCADE,
+  PRIMARY KEY (company_id, area_id)
+);
+
+CREATE TABLE IF NOT EXISTS company_works (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  category_id TEXT REFERENCES categories(id),
+  title TEXT NOT NULL,
+  city TEXT NOT NULL DEFAULT '',
+  cost_label TEXT NOT NULL DEFAULT '',
+  image_url TEXT,
+  file_id TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS files (
+  id TEXT PRIMARY KEY,
+  owner_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('public','project','match','contract')),
+  scope_id TEXT,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  original_name TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category_id TEXT NOT NULL REFERENCES categories(id),
+  area_id TEXT REFERENCES service_areas(id),
+  title TEXT NOT NULL,
+  postal_code TEXT NOT NULL DEFAULT '',
+  prefecture TEXT NOT NULL,
+  city TEXT NOT NULL,
+  house_type TEXT NOT NULL,
+  building_age INTEGER,
+  concerns TEXT NOT NULL DEFAULT '',
+  details TEXT NOT NULL DEFAULT '',
+  desired_timing TEXT NOT NULL,
+  budget_min INTEGER,
+  budget_max INTEGER,
+  contact_time TEXT NOT NULL DEFAULT '',
+  estimate_min INTEGER,
+  estimate_max INTEGER,
+  status TEXT NOT NULL DEFAULT 'consulting' CHECK (status IN ('consulting','quoting','comparing','contracted','in_progress','completed','cancelled')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS project_images (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  file_id TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  sort INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- One row per (project, eligible company). Both sides say yes => matched.
+CREATE TABLE IF NOT EXISTS matches (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  reasons TEXT NOT NULL DEFAULT '[]',
+  customer_interest INTEGER NOT NULL DEFAULT 0,
+  customer_interest_at TEXT,
+  company_response TEXT NOT NULL DEFAULT 'none' CHECK (company_response IN ('none','yes','no')),
+  company_response_at TEXT,
+  status TEXT NOT NULL DEFAULT 'candidate' CHECK (status IN ('candidate','matched','closed')),
+  matched_at TEXT,
+  customer_last_read_at TEXT,
+  company_last_read_at TEXT,
+  last_message_at TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE (project_id, company_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  sender_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  sender_side TEXT NOT NULL CHECK (sender_side IN ('customer','company','system')),
+  kind TEXT NOT NULL DEFAULT 'text' CHECK (kind IN ('text','image','file','quote','system')),
+  body TEXT NOT NULL DEFAULT '',
+  file_id TEXT REFERENCES files(id),
+  quote_id TEXT,
+  contact_flags TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quotes (
+  id TEXT PRIMARY KEY,
+  match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  created_by TEXT REFERENCES users(id),
+  version INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted','superseded','accepted','declined')),
+  title TEXT NOT NULL DEFAULT '',
+  subtotal INTEGER NOT NULL DEFAULT 0,
+  overhead INTEGER NOT NULL DEFAULT 0,
+  discount INTEGER NOT NULL DEFAULT 0,
+  tax INTEGER NOT NULL DEFAULT 0,
+  total INTEGER NOT NULL DEFAULT 0,
+  warranty TEXT NOT NULL DEFAULT '',
+  warranty_years REAL NOT NULL DEFAULT 0,
+  duration TEXT NOT NULL DEFAULT '',
+  duration_days INTEGER,
+  materials TEXT NOT NULL DEFAULT '',
+  payment_terms TEXT NOT NULL DEFAULT '',
+  extra_costs TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  valid_until TEXT,
+  pdf_file_id TEXT REFERENCES files(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quote_items (
+  id TEXT PRIMARY KEY,
+  quote_id TEXT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  quantity REAL NOT NULL DEFAULT 1,
+  unit TEXT NOT NULL DEFAULT '式',
+  unit_price INTEGER NOT NULL DEFAULT 0,
+  amount INTEGER NOT NULL DEFAULT 0,
+  sort INTEGER NOT NULL DEFAULT 0
+);
+
+-- Future: e-sign, escrow payment, warranty and progress tracking hang off this table.
+CREATE TABLE IF NOT EXISTS contracts (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  match_id TEXT NOT NULL REFERENCES matches(id),
+  quote_id TEXT REFERENCES quotes(id),
+  amount INTEGER NOT NULL,
+  contract_date TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  contract_file_id TEXT REFERENCES files(id),
+  status TEXT NOT NULL DEFAULT 'contracted' CHECK (status IN ('contracted','in_progress','completed','cancelled')),
+  success_fee_rate REAL NOT NULL DEFAULT 0.03,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  project_id TEXT UNIQUE REFERENCES projects(id) ON DELETE SET NULL,
+  customer_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  title TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  author_label TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  link TEXT NOT NULL DEFAULT '',
+  read_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- Outgoing email log. In the MVP this table is the mail transport; plug SMTP / LINE later.
+CREATE TABLE IF NOT EXISTS email_outbox (
+  id TEXT PRIMARY KEY,
+  to_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'email',
+  status TEXT NOT NULL DEFAULT 'queued',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id TEXT PRIMARY KEY,
+  reporter_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  target_type TEXT NOT NULL CHECK (target_type IN ('match','company','user','message')),
+  target_id TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved')),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,
+  user_id TEXT,
+  session_key TEXT,
+  meta TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_customer ON projects(customer_id);
+CREATE INDEX IF NOT EXISTS idx_matches_project ON matches(project_id);
+CREATE INDEX IF NOT EXISTS idx_matches_company ON matches(company_id);
+CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_quotes_project ON quotes(project_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind, created_at);
+CREATE INDEX IF NOT EXISTS idx_members_user ON company_members(user_id);
+`;
