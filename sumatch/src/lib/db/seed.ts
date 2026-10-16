@@ -75,18 +75,27 @@ export function seed() {
     });
 
     /* ---------- categories (add more from /admin) ---------- */
+    // The first four are shown on the top page; the rest live under 「その他」.
     const cats: [string, string, string, string, string, number, number, string, string[], number][] = [
-      ["exterior-paint", "外壁塗装", "住まい", "paint", "外壁の塗り替え・補修", 800000, 1300000, "30坪前後の戸建て・シリコン〜フッ素塗料の目安", ["ひび割れ", "色あせ", "チョーキング（白い粉）", "コケ・カビ", "前回の塗装から10年以上", "雨漏りが心配"], 1],
-      ["roof", "屋根", "住まい", "roof", "屋根の修理・塗装・葺き替え", 400000, 1500000, "部分補修〜カバー工法の目安", ["雨漏り", "瓦のズレ・割れ", "棟板金の浮き", "塗装のはがれ", "台風後の点検"], 1],
-      ["water", "水回り", "住まい", "water", "キッチン・浴室・トイレ・洗面", 200000, 1500000, "設備交換〜ユニットバス交換の目安", ["浴室が古い", "キッチンを交換したい", "トイレの水漏れ", "洗面台の交換", "給湯器の不調"], 1],
-      ["interior", "内装", "住まい", "interior", "クロス・床・間取り変更", 100000, 800000, "6〜8畳×数部屋のクロス・床張替えの目安", ["クロスの汚れ・はがれ", "床のきしみ", "和室を洋室に", "収納を増やしたい", "間取りを変えたい"], 1],
-      ["exterior", "外構", "住まい", "fence", "フェンス・駐車場・庭", 300000, 2000000, "フェンス・カーポート・土間コンクリートの目安", ["駐車場を広げたい", "フェンスの交換", "カーポート設置", "庭の手入れが大変", "門まわりを新しく"], 1],
-      ["aircon", "エアコン", "住まい", "aircon", "取付・交換・クリーニング", 30000, 250000, "1台あたり・本体代込みの目安", ["効きが悪い", "異音・異臭", "新しく取り付けたい", "古いエアコンの交換"], 1],
-      ["house-cleaning", "ハウスクリーニング", "暮らし", "sparkle", "水回り・エアコン・まるごと清掃", 15000, 120000, "箇所ごと〜空室まるごとの目安", ["キッチンの油汚れ", "浴室のカビ", "引越し前後の清掃", "定期的に頼みたい"], 1],
-      ["moving", "引越し", "暮らし", "truck", "近距離・単身・家族の引越し", 30000, 300000, "", [], 0],
+      ["exterior-paint", "外壁・屋根", "住まい", "roof", "塗り替え・補修・雨漏り", 400000, 1800000, "30坪前後の戸建て。部分補修〜外壁と屋根の同時塗装の目安", ["色あせ・汚れ", "ひび割れ", "雨漏り", "コケ・カビ", "前回の工事から10年以上"], 1],
+      ["kitchen", "キッチン", "住まい", "water", "交換・レイアウト変更", 500000, 1500000, "システムキッチン交換の目安", ["古くなった", "使いにくい", "収納を増やしたい", "IHにしたい"], 1],
+      ["bath", "お風呂", "住まい", "water", "ユニットバス交換・在来浴室から", 700000, 1600000, "ユニットバス交換の目安", ["冬が寒い", "カビ・汚れ", "段差をなくしたい", "給湯器の不調"], 1],
+      ["interior", "内装", "住まい", "interior", "クロス・床・間取り", 100000, 800000, "6〜8畳×数部屋のクロス・床張替えの目安", ["クロスの汚れ・はがれ", "床のきしみ", "和室を洋室に", "間取りを変えたい"], 1],
+      ["toilet", "トイレ・洗面", "住まい", "water", "便器・洗面台の交換", 150000, 500000, "本体交換と内装の目安", ["水漏れ", "古くなった", "掃除しやすくしたい"], 1],
+      ["exterior", "外構・庭", "住まい", "fence", "フェンス・駐車場・庭", 300000, 2000000, "フェンス・カーポート・土間コンクリートの目安", ["駐車場を広げたい", "フェンスの交換", "カーポート設置", "庭の手入れが大変"], 1],
+      ["aircon", "エアコン", "住まい", "aircon", "取付・交換", 30000, 250000, "1台あたり・本体代込みの目安", ["効きが悪い", "新しく取り付けたい", "古いエアコンの交換"], 1],
+      ["house-cleaning", "ハウスクリーニング", "暮らし", "sparkle", "水回り・エアコン・空室", 15000, 120000, "箇所ごと〜空室まるごとの目安", ["キッチンの油汚れ", "浴室のカビ", "引越し前後の清掃"], 1],
+      ["moving", "引越し", "暮らし", "truck", "近距離・単身・家族", 30000, 300000, "", [], 0],
       ["junk", "不用品回収", "暮らし", "box", "家具・家電の回収", 10000, 200000, "", [], 0],
-      ["car", "車", "くるま", "car", "板金・修理・コーティング", 20000, 500000, "", [], 0],
     ];
+    // Old category keys used below map onto the new set.
+    const remap: Record<string, string[]> = { roof: ["exterior-paint"], water: ["kitchen", "bath", "toilet"] };
+    const expandCats = (list: [string, number][]) => {
+      const out = new Map<string, number>();
+      for (const [slug, n] of list) for (const s of remap[slug] ?? [slug]) out.set(s, (out.get(s) ?? 0) + n);
+      return [...out.entries()];
+    };
+    const workCat = (img: string, slug: string) => (slug === "water" ? (img.startsWith("kitchen") ? "kitchen" : "bath") : (remap[slug]?.[0] ?? slug));
     const catId: Record<string, string> = {};
     cats.forEach(([slug, name, group, icon, desc, min, max, note, concerns, active], i) => {
       catId[slug] = newId("cat");
@@ -211,10 +220,10 @@ export function seed() {
         const sid = user(c.staff[0], c.staff[1], "business", ago(60));
         insert("company_members", { company_id: id, user_id: sid, member_role: "staff", created_at: ago(60) });
       }
-      for (const [slug, n] of c.cats) insert("company_categories", { company_id: id, category_id: catId[slug], works_count: n });
+      for (const [slug, n] of expandCats(c.cats)) insert("company_categories", { company_id: id, category_id: catId[slug], works_count: n });
       for (const a of c.areas) insert("company_areas", { company_id: id, area_id: areaId[a] });
       for (const [img, slug, title, city, cost] of c.works) {
-        insert("company_works", { id: newId("wk"), company_id: id, category_id: catId[slug], title, city, cost_label: cost, image_url: `/seed/${img}`, created_at: ago(40) });
+        insert("company_works", { id: newId("wk"), company_id: id, category_id: catId[workCat(img, slug)], title, city, cost_label: cost, image_url: `/seed/${img}`, created_at: ago(40) });
       }
     }
 
@@ -271,7 +280,7 @@ export function seed() {
     };
     const matchOf = (projectId: string, key: string) => get<Match>("SELECT * FROM matches WHERE project_id = ? AND company_id = ?", projectId, companyId[key])!;
     const setMatched = (m: Match, at: string, extra: Record<string, string | number> = {}) =>
-      update("matches", m.id, { customer_interest: 1, customer_interest_at: at, company_response: "yes", company_response_at: at, status: "matched", matched_at: at, ...extra });
+      update("matches", m.id, { customer_interest: 1, customer_interest_at: at, company_response: "yes", company_response_at: at, status: "matched", matched_at: at, customer_match_seen_at: at, company_match_seen_at: at, ...extra });
 
     const msg = (matchId: string, side: "customer" | "company" | "system", sender: string | null, body: string, at: string, extra: Record<string, string | null> = {}) => {
       insert("messages", { id: newId("msg"), match_id: matchId, sender_user_id: sender, sender_side: side, kind: side === "system" ? "system" : "text", body, created_at: at, ...extra });
@@ -306,9 +315,9 @@ export function seed() {
       timing: "3m", budget: [1000000, 1500000], contact: "平日 夕方以降", status: "comparing", created: ago(8), photos: ["exterior-2.svg", "wall-crack.svg", "exterior-4.svg"],
     });
     const yScores: Record<string, [number, string[]]> = {
-      "shonan-paint": [94, ["対応地域（藤沢市）", "希望予算帯", "外壁塗装の実績多数", "希望時期対応可能", "返信が早い"]],
-      "fujisawa-reform": [89, ["対応地域（藤沢市）", "希望予算帯", "外壁塗装の実績多数", "希望時期対応可能"]],
-      "home-works": [85, ["対応地域（藤沢市）", "希望予算帯", "外壁塗装の実績多数", "希望時期対応可能"]],
+      "shonan-paint": [94, ["対応地域（藤沢市）", "希望予算帯", "外壁・屋根の実績多数", "希望時期対応可能", "返信が早い"]],
+      "fujisawa-reform": [89, ["対応地域（藤沢市）", "希望予算帯", "外壁・屋根の実績多数", "希望時期対応可能"]],
+      "home-works": [85, ["対応地域（藤沢市）", "希望予算帯", "外壁・屋根の実績多数", "希望時期対応可能"]],
     };
     for (const [key, [score, reasons]] of Object.entries(yScores)) update("matches", matchOf(pY.id, key).id, { score, reasons: JSON.stringify(reasons) });
     const ySP = matchOf(pY.id, "shonan-paint"), yFR = matchOf(pY.id, "fujisawa-reform"), yHW = matchOf(pY.id, "home-works");
@@ -353,8 +362,8 @@ export function seed() {
 
     // 2) 鈴木 花子 — 工事中（藤沢リフォームに決定）
     const pS = mkProject({
-      customer: suzuki, slug: "water", city: "茅ヶ崎市", postal: "253-0041", house: "マンション", age: 24, title: "浴室リフォームの相談",
-      concerns: ["浴室が古い", "給湯器の不調"], details: "在来工法の浴室で冬が寒いです。ユニットバスへの交換を考えています。", timing: "1m", budget: [1000000, 1500000],
+      customer: suzuki, slug: "bath", city: "茅ヶ崎市", postal: "253-0041", house: "マンション", age: 24, title: "浴室リフォームの相談",
+      concerns: ["浴室が古い", "給湯器の不調"], details: "在来工法の浴室で冬が寒いです。ユニットバスへの交換を考えています。", timing: "asap", budget: [1000000, 1500000],
       contact: "土日祝", status: "in_progress", created: ago(35), photos: ["bath-2.svg"],
     });
     const sFR = matchOf(pS.id, "fujisawa-reform"), sHW = matchOf(pS.id, "hiratsuka-water");
@@ -381,7 +390,7 @@ export function seed() {
 
     // 3) 高橋 誠 — 完了（茅ヶ崎ルーフ工業）
     const pT = mkProject({
-      customer: takahashi, slug: "roof", city: "平塚市", postal: "254-0034", house: "戸建て", age: 32, title: "雨漏りと屋根の修理",
+      customer: takahashi, slug: "exterior-paint", city: "平塚市", postal: "254-0034", house: "戸建て", age: 32, title: "雨漏りと屋根の修理",
       concerns: ["雨漏り", "瓦のズレ・割れ"], details: "台風のあと2階の天井にシミが出ました。", timing: "asap", budget: [500000, 1000000],
       contact: "いつでも可", status: "completed", created: ago(65), photos: ["roof-2.svg"],
     });
@@ -401,7 +410,7 @@ export function seed() {
     // 4) 伊藤 由美 — 新着（まだ誰にも依頼していない）
     mkProject({
       customer: ito, slug: "interior", city: "藤沢市", postal: "251-0025", house: "マンション", age: 12, title: "リビングと寝室のクロス張替え",
-      concerns: ["クロスの汚れ・はがれ"], details: "リビング（12畳）と寝室（6畳）の壁紙を張り替えたいです。", timing: "1m", budget: [100000, 300000],
+      concerns: ["クロスの汚れ・はがれ"], details: "リビング（12畳）と寝室（6畳）の壁紙を張り替えたいです。", timing: "asap", budget: [100000, 300000],
       contact: "平日 日中", status: "consulting", created: ago(0, 6), photos: ["interior-2.svg", "interior-1.svg"],
     });
 
@@ -431,7 +440,10 @@ export function seed() {
         insert("events", { kind: "visit", session_key: `s${d}-${i}`, created_at: at, meta: "" });
         if (r() < 0.32) {
           insert("events", { kind: "diagnosis_start", session_key: `s${d}-${i}`, created_at: at, meta: "" });
-          if (r() < 0.55) insert("events", { kind: "diagnosis_complete", session_key: `s${d}-${i}`, created_at: at, meta: "" });
+          if (r() < 0.55) {
+            insert("events", { kind: "diagnosis_complete", session_key: `s${d}-${i}`, created_at: at, meta: "" });
+            if (r() < 0.8) insert("events", { kind: "company_view", session_key: `s${d}-${i}`, created_at: at, meta: `seed-${d}-${i}` });
+          }
         }
       }
     }

@@ -1,127 +1,127 @@
-// Generates the calm, flat illustrations used as demo photos (public/seed/*.svg).
+// Generates calm, material-style placeholder images for demo data (public/seed/*.svg).
+// Deliberately NOT fake houses: close-ups of surfaces (plaster, siding, slate, tile, wood),
+// so nothing pretends to be a real photo. Real companies replace these with their own work photos.
 // Run: node scripts/gen-seed-images.mjs
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const out = new URL("../public/seed/", import.meta.url);
 mkdirSync(out, { recursive: true });
 
-const W = 800, H = 600;
-const wrap = (bg, body) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${bg}"/>${body}</svg>\n`;
+const W = 1200, H = 900;
+const grain = (id, freq, opacity, seed = 3) => `
+  <filter id="${id}" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="${freq}" numOctaves="3" seed="${seed}" result="n"/>
+    <feColorMatrix type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="linear" slope="${opacity}"/></feComponentTransfer>
+  </filter>`;
 
-function exterior({ sky, wall, roof, trim, ground, scaffold = false, sun = true }) {
-  return wrap(
-    sky,
-    `${sun ? `<circle cx="660" cy="110" r="46" fill="#fff" opacity=".55"/>` : ""}
-<rect y="470" width="800" height="130" fill="${ground}"/>
-<rect x="190" y="250" width="420" height="230" fill="${wall}"/>
-<polygon points="160,262 400,120 640,262" fill="${roof}"/>
-<rect x="230" y="300" width="90" height="70" rx="4" fill="${trim}"/><rect x="480" y="300" width="90" height="70" rx="4" fill="${trim}"/>
-<rect x="365" y="370" width="70" height="110" rx="4" fill="${roof}" opacity=".85"/>
-<rect x="230" y="300" width="90" height="70" rx="4" fill="none" stroke="#fff" stroke-width="6" opacity=".6"/>
-<rect x="480" y="300" width="90" height="70" rx="4" fill="none" stroke="#fff" stroke-width="6" opacity=".6"/>
-${
-  scaffold
-    ? `<g stroke="#9AA3B2" stroke-width="6" opacity=".9">${[170, 290, 410, 530, 630].map((x) => `<line x1="${x}" y1="200" x2="${x}" y2="480"/>`).join("")}${[260, 340, 420].map((y) => `<line x1="160" y1="${y}" x2="640" y2="${y}"/>`).join("")}</g><rect x="150" y="190" width="500" height="290" fill="#E9EEF7" opacity=".35"/>`
-    : ""
-}`,
+const svg = (defs, body) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs}</defs>${body}</svg>\n`;
+
+/** Plaster / mortar wall, optional hairline crack and a strip of masking tape. */
+function plaster({ base, crack = false, tape = false, seed = 2 }) {
+  return svg(
+    grain("g", 0.9, 0.35, seed) + grain("g2", 0.012, 0.25, seed + 5),
+    `<rect width="${W}" height="${H}" fill="${base}"/>
+     <rect width="${W}" height="${H}" filter="url(#g2)"/>
+     <rect width="${W}" height="${H}" filter="url(#g)"/>
+     ${crack ? `<path d="M420 0 L452 160 L430 300 L488 470 L460 640 L506 900" stroke="#5f574c" stroke-width="3" fill="none" opacity=".55"/><path d="M452 160 L560 214" stroke="#5f574c" stroke-width="2" fill="none" opacity=".45"/>` : ""}
+     ${tape ? `<rect x="0" y="690" width="${W}" height="70" fill="#d9cfa4" opacity=".92"/><rect x="0" y="690" width="${W}" height="70" filter="url(#g)" opacity=".5"/>` : ""}`,
   );
 }
 
-function roofTiles({ bg, tile, line }) {
-  let rows = "";
-  for (let r = 0; r < 9; r++) {
-    for (let c = -1; c < 11; c++) {
-      const x = c * 80 + (r % 2 ? 40 : 0);
-      rows += `<rect x="${x}" y="${r * 70 - 20}" width="76" height="66" rx="8" fill="${tile}" opacity="${0.75 + ((r * 7 + c * 3) % 5) * 0.05}"/>`;
-    }
-    rows += `<line x1="0" x2="800" y1="${r * 70 + 46}" y2="${r * 70 + 46}" stroke="${line}" stroke-width="4"/>`;
+/** Horizontal lap siding, half freshly painted. */
+function siding({ old, fresh, split = 0.55, seed = 4 }) {
+  let boards = "";
+  for (let y = 0; y < H; y += 90) {
+    boards += `<rect x="0" y="${y}" width="${W}" height="88" fill="${old}"/><rect x="0" y="${y + 84}" width="${W}" height="6" fill="#000" opacity=".12"/>`;
   }
-  return wrap(bg, rows);
+  const x = Math.round(W * split);
+  let freshBoards = "";
+  for (let y = 0; y < H; y += 90) freshBoards += `<rect x="${x}" y="${y}" width="${W - x}" height="88" fill="${fresh}"/><rect x="${x}" y="${y + 84}" width="${W - x}" height="6" fill="#000" opacity=".1"/>`;
+  return svg(grain("g", 0.8, 0.28, seed), `${boards}${freshBoards}<rect width="${W}" height="${H}" filter="url(#g)"/><rect x="${x - 2}" y="0" width="4" height="${H}" fill="#000" opacity=".08"/>`);
 }
 
-function bath({ wall, tub, floor }) {
+/** Roof slate / tile courses. */
+function slate({ base, alt, seed = 6 }) {
   let tiles = "";
-  for (let y = 0; y < 360; y += 60) for (let x = 0; x < 800; x += 60) tiles += `<rect x="${x + 2}" y="${y + 2}" width="56" height="56" fill="#fff" opacity=".35"/>`;
-  return wrap(
-    wall,
-    `${tiles}<rect y="360" width="800" height="240" fill="${floor}"/>
-<rect x="120" y="300" width="460" height="170" rx="40" fill="${tub}"/><rect x="140" y="300" width="420" height="40" rx="20" fill="#fff" opacity=".6"/>
-<rect x="640" y="140" width="16" height="200" rx="8" fill="#B8C0CC"/><circle cx="648" cy="130" r="26" fill="#C9D0DA"/>`,
+  for (let r = 0, y = -20; y < H; r++, y += 110) {
+    for (let x = r % 2 ? -110 : 0; x < W; x += 220) {
+      tiles += `<rect x="${x + 3}" y="${y}" width="214" height="128" rx="4" fill="${(x / 220 + r) % 3 ? base : alt}"/>`;
+    }
+    tiles += `<rect x="0" y="${y + 104}" width="${W}" height="8" fill="#000" opacity=".22"/>`;
+  }
+  return svg(grain("g", 0.7, 0.3, seed), `<rect width="${W}" height="${H}" fill="${base}"/>${tiles}<rect width="${W}" height="${H}" filter="url(#g)"/>`);
+}
+
+/** Square ceramic tile with grout. */
+function tile({ base, grout, size = 150, seed = 8 }) {
+  let t = "";
+  for (let y = 0; y < H; y += size) for (let x = 0; x < W; x += size) t += `<rect x="${x + 3}" y="${y + 3}" width="${size - 6}" height="${size - 6}" rx="3" fill="${base}"/>`;
+  return svg(grain("g", 0.9, 0.18, seed) + `<linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="${grout}"/>${t}<rect width="${W}" height="${H}" fill="url(#sheen)"/><rect width="${W}" height="${H}" filter="url(#g)"/>`);
+}
+
+/** Wood flooring planks. */
+function wood({ tones, seed = 10 }) {
+  let p = "";
+  let i = 0;
+  for (let x = 0; x < W; x += 150) {
+    const offset = (i * 97) % 600;
+    for (let y = -offset; y < H; y += 600) {
+      p += `<rect x="${x}" y="${y}" width="148" height="596" fill="${tones[i % tones.length]}"/>`;
+    }
+    i++;
+  }
+  return svg(
+    `<filter id="w"><feTurbulence type="fractalNoise" baseFrequency="0.004 0.18" numOctaves="2" seed="${seed}"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer></filter>`,
+    `<rect width="${W}" height="${H}" fill="${tones[0]}"/>${p}<rect width="${W}" height="${H}" filter="url(#w)"/>`,
   );
 }
 
-function kitchen({ wall, cabinet, top }) {
-  return wrap(
-    wall,
-    `<rect x="80" y="110" width="640" height="120" rx="10" fill="${cabinet}" opacity=".9"/>
-<rect y="330" width="800" height="270" fill="${cabinet}"/><rect y="320" width="800" height="22" fill="${top}"/>
-${[0, 1, 2, 3].map((i) => `<rect x="${60 + i * 180}" y="370" width="160" height="200" rx="8" fill="#fff" opacity=".22"/>`).join("")}
-<rect x="430" y="250" width="12" height="72" fill="#9AA3B2"/><path d="M436 250 q0 -36 40 -36" stroke="#9AA3B2" stroke-width="12" fill="none"/>`,
+/** Concrete / paving. */
+function concrete({ base, joints = true, seed = 12 }) {
+  return svg(
+    grain("g", 0.6, 0.4, seed) + grain("g2", 0.02, 0.25, seed + 1),
+    `<rect width="${W}" height="${H}" fill="${base}"/><rect width="${W}" height="${H}" filter="url(#g2)"/><rect width="${W}" height="${H}" filter="url(#g)"/>
+     ${joints ? `<path d="M0 450 H${W} M600 0 V${H}" stroke="#000" stroke-width="5" opacity=".18"/>` : ""}`,
   );
 }
 
-function interior({ wall, floor, sofa, accent }) {
-  let planks = "";
-  for (let x = 0; x < 800; x += 100) planks += `<line x1="${x}" y1="420" x2="${x - 40}" y2="600" stroke="#000" opacity=".06" stroke-width="3"/>`;
-  return wrap(
-    wall,
-    `<rect y="420" width="800" height="180" fill="${floor}"/>${planks}
-<rect x="470" y="90" width="230" height="230" rx="6" fill="#fff" opacity=".7"/><line x1="585" y1="90" x2="585" y2="320" stroke="${wall}" stroke-width="8"/>
-<rect x="90" y="330" width="320" height="110" rx="26" fill="${sofa}"/><rect x="110" y="290" width="280" height="70" rx="22" fill="${sofa}" opacity=".85"/>
-<circle cx="640" cy="440" r="34" fill="${accent}"/><rect x="636" y="440" width="8" height="70" fill="${accent}"/>`,
-  );
+/** Paint colour swatches on a board — what you look at when choosing a colour. */
+function swatches({ colors, seed = 14 }) {
+  const cells = colors.map((c, i) => `<rect x="${120 + (i % 3) * 330}" y="${150 + Math.floor(i / 3) * 330}" width="290" height="290" rx="6" fill="${c}"/>`).join("");
+  return svg(grain("g", 0.85, 0.22, seed), `<rect width="${W}" height="${H}" fill="#ece8df"/>${cells}<rect width="${W}" height="${H}" filter="url(#g)"/>`);
 }
 
-function garden({ sky, grass, fence, path }) {
-  let slats = "";
-  for (let x = 20; x < 800; x += 46) slats += `<rect x="${x}" y="230" width="34" height="170" rx="4" fill="${fence}"/>`;
-  return wrap(
-    sky,
-    `<rect y="380" width="800" height="220" fill="${grass}"/>${slats}<rect x="0" y="270" width="800" height="12" fill="${fence}" opacity=".7"/>
-<polygon points="340,600 460,600 430,390 370,390" fill="${path}"/>
-<circle cx="140" cy="380" r="60" fill="#5E8C61"/><circle cx="660" cy="370" r="72" fill="#6E9C70"/><circle cx="210" cy="400" r="40" fill="#7FAE80"/>`,
-  );
-}
-
-function aircon({ wall, unit }) {
-  return wrap(
-    wall,
-    `<rect x="170" y="150" width="460" height="150" rx="26" fill="${unit}"/><rect x="200" y="250" width="400" height="14" rx="7" fill="#000" opacity=".08"/>
-<circle cx="580" cy="190" r="6" fill="#7BC6A4"/>
-${[0, 1, 2].map((i) => `<path d="M${280 + i * 120} 330 q20 40 0 80 q-20 40 0 80" stroke="#9EC1F0" stroke-width="8" fill="none" opacity=".7"/>`).join("")}`,
-  );
-}
-
-function cleaning({ wall, floor }) {
-  const sparkle = (x, y, s) => `<path d="M${x} ${y - s} L${x + s / 4} ${y - s / 4} L${x + s} ${y} L${x + s / 4} ${y + s / 4} L${x} ${y + s} L${x - s / 4} ${y + s / 4} L${x - s} ${y} L${x - s / 4} ${y - s / 4} Z" fill="#fff"/>`;
-  return wrap(
-    wall,
-    `<rect y="380" width="800" height="220" fill="${floor}"/><rect x="120" y="120" width="300" height="220" rx="6" fill="#fff" opacity=".8"/>
-${sparkle(520, 200, 40)}${sparkle(600, 280, 24)}${sparkle(470, 470, 30)}${sparkle(680, 430, 20)}`,
-  );
+/** Matte appliance surface with a single vent line (aircon). */
+function appliance({ base, seed = 16 }) {
+  let vents = "";
+  for (let y = 560; y < 700; y += 18) vents += `<rect x="160" y="${y}" width="${W - 320}" height="6" rx="3" fill="#000" opacity=".1"/>`;
+  return svg(grain("g", 0.9, 0.14, seed), `<rect width="${W}" height="${H}" fill="#e7e3da"/><rect x="120" y="260" width="${W - 240}" height="460" rx="18" fill="${base}"/>${vents}<rect width="${W}" height="${H}" filter="url(#g)"/>`);
 }
 
 const files = {
-  "exterior-1.svg": exterior({ sky: "#DCE7F5", wall: "#F4EFE6", roof: "#3E4A5C", trim: "#9DB4D3", ground: "#C9D6C3" }),
-  "exterior-2.svg": exterior({ sky: "#E4EBF2", wall: "#E2E7EE", roof: "#5B4B44", trim: "#B7C7D9", ground: "#CFD8C6" }),
-  "exterior-3.svg": exterior({ sky: "#E7EEF6", wall: "#D9CFC2", roof: "#2F3B4C", trim: "#AFC2D6", ground: "#C3D1BD", scaffold: true }),
-  "exterior-4.svg": exterior({ sky: "#DFE9F3", wall: "#FAF8F4", roof: "#40566E", trim: "#C5D3E2", ground: "#D2DCCB", sun: false }),
-  "exterior-5.svg": exterior({ sky: "#E9EEF3", wall: "#CBD5DF", roof: "#363C45", trim: "#EEF2F6", ground: "#C8D3C1" }),
-  "wall-crack.svg": wrap("#E8E1D6", `<path d="M300 60 L330 180 L300 260 L360 380 L330 470 L370 560" stroke="#8A7F72" stroke-width="7" fill="none"/><path d="M330 180 L410 230" stroke="#8A7F72" stroke-width="5" fill="none"/><circle cx="560" cy="160" r="70" fill="#5E7F5E" opacity=".25"/><circle cx="610" cy="200" r="40" fill="#5E7F5E" opacity=".25"/>`),
-  "roof-1.svg": roofTiles({ bg: "#3B4452", tile: "#4E5868", line: "#2E3540" }),
-  "roof-2.svg": roofTiles({ bg: "#5A4A42", tile: "#6E5B51", line: "#463A33" }),
-  "bath-1.svg": bath({ wall: "#DDE6EE", tub: "#F7F9FB", floor: "#B9C3CF" }),
-  "bath-2.svg": bath({ wall: "#E9E4DC", tub: "#FFFFFF", floor: "#C8BFB2" }),
-  "kitchen-1.svg": kitchen({ wall: "#EFF2F5", cabinet: "#55606E", top: "#D9DDE2" }),
-  "kitchen-2.svg": kitchen({ wall: "#F4F1EC", cabinet: "#A88F75", top: "#EDE7DF" }),
-  "interior-1.svg": interior({ wall: "#EEF1F4", floor: "#C8AE8E", sofa: "#6F7F95", accent: "#7FA27F" }),
-  "interior-2.svg": interior({ wall: "#F3EFE9", floor: "#B79C7E", sofa: "#C5B8A6", accent: "#5F8A6B" }),
-  "garden-1.svg": garden({ sky: "#E3ECF4", grass: "#A9C4A0", fence: "#8C735E", path: "#D8D1C4" }),
-  "garden-2.svg": garden({ sky: "#E8EEF3", grass: "#B6CCAA", fence: "#5D6672", path: "#E2DCD0" }),
-  "aircon-1.svg": aircon({ wall: "#EEF1F5", unit: "#FFFFFF" }),
-  "clean-1.svg": cleaning({ wall: "#E6EEF6", floor: "#CBB59A" }),
+  "exterior-1.svg": siding({ old: "#b9b2a4", fresh: "#e8e4da", split: 0.5 }),
+  "exterior-2.svg": plaster({ base: "#d8d0c2", tape: true }),
+  "exterior-3.svg": siding({ old: "#8d8b84", fresh: "#3f4a45", split: 0.62, seed: 5 }),
+  "exterior-4.svg": plaster({ base: "#e6e0d4", seed: 9 }),
+  "exterior-5.svg": siding({ old: "#cfc8bb", fresh: "#2f3330", split: 0.4, seed: 7 }),
+  "wall-crack.svg": plaster({ base: "#d6cdbd", crack: true, seed: 11 }),
+  "roof-1.svg": slate({ base: "#3b3d3c", alt: "#444745" }),
+  "roof-2.svg": slate({ base: "#6a5c52", alt: "#73655a", seed: 13 }),
+  "bath-1.svg": tile({ base: "#e9ece9", grout: "#c9cdc9" }),
+  "bath-2.svg": tile({ base: "#efe9df", grout: "#cfc6b8", size: 112, seed: 15 }),
+  "kitchen-1.svg": concrete({ base: "#9a9790", joints: false }),
+  "kitchen-2.svg": wood({ tones: ["#b89a78", "#ad8f6d", "#c3a684"], seed: 17 }),
+  "interior-1.svg": wood({ tones: ["#c7ab86", "#bd9f7a", "#d0b591"] }),
+  "interior-2.svg": plaster({ base: "#ece7dd", seed: 19 }),
+  "garden-1.svg": concrete({ base: "#b8b3a8" }),
+  "garden-2.svg": wood({ tones: ["#6f5a46", "#7a6550", "#655140"], seed: 21 }),
+  "aircon-1.svg": appliance({ base: "#f4f2ed" }),
+  "clean-1.svg": tile({ base: "#f3f3f1", grout: "#dcdcd8", size: 200, seed: 23 }),
+  "swatches.svg": swatches({ colors: ["#e8e4da", "#cfc8bb", "#8d8b84", "#3f4a45", "#2f3330", "#b9b2a4"] }),
 };
 
-for (const [name, svg] of Object.entries(files)) writeFileSync(new URL(name, out), svg);
+for (const [name, s] of Object.entries(files)) writeFileSync(new URL(name, out), s);
 console.log(`wrote ${Object.keys(files).length} images`);

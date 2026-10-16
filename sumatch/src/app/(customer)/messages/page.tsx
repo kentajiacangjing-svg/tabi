@@ -10,13 +10,13 @@ export default async function MessagesPage() {
   const user = await requireUser(["customer"], "/messages");
   const conversations = conversationsForCustomer(user.id);
   return (
-    <div>
-      <PageHeader title="メッセージ" description="マッチした会社とのやり取りです。連絡先を交換しなくても、ここで相談から契約まで進められます。" />
+    <div className="mx-auto max-w-[720px]">
+      <PageHeader title="メッセージ" />
       {conversations.length ? (
         <ConversationList conversations={conversations} side="customer" />
       ) : (
-        <EmptyState icon="chat" title="まだメッセージはありません" action={<ButtonLink href="/matches">会社を選ぶ</ButtonLink>}>
-          「この会社と話したい」を選び、会社も対応を希望するとチャットが始まります。
+        <EmptyState title="まだメッセージはありません" action={<ButtonLink href="/matches">会社を見る</ButtonLink>}>
+          「相談する」を押した会社が対応したいと答えると、ここで話せるようになります。
         </EmptyState>
       )}
     </div>

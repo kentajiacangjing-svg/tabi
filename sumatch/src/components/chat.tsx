@@ -46,6 +46,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
   const [reporting, setReporting] = useState(false);
   const [pending, start] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const refresh = useCallback(async () => {
@@ -81,9 +82,16 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
     };
   }, [matchId, refresh, side]);
 
+  // Keep the newest message in view, including after images finish loading.
+  const stickToBottom = useCallback(() => {
+    const el = scrollerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
   useLayoutEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+    stickToBottom();
+    const t = [setTimeout(stickToBottom, 120), setTimeout(stickToBottom, 500)];
+    return () => t.forEach(clearTimeout);
+  }, [messages.length, stickToBottom]);
 
   const doSend = (skipCheck = false) => {
     setError(null);
@@ -125,7 +133,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
   let lastDay = "";
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-4 sm:px-5">
+      <div ref={scrollerRef} onLoadCapture={stickToBottom} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-8">
         {messages.map((m, i) => {
           const day = dayLabel(m.created_at);
           const showDay = day !== lastDay;
@@ -136,15 +144,15 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
             <div key={m.id}>
               {showDay && (
                 <div className="my-3 text-center">
-                  <span className="rounded-full bg-soft px-3 py-1 text-[11px] font-medium text-muted">{day}</span>
+                  <span className="text-[12px] text-faint">{day}</span>
                 </div>
               )}
               {m.kind === "system" ? (
-                <div className="mx-auto my-2 max-w-md rounded-2xl bg-soft px-4 py-2.5 text-center text-[12px] leading-relaxed text-ink-2">{m.body}</div>
+                <div className="mx-auto my-3 max-w-md px-4 text-center text-[13px] leading-relaxed text-muted">{m.body}</div>
               ) : (
                 <div className={cx("flex items-end gap-1.5", isMine ? "flex-row-reverse" : "flex-row")}>
                   <div className={cx("max-w-[78%] sm:max-w-[65%]", isMine ? "items-end" : "items-start", "flex flex-col")}>
-                    {!isMine && side !== "admin" && m.sender_name && <span className="mb-0.5 px-1 text-[11px] text-muted">{m.sender_name}</span>}
+                    {!isMine && side !== "admin" && m.sender_name && <span className="mb-1 px-1 text-[12px] text-muted">{m.sender_name}</span>}
                     {side === "admin" && <span className="mb-0.5 px-1 text-[11px] text-muted">{m.sender_side === "customer" ? "お客様" : "企業"}・{m.sender_name}</span>}
                     <Bubble m={m} isMine={isMine} quoteHref={quoteHref} />
                     {flagged.length > 0 && (
@@ -154,8 +162,8 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
                       </span>
                     )}
                   </div>
-                  <div className={cx("flex shrink-0 flex-col pb-0.5 text-[10px] leading-tight text-faint", isMine ? "items-end" : "items-start")}>
-                    {isMine && i === lastMineIndex && otherReadAt && otherReadAt >= m.created_at && <span className="text-brand">既読</span>}
+                  <div className={cx("flex shrink-0 flex-col pb-0.5 text-[11px] leading-tight text-faint", isMine ? "items-end" : "items-start")}>
+                    {isMine && i === lastMineIndex && otherReadAt && otherReadAt >= m.created_at && <span className="text-ink-2">既読</span>}
                     {isMine && i !== lastMineIndex && otherReadAt && otherReadAt >= m.created_at && <span>既読</span>}
                     <span>{timeHM(m.created_at)}</span>
                   </div>
@@ -170,9 +178,9 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
       {readOnly ? (
         <div className="border-t border-line bg-soft/60 px-4 py-4 text-center text-[13px] text-muted">{readOnlyReason ?? "このチャットは閲覧のみです。"}</div>
       ) : (
-        <div className="border-t border-line bg-white px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-2.5 sm:px-4">
+        <div className="border-t border-line bg-canvas px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-3 sm:px-4">
           {warn && (
-            <div className="mb-2.5 rounded-2xl border border-warn/30 bg-warn-soft p-3.5 text-[13px] text-warn">
+            <div className="mb-3 rounded-xl bg-warn-soft p-4 text-[14px] text-warn" role="alert">
               <div className="flex gap-2 font-semibold">
                 <Icon name="alert" size={17} className="shrink-0" />
                 {warn.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}が含まれているようです
@@ -188,24 +196,6 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
               </div>
             </div>
           )}
-          {showTemplates && (
-            <div className="no-scrollbar mb-2 flex gap-2 overflow-x-auto pb-1">
-              {templates.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => {
-                    setText(t);
-                    setShowTemplates(false);
-                    taRef.current?.focus();
-                  }}
-                  className="max-w-[16rem] shrink-0 truncate rounded-full border border-line bg-white px-3 py-1.5 text-[12px] text-ink-2 hover:bg-soft"
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
           {file && (
             <div className="mb-2 flex items-center gap-2 rounded-xl bg-soft px-3 py-2 text-[13px]">
               <Icon name={file.type === "application/pdf" ? "pdf" : "image"} size={16} />
@@ -217,19 +207,37 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
           )}
           {draftSource && <div className="mb-1.5 px-1 text-[11px] text-muted">{draftSource === "ai" ? "AIが下書きしました。内容を確認してから送信してください。" : "テンプレートから下書きしました。内容を調整してから送信してください。"}</div>}
           {error && <Notice tone="danger" className="mb-2">{error}</Notice>}
-          <div className="flex items-end gap-1.5">
-            <div className="flex shrink-0 items-center pb-1">
-              <label className="grid size-9 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-soft" aria-label="写真・PDFを添付">
-                <Icon name="clip" size={20} />
-                <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              </label>
-              <button type="button" onClick={() => setShowTemplates((v) => !v)} className={cx("grid size-9 place-items-center rounded-full hover:bg-soft", showTemplates ? "text-brand" : "text-ink-2")} aria-label="テンプレート">
-                <Icon name="doc" size={19} />
+          {showTemplates && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              <button type="button" onClick={draft} disabled={drafting} className="min-h-10 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink-2 hover:border-ink/30 disabled:opacity-40">
+                {drafting ? "下書き中…" : "返信の下書きを作る"}
               </button>
-              <button type="button" onClick={draft} disabled={drafting} className="grid size-9 place-items-center rounded-full text-ink-2 hover:bg-soft disabled:opacity-40" aria-label="AIで返信を下書き" title="AI返信下書き">
-                <Icon name="ai" size={20} className={drafting ? "animate-spin" : ""} />
+              <button type="button" onClick={() => setReporting(true)} className="min-h-10 rounded-lg px-3 text-[14px] text-muted hover:text-ink">
+                運営に通報
               </button>
+              <div className="w-full divide-y divide-line border-y border-line">
+                {templates.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setText(t);
+                      setShowTemplates(false);
+                      taRef.current?.focus();
+                    }}
+                    className="block min-h-11 w-full truncate py-2.5 text-left text-[14px] text-ink-2 hover:text-ink"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+          <div className="flex items-end gap-2">
+            <label className="mb-0.5 grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-ink-2 hover:bg-soft focus-within:outline focus-within:outline-2 focus-within:outline-brand" aria-label="写真を添付">
+              <Icon name="image" size={22} />
+              <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            </label>
             <Textarea
               ref={taRef}
               rows={1}
@@ -241,25 +249,24 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
                   doSend();
                 }
               }}
-              placeholder="メッセージを入力"
-              className="max-h-40 min-h-[42px] flex-1 resize-none rounded-[20px] py-2.5"
-              style={{ height: Math.min(160, 42 + Math.max(0, text.split("\n").length - 1) * 22) }}
+              placeholder="メッセージ"
+              className="max-h-40 min-h-[46px] flex-1 resize-none py-2.5"
+              style={{ height: Math.min(160, 46 + Math.max(0, text.split("\n").length - 1) * 24) }}
               aria-label="メッセージ"
             />
             <button
               type="button"
               onClick={() => doSend()}
               disabled={pending || (!text.trim() && !file)}
-              className="mb-0.5 grid size-10 shrink-0 place-items-center rounded-full bg-brand text-white disabled:bg-line disabled:text-faint"
-              aria-label="送信"
+              className="press mb-0.5 h-11 shrink-0 rounded-[10px] bg-brand px-4 text-[15px] font-medium text-white disabled:bg-line disabled:text-faint"
             >
-              <Icon name="send" size={18} />
+              送信
             </button>
           </div>
-          <div className="mt-1.5 flex items-center justify-between px-1 text-[11px] text-faint">
-            <span>連絡先の交換はせず、SUMATCH内でやり取りしましょう</span>
-            <button type="button" onClick={() => setReporting(true)} className="hover:text-ink-2">
-              通報
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[12px] text-faint">連絡先の交換はせず、ここでやり取りしましょう</span>
+            <button type="button" onClick={() => setShowTemplates((v) => !v)} className="min-h-9 px-1 text-[13px] text-muted hover:text-ink" aria-expanded={showTemplates}>
+              {showTemplates ? "閉じる" : "その他"}
             </button>
           </div>
         </div>
@@ -270,28 +277,21 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
 }
 
 function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quoteHref?: string }) {
-  const base = cx("rounded-[20px] text-[14.5px] leading-relaxed", isMine ? "rounded-br-md bg-brand text-white" : "rounded-bl-md bg-soft text-ink");
+  const base = cx("rounded-xl text-[16px] leading-relaxed", isMine ? "rounded-br-sm bg-brand-soft text-ink" : "rounded-bl-sm border border-line bg-surface text-ink");
   if (m.kind === "quote") {
     return (
-      <Link href={quoteHref ?? "#"} className="block w-64 overflow-hidden rounded-[20px] border border-line bg-white text-ink shadow-[var(--shadow-card)] hover:border-ink/20">
-        <div className="flex items-center gap-2 border-b border-line bg-soft/70 px-4 py-2.5 text-[12px] font-semibold text-ink-2">
-          <Icon name="doc" size={15} />
-          見積書{m.quote_version && m.quote_version > 1 ? `（第${m.quote_version}版）` : ""}
-        </div>
-        <div className="px-4 py-3">
-          <div className="truncate text-[13px] text-muted">{m.quote_title}</div>
-          <div className="mt-0.5 text-[22px] font-bold tracking-tight">{yenMan(m.quote_total)}</div>
-          <div className="text-[11px] text-muted">税込</div>
-          {m.file_id && <div className="mt-2 flex items-center gap-1 text-[12px] text-brand"><Icon name="pdf" size={14} />PDF添付あり</div>}
-        </div>
-        <div className="border-t border-line px-4 py-2.5 text-center text-[13px] font-semibold text-brand">内容を見る</div>
+      <Link href={quoteHref ?? "#"} className="block w-72 rounded-xl border border-ink/80 bg-surface px-5 py-4 text-ink hover:bg-soft">
+        <div className="text-[14px] text-muted">{m.quote_version && m.quote_version > 1 ? `見積もりが更新されました（第${m.quote_version}版）` : "見積もりが届きました"}</div>
+        <div className="mt-2 text-[26px] font-medium tracking-tight">¥{m.quote_total?.toLocaleString("ja-JP")}</div>
+        <div className="truncate text-[14px] text-ink-2">{m.quote_title}（税込）</div>
+        <div className="mt-3 text-[15px] font-medium text-brand">見積もりを見る</div>
       </Link>
     );
   }
   if (m.kind === "image" && m.file_id) {
     return (
       <div className="space-y-1">
-        <a href={`/api/files/${m.file_id}`} target="_blank" rel="noopener" className="block overflow-hidden rounded-[18px] border border-line bg-soft">
+        <a href={`/api/files/${m.file_id}`} target="_blank" rel="noopener" className="block overflow-hidden rounded-xl border border-line bg-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`/api/files/${m.file_id}`} alt={m.file_name ?? "画像"} className="max-h-72 w-auto max-w-full object-cover" loading="lazy" />
         </a>
@@ -302,8 +302,8 @@ function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quo
   if (m.kind === "file" && m.file_id) {
     return (
       <div className="space-y-1">
-        <a href={`/api/files/${m.file_id}`} target="_blank" rel="noopener" className="flex w-60 items-center gap-3 rounded-[18px] border border-line bg-white px-3.5 py-3 text-ink hover:border-ink/20">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-danger-soft text-danger">
+        <a href={`/api/files/${m.file_id}`} target="_blank" rel="noopener" className="flex w-64 items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-ink hover:border-ink/30">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-soft text-ink-2">
             <Icon name="pdf" size={20} />
           </span>
           <span className="min-w-0">
@@ -323,11 +323,11 @@ function ReportDialog({ matchId, onClose }: { matchId: string; onClose: () => vo
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-3 sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-surface p-6" onClick={(e) => e.stopPropagation()}>
         {done ? (
           <div className="py-4 text-center">
-            <div className="font-bold">通報を受け付けました</div>
+            <div className="font-semibold">通報を受け付けました</div>
             <p className="mt-1 text-sm text-muted">運営が内容を確認します。</p>
             <Button className="mt-5" variant="secondary" onClick={onClose}>
               閉じる
@@ -344,7 +344,7 @@ function ReportDialog({ matchId, onClose }: { matchId: string; onClose: () => vo
             }
             className="space-y-3"
           >
-            <div className="font-bold">運営に通報する</div>
+            <div className="font-semibold">運営に通報する</div>
             <input type="hidden" name="target_type" value="match" />
             <input type="hidden" name="target_id" value={matchId} />
             <Select name="reason" defaultValue="">

@@ -16,21 +16,24 @@ import {
   upsertPlanAction,
 } from "@/app/actions/admin";
 import { ActionButton, ActionForm } from "@/components/action-button";
-import { Badge, Card, PageHeader, SectionTitle, Stat, cx, inputClass } from "@/components/ui";
+import { Badge, SectionTitle, Stat, cx, inputClass } from "@/components/ui";
 import type { Company, Plan, ProjectStatus } from "@/lib/types";
 
 export const metadata = { title: "管理画面" };
 export const dynamic = "force-dynamic";
 
 const TABS = [
-  ["kpi", "KPI"],
-  ["companies", "企業・審査"],
+  ["overview", "概要"],
   ["users", "ユーザー"],
-  ["projects", "案件"],
-  ["matches", "マッチング"],
-  ["chats", "チャット確認"],
+  ["companies", "企業"],
+  ["projects", "相談"],
+  ["matches", "マッチ"],
   ["quotes", "見積もり"],
   ["contracts", "契約"],
+  ["analytics", "分析"],
+] as const;
+const MORE = [
+  ["chats", "チャット確認"],
   ["reports", "通報"],
   ["categories", "カテゴリ"],
   ["areas", "地域"],
@@ -39,18 +42,28 @@ const TABS = [
 ] as const;
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { tab = "kpi" } = await searchParams;
+  const { tab: raw = "overview" } = await searchParams;
+  const tab = raw === "kpi" ? "overview" : raw;
   return (
     <div>
-      <PageHeader title="SUMATCH 管理画面" />
-      <nav className="no-scrollbar -mx-4 mb-6 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-        {TABS.map(([k, label]) => (
-          <Link key={k} href={`/admin?tab=${k}`} className={cx("shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium", tab === k ? "bg-ink text-white" : "bg-soft text-ink-2 hover:bg-line-2")}>
+      <nav className="no-scrollbar -mx-5 mb-10 flex gap-1 overflow-x-auto border-b border-line px-5 sm:mx-0 sm:px-0" aria-label="管理メニュー">
+        {[...TABS, ...MORE].map(([k, label], i) => (
+          <Link
+            key={k}
+            href={`/admin?tab=${k}`}
+            aria-current={tab === k ? "page" : undefined}
+            className={cx(
+              "relative flex min-h-12 shrink-0 items-center px-3 text-[15px]",
+              i === TABS.length && "ml-4 border-l border-line pl-5",
+              tab === k ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-ink" : "text-muted hover:text-ink",
+            )}
+          >
             {label}
           </Link>
         ))}
       </nav>
-      {tab === "kpi" && <KpiTab />}
+      {tab === "overview" && <OverviewTab />}
+      {tab === "analytics" && <AnalyticsTab />}
       {tab === "companies" && <CompaniesTab />}
       {tab === "users" && <UsersTab />}
       {tab === "projects" && <ProjectsTab />}
@@ -71,87 +84,122 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
 function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-white">
-      <table className="w-full min-w-[720px] text-[13px]">
+    <div className="overflow-x-auto border-y border-line">
+      <table className="w-full min-w-[720px] text-[14px]">
         <thead>
-          <tr className="bg-soft text-left text-[12px] text-muted">
+          <tr className="text-left text-[13px] text-muted">
             {head.map((h) => (
-              <th key={h} className="whitespace-nowrap px-3 py-2.5 font-semibold">
+              <th key={h} className="whitespace-nowrap px-3 py-3 font-normal first:pl-0">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="[&>tr]:border-t [&>tr]:border-line-2 [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top">{children}</tbody>
+        <tbody className="[&>tr]:border-t [&>tr]:border-line [&_td]:px-3 [&_td]:py-3 [&_td]:align-top [&_td:first-child]:pl-0">{children}</tbody>
       </table>
     </div>
   );
 }
 
-function KpiTab() {
+function OverviewTab() {
   const k = kpis(30);
-  const funnel = [
-    ["サイト訪問", k.visits],
-    ["診断開始", k.starts],
-    ["診断完了", k.completes],
-    ["マッチ希望", k.requests],
-    ["マッチ成立", k.matches],
-    ["見積もり提出", k.quotes],
-    ["成約", k.contracts],
+  const nums: [string, number, string, string][] = [
+    ["ユーザー", k.customers, "目標30人", "users"],
+    ["企業", k.companies, `審査待ち ${k.pendingCompanies}社・目標10社`, "companies"],
+    ["相談", k.projectsTotal, "", "projects"],
+    ["マッチ", k.matchesTotal, "", "matches"],
+    ["見積もり", k.quotesTotal, "", "quotes"],
+    ["契約", k.contractsTotal, k.avgContract ? `平均 ${man(k.avgContract)}` : "", "contracts"],
+  ];
+  const alerts = [
+    [k.pendingCompanies, "社の企業が審査を待っています", "companies"],
+    [k.openReports, "件の通報が未対応です", "reports"],
+    [k.flaggedMessages, "件の連絡先共有が検知されました（30日）", "chats"],
   ] as const;
-  const max = Math.max(1, ...funnel.map((f) => f[1]));
-  const dmax = Math.max(1, ...k.daily.map((d) => d.n));
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="登録企業（承認済み）" value={k.companies} sub={`審査待ち ${k.pendingCompanies}社 / 目標10社`} tone="brand" />
-        <Stat label="一般ユーザー" value={k.customers} sub="目標30人" />
-        <Stat label="平均成約額（30日）" value={k.avgContract ? man(k.avgContract) : "—"} sub={`成約総額 ${man(k.gmv)}・成功報酬見込 ${man(k.fee, 1)}`} />
-        <Stat label="企業継続率" value={k.retention == null ? "—" : pct(k.retention)} sub={`承認後30日以上の${k.cohort}社が対象`} />
+    <div>
+      <h1 className="text-[28px] font-semibold">概要</h1>
+      <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-6">
+        {nums.map(([label, v, sub, href]) => (
+          <Link key={label} href={`/admin?tab=${href}`} className="hover:opacity-80">
+            <Stat label={label} value={v} sub={sub} />
+          </Link>
+        ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <Card className="p-5">
-          <SectionTitle>過去30日のファネル</SectionTitle>
-          <ul className="space-y-2.5">
-            {funnel.map(([label, v], i) => (
-              <li key={label} className="grid grid-cols-[6.5rem_1fr_4.5rem] items-center gap-3 text-[13px]" title={`${label}: ${v}`}>
-                <span className="text-ink-2">{label}</span>
-                <span className="h-5 rounded-r-[4px] bg-line-2">
-                  <span className="block h-full rounded-r-[4px] bg-brand" style={{ width: `${Math.max(1.5, (v / max) * 100)}%` }} />
-                </span>
-                <span className="text-right tabular-nums">
-                  <b>{v}</b>
-                  {i > 0 && funnel[i - 1][1] > 0 && <span className="ml-1 text-[11px] text-muted">{pct(v / funnel[i - 1][1])}</span>}
-                </span>
+      {alerts.some(([n]) => n > 0) && (
+        <ul className="mt-14 divide-y divide-line border-y border-line">
+          {alerts
+            .filter(([n]) => n > 0)
+            .map(([n, text, href]) => (
+              <li key={href}>
+                <Link href={`/admin?tab=${href}`} className="flex min-h-14 items-center justify-between py-3 text-[16px] hover:text-brand">
+                  <span>
+                    {n}
+                    {text}
+                  </span>
+                  <span className="text-muted">確認する</span>
+                </Link>
               </li>
             ))}
-          </ul>
-          <p className="mt-3 text-[11px] text-muted">右の％は1つ前の段階からの転換率</p>
-        </Card>
-        <Card className="p-5">
-          <SectionTitle>サイト訪問（日別・30日）</SectionTitle>
-          <div className="flex h-40 items-end gap-[2px] border-b border-line" role="img" aria-label="日別サイト訪問数">
-            {k.daily.map((d) => (
-              <div key={d.d} className="group relative flex-1" style={{ height: `${(d.n / dmax) * 100}%` }}>
-                <div className="size-full rounded-t-[4px] bg-brand/85 group-hover:bg-brand" />
-                <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[11px] text-white group-hover:block">
-                  {d.d.slice(5).replace("-", "/")}：{d.n}
-                </div>
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsTab() {
+  const k = kpis(30);
+  const funnel = [
+    ["訪問", k.visits],
+    ["相談開始", k.starts],
+    ["相談完了", k.completes],
+    ["会社閲覧", k.companyViews],
+    ["マッチ", k.matches],
+    ["見積もり", k.quotes],
+    ["契約", k.contracts],
+  ] as const;
+  const max = Math.max(1, funnel[0][1]);
+  const dmax = Math.max(1, ...k.daily.map((d) => d.n));
+  return (
+    <div className="space-y-16">
+      <section>
+        <h1 className="text-[28px] font-semibold">ファネル（過去30日）</h1>
+        <p className="mt-2 text-[14px] text-muted">右側のCVRは、ひとつ前の段階からの割合です。</p>
+        <ol className="mt-8 space-y-3">
+          {funnel.map(([label, v], i) => (
+            <li key={label} className="grid grid-cols-[5.5rem_1fr_7.5rem] items-center gap-4 text-[15px]">
+              <span>{label}</span>
+              <span className="h-6 bg-line-2" title={`${label}: ${v}`}>
+                <span className="block h-full rounded-r-[4px] bg-brand" style={{ width: `${Math.max(0.8, (v / max) * 100)}%` }} />
+              </span>
+              <span className="text-right tabular-nums">
+                {v.toLocaleString()}
+                <span className="ml-2 inline-block w-12 text-[13px] text-muted">{i > 0 ? (funnel[i - 1][1] ? pct(v / funnel[i - 1][1]) : "—") : ""}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-6 text-[15px] text-ink-2">
+          訪問から契約まで {k.visits ? `${((k.contracts / k.visits) * 100).toFixed(2)}%` : "—"}・平均成約額 {k.avgContract ? man(k.avgContract) : "—"}・企業継続率 {k.retention == null ? "—" : pct(k.retention)}
+        </p>
+      </section>
+      <section>
+        <h2 className="text-[20px] font-medium">日別の訪問</h2>
+        <div className="mt-6 flex h-44 items-end gap-[2px] border-b border-line" role="img" aria-label={`日別の訪問数。最大${dmax}件`}>
+          {k.daily.map((d) => (
+            <div key={d.d} className="group relative flex-1" style={{ height: `${(d.n / dmax) * 100}%` }}>
+              <div className="size-full rounded-t-[4px] bg-brand/80 group-hover:bg-brand" />
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[12px] text-white group-hover:block">
+                {d.d.slice(5).replace("-", "/")}　{d.n}
               </div>
-            ))}
-          </div>
-          <div className="mt-1.5 flex justify-between text-[11px] text-muted">
-            <span>{k.daily[0]?.d.slice(5).replace("-", "/")}</span>
-            <span>最大 {dmax}/日</span>
-            <span>{k.daily.at(-1)?.d.slice(5).replace("-", "/")}</span>
-          </div>
-        </Card>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Link href="/admin?tab=companies" className="rounded-2xl border border-line bg-white p-4 text-sm hover:bg-soft">審査待ちの企業 <b>{k.pendingCompanies}</b></Link>
-        <Link href="/admin?tab=reports" className="rounded-2xl border border-line bg-white p-4 text-sm hover:bg-soft">未対応の通報 <b>{k.openReports}</b></Link>
-        <Link href="/admin?tab=chats" className="rounded-2xl border border-line bg-white p-4 text-sm hover:bg-soft">連絡先共有の検知（30日） <b>{k.flaggedMessages}</b></Link>
-      </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex justify-between text-[13px] text-muted">
+          <span>{k.daily[0]?.d.slice(5).replace("-", "/")}</span>
+          <span>{k.daily.at(-1)?.d.slice(5).replace("-", "/")}</span>
+        </div>
+      </section>
     </div>
   );
 }
@@ -407,7 +455,7 @@ const small = cx(inputClass, "px-2.5 py-1.5 text-[13px]");
 function CategoriesTab() {
   const rows = allCategories();
   const form = (c?: (typeof rows)[number]) => (
-    <ActionForm key={c?.id ?? "new"} action={upsertCategoryAction} className="grid items-end gap-2 rounded-2xl border border-line bg-white p-3 sm:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,2fr)_auto]">
+    <ActionForm key={c?.id ?? "new"} action={upsertCategoryAction} className="grid items-end gap-2 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,2fr)_auto]">
       <input type="hidden" name="id" value={c?.id ?? ""} />
       <label className="text-[11px] text-muted">名前<input name="name" defaultValue={c?.name} className={small} required /></label>
       <label className="text-[11px] text-muted">スラッグ<input name="slug" defaultValue={c?.slug} className={small} required /></label>
@@ -416,7 +464,7 @@ function CategoriesTab() {
       <label className="text-[11px] text-muted">お悩みの選択肢（読点区切り）<input name="concerns" defaultValue={parseJson<string[]>(c?.concerns, []).join("、")} className={small} /></label>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-1 text-[12px]"><input type="checkbox" name="active" defaultChecked={c ? !!c.active : true} />公開</label>
-        <button className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white">{c ? "保存" : "追加"}</button>
+        <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">{c ? "保存" : "追加"}</button>
       </div>
       <input type="hidden" name="group_name" value={c?.group_name ?? "住まい"} />
       <input type="hidden" name="icon" value={c?.icon ?? "home"} />
@@ -438,7 +486,7 @@ function CategoriesTab() {
 function AreasTab() {
   const rows = allAreas();
   const form = (a?: (typeof rows)[number]) => (
-    <ActionForm key={a?.id ?? "new"} action={upsertAreaAction} className="grid items-end gap-2 rounded-2xl border border-line bg-white p-3 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
+    <ActionForm key={a?.id ?? "new"} action={upsertAreaAction} className="grid items-end gap-2 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
       <input type="hidden" name="id" value={a?.id ?? ""} />
       <input type="hidden" name="sort" value={a?.sort ?? rows.length} />
       <label className="text-[11px] text-muted">都道府県<input name="prefecture" defaultValue={a?.prefecture ?? "神奈川県"} className={small} required /></label>
@@ -447,7 +495,7 @@ function AreasTab() {
       <label className="text-[11px] text-muted">郵便番号の先頭3桁<input name="postal_prefixes" defaultValue={a?.postal_prefixes} placeholder="251,252" className={small} /></label>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-1 text-[12px]"><input type="checkbox" name="active" defaultChecked={a ? !!a.active : true} />対応中</label>
-        <button className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white">{a ? "保存" : "追加"}</button>
+        <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">{a ? "保存" : "追加"}</button>
       </div>
     </ActionForm>
   );
@@ -463,7 +511,7 @@ function AreasTab() {
 function PlansTab() {
   const rows = all<Plan>("SELECT * FROM plans ORDER BY sort");
   const form = (p?: Plan) => (
-    <ActionForm key={p?.id ?? "new"} action={upsertPlanAction} className="grid items-end gap-2 rounded-2xl border border-line bg-white p-3 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_1.6fr_auto]">
+    <ActionForm key={p?.id ?? "new"} action={upsertPlanAction} className="grid items-end gap-2 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_1.6fr_auto]">
       <input type="hidden" name="id" value={p?.id ?? ""} />
       <input type="hidden" name="sort" value={p?.sort ?? rows.length} />
       <label className="text-[11px] text-muted">コード<input name="code" defaultValue={p?.code} className={small} required /></label>
@@ -474,7 +522,7 @@ function PlansTab() {
       <label className="text-[11px] text-muted">説明<input name="description" defaultValue={p?.description} className={small} /></label>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-1 text-[12px]"><input type="checkbox" name="active" defaultChecked={p ? !!p.active : true} />公開</label>
-        <button className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white">{p ? "保存" : "追加"}</button>
+        <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">{p ? "保存" : "追加"}</button>
       </div>
     </ActionForm>
   );
@@ -485,15 +533,15 @@ function PlansTab() {
       <SectionTitle>プランを追加</SectionTitle>
       {form()}
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
-        <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-2xl border border-line bg-white p-3">
+        <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-xl border border-line bg-surface p-4">
           <input type="hidden" name="key" value="default_trial_days" />
           <label className="flex-1 text-[11px] text-muted">新規企業の無料期間（日）<input name="value" type="number" defaultValue={getSetting("default_trial_days", "60")} className={small} /></label>
-          <button className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white">保存</button>
+          <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">保存</button>
         </ActionForm>
-        <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-2xl border border-line bg-white p-3">
+        <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-xl border border-line bg-surface p-4">
           <input type="hidden" name="key" value="success_fee_note" />
           <label className="flex-1 text-[11px] text-muted">成功報酬の注記<input name="value" defaultValue={getSetting("success_fee_note")} className={small} /></label>
-          <button className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white">保存</button>
+          <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">保存</button>
         </ActionForm>
       </div>
     </div>

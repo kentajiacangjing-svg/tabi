@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { submitDiagnosisAction } from "@/app/actions/customer";
 import { estimateRange } from "@/lib/estimate";
-import { BUDGETS, CONTACT_TIMES, HOUSE_TYPES, MAX_PROJECT_PHOTOS, PREFECTURES, TIMINGS } from "@/lib/constants";
+import { BUDGETS, HOUSE_CHOICES, MAX_PROJECT_PHOTOS, TIMINGS } from "@/lib/constants";
 import { manRange } from "@/lib/format";
 import { Icon } from "./icons";
-import { Button, Field, Input, Notice, Select, Textarea, cx } from "./ui";
+import { Button, Field, Input, Notice, Textarea, cx } from "./ui";
 
 export interface WizardCategory {
   id: string;
@@ -34,30 +34,17 @@ interface Draft {
   prefecture: string;
   city: string;
   house_type: string;
-  building_age: string;
-  concerns: string[];
   details: string;
   budget: string;
   desired_timing: string;
-  contact_time: string;
 }
 
-const EMPTY: Draft = {
-  category_id: "",
-  postal_code: "",
-  prefecture: "神奈川県",
-  city: "",
-  house_type: "",
-  building_age: "",
-  concerns: [],
-  details: "",
-  budget: "",
-  desired_timing: "",
-  contact_time: "",
-};
+const EMPTY: Draft = { category_id: "", postal_code: "", prefecture: "神奈川県", city: "", house_type: "", details: "", budget: "", desired_timing: "" };
 
-const STEPS = ["カテゴリ", "地域", "お住まい", "工事内容", "予算", "希望時期", "写真", "診断結果"] as const;
-const STORAGE_KEY = "sumatch:diagnosis";
+// One screen, one decision. "category" is answered on the top page; it is shown only if missing.
+type Step = "category" | "budget" | "timing" | "area" | "house" | "photos" | "confirm" | "account";
+const QUESTIONS: Step[] = ["budget", "timing", "area", "house", "photos", "confirm"];
+const STORAGE_KEY = "sumatch:diagnosis:v2";
 
 async function shrinkImage(file: File): Promise<File> {
   // Downscale large photos on-device so uploads stay fast on mobile networks.
@@ -70,8 +57,7 @@ async function shrinkImage(file: File): Promise<File> {
     canvas.height = Math.round(bmp.height * scale);
     canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-    if (!blob) return file;
-    return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
+    return blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file;
   } catch {
     return file;
   }
@@ -91,28 +77,31 @@ export function DiagnosisWizard({
   initialCategory?: string;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState<Step>("budget");
   const [d, setD] = useState<Draft>(EMPTY);
+  const [otherCity, setOtherCity] = useState(false);
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [hydrated, setHydrated] = useState(false);
-  const topRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  // Restore an unfinished draft (photos are not persisted).
   useEffect(() => {
+    const init = initialCategory ? categories.find((c) => c.slug === initialCategory) : undefined;
+    let restored: { d: Draft; step: Step } | null = null;
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      const init = initialCategory ? categories.find((c) => c.slug === initialCategory) : undefined;
-      if (saved) {
-        const parsed = JSON.parse(saved) as { d: Draft; step: number };
-        setD({ ...EMPTY, ...parsed.d, ...(init ? { category_id: init.id } : {}) });
-        setStep(Math.min(parsed.step, STEPS.length - 2));
-      } else if (init) {
-        setD((x) => ({ ...x, category_id: init.id }));
-        setStep(1);
-      }
+      restored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
     } catch {}
+    if (init) {
+      const same = restored?.d.category_id === init.id;
+      setD({ ...EMPTY, ...(same ? restored!.d : {}), category_id: init.id });
+      setStep(same && restored!.step !== "account" ? restored!.step : "budget");
+    } else if (restored?.d.category_id) {
+      setD({ ...EMPTY, ...restored.d });
+      setStep(restored.step === "account" ? "confirm" : restored.step);
+    } else {
+      setStep("category");
+    }
     setHydrated(true);
   }, [categories, initialCategory]);
 
@@ -121,46 +110,34 @@ export function DiagnosisWizard({
   }, [d, step, hydrated]);
 
   const category = categories.find((c) => c.id === d.category_id);
-  const prefectures = useMemo<string[]>(() => [...new Set(areas.map((a) => a.prefecture))], [areas]);
   const cities = areas.filter((a) => a.prefecture === d.prefecture);
   const inArea = areas.some((a) => a.prefecture === d.prefecture && a.city === d.city);
+  const qIndex = QUESTIONS.indexOf(step);
 
-  const estimate = category
-    ? estimateRange({
-        priceMin: category.price_min,
-        priceMax: category.price_max,
-        houseType: d.house_type,
-        buildingAge: d.building_age === "" ? null : Number(d.building_age),
-      })
-    : null;
-
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
-
-  const canNext = [
-    !!d.category_id,
-    !!d.prefecture && !!d.city && /^(\d{3}-?\d{4})?$/.test(d.postal_code),
-    !!d.house_type,
-    d.concerns.length > 0 || d.details.trim().length > 0,
-    !!d.budget,
-    !!d.desired_timing,
-    true,
-    true,
-  ][step];
-
-  const go = (n: number) => {
+  const go = (s: Step) => {
     setError(null);
-    setStep(n);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStep(s);
+    window.scrollTo({ top: 0 });
+    requestAnimationFrame(() => headingRef.current?.focus());
+  };
+  const next = () => go(QUESTIONS[qIndex + 1] ?? "confirm");
+  const back = () => {
+    if (step === "account") return go("confirm");
+    if (step === "category") return router.push("/");
+    if (qIndex <= 0) return initialCategory ? router.push("/") : go("category");
+    go(QUESTIONS[qIndex - 1]);
+  };
+  const choose = <K extends keyof Draft>(k: K, v: Draft[K], after?: Step) => {
+    setD((x) => ({ ...x, [k]: v }));
+    setTimeout(() => (after ? go(after) : next()), 140); // let the selected state register before moving on
   };
 
   const onPostal = (v: string) => {
     const z = v.replace(/[^\d-]/g, "").slice(0, 8);
-    set("postal_code", z);
     const digits = z.replace("-", "");
-    if (digits.length >= 3) {
-      const hit = areas.find((a) => a.postal_prefixes.split(",").includes(digits.slice(0, 3)));
-      if (hit) setD((x) => ({ ...x, postal_code: z, prefecture: hit.prefecture, city: x.city && areas.some((a) => a.city === x.city && a.postal_prefixes.includes(digits.slice(0, 3))) ? x.city : hit.city }));
-    }
+    const hit = digits.length >= 3 ? areas.find((a) => a.postal_prefixes.split(",").includes(digits.slice(0, 3))) : undefined;
+    setD((x) => ({ ...x, postal_code: z, ...(hit ? { prefecture: hit.prefecture, city: hit.city } : {}) }));
+    if (hit) setOtherCity(false);
   };
 
   const addPhotos = async (files: FileList | null) => {
@@ -172,7 +149,9 @@ export function DiagnosisWizard({
 
   const submit = (fd: FormData) => {
     setError(null);
-    (Object.keys(d) as (keyof Draft)[]).forEach((k) => fd.set(k, k === "concerns" ? d.concerns.join("、") : (d[k] as string)));
+    (Object.keys(d) as (keyof Draft)[]).forEach((k) => fd.set(k, d[k].trim()));
+    fd.set("contact_time", "");
+    fd.set("concerns", "");
     photos.forEach((p) => fd.append("photos", p.file));
     start(async () => {
       const r = await submitDiagnosisAction(fd);
@@ -183,306 +162,238 @@ export function DiagnosisWizard({
     });
   };
 
+  const estimate = category ? estimateRange({ priceMin: category.price_min, priceMax: category.price_max, houseType: d.house_type, buildingAge: null }) : null;
+
+  if (!hydrated) return <div className="min-h-[60dvh]" />;
+
   return (
-    <div ref={topRef} className="mx-auto max-w-xl scroll-mt-20">
-      {/* progress */}
-      <div className="mb-6">
-        <div className="mb-2 flex items-center justify-between text-[12px] font-medium text-muted">
-          <span>
-            {step + 1} / {STEPS.length}　{STEPS[step]}
+    <div className="mx-auto min-h-[70dvh] max-w-[680px]">
+      <div className="mb-10 flex min-h-11 items-center justify-between">
+        <button type="button" onClick={back} className="-ml-2 flex min-h-11 items-center gap-1 rounded-lg px-2 text-[15px] text-muted hover:text-ink">
+          <Icon name="chevron-left" size={18} />
+          戻る
+        </button>
+        {qIndex >= 0 && (
+          <span className="text-[14px] tabular-nums text-muted" aria-label={`${QUESTIONS.length}問中${qIndex + 1}問目`}>
+            {qIndex + 1} / {QUESTIONS.length}
           </span>
-          {step > 0 && (
-            <button type="button" onClick={() => go(step - 1)} className="flex items-center gap-0.5 text-ink-2 hover:text-ink">
-              <Icon name="chevron-left" size={14} />
-              戻る
-            </button>
-          )}
-        </div>
-        <div className="h-1 overflow-hidden rounded-full bg-line-2">
-          <div className="h-full rounded-full bg-brand transition-all duration-300" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
-        </div>
+        )}
       </div>
 
       <div key={step} className="animate-fade-up">
-        {step === 0 && (
-          <StepFrame title="どんなことでお困りですか？" sub="近いものを1つ選んでください。">
-            <div className="grid grid-cols-2 gap-2.5">
-              {categories.map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  onClick={() => {
-                    setD((x) => ({ ...x, category_id: c.id, concerns: x.category_id === c.id ? x.concerns : [] }));
-                    go(1);
-                  }}
-                  className={cx(
-                    "rounded-2xl border p-4 text-left transition-colors",
-                    d.category_id === c.id ? "border-brand bg-brand-soft/60" : "border-line bg-white hover:border-ink/20",
-                  )}
-                >
-                  <Icon name={c.icon} size={22} className={d.category_id === c.id ? "text-brand" : "text-ink"} />
-                  <div className="mt-4 font-bold">{c.name}</div>
-                  <div className="mt-0.5 text-[12px] leading-snug text-muted">{c.description}</div>
-                </button>
-              ))}
-            </div>
-          </StepFrame>
+        {step === "category" && (
+          <Question title="どんな工事を|考えていますか？" headingRef={headingRef}>
+            <Options options={categories.map((c) => ({ value: c.id, label: c.name, sub: c.description }))} value={d.category_id} onChange={(v) => choose("category_id", v, "budget")} />
+          </Question>
         )}
 
-        {step === 1 && (
-          <StepFrame title="工事をする場所はどちらですか？" sub="番地までは不要です。会社には市区町村までしか表示されません。">
-            <div className="space-y-4">
-              <Field label="郵便番号" hint="入力すると市区町村を自動で選びます（任意）">
-                <Input inputMode="numeric" placeholder="251-0047" value={d.postal_code} onChange={(e) => onPostal(e.target.value)} autoComplete="postal-code" />
-              </Field>
-              <Field label="都道府県" required>
-                <Select value={d.prefecture} onChange={(e) => setD((x) => ({ ...x, prefecture: e.target.value, city: "" }))}>
-                  {[...prefectures, ...PREFECTURES.filter((p) => !prefectures.includes(p))].map((p) => (
-                    <option key={p}>{p}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field group label="市区町村" required>
-                <Chips options={[...cities.map((c) => c.city), "その他の地域"]} value={inArea ? d.city : d.city ? "その他の地域" : ""} onChange={(v) => set("city", v === "その他の地域" ? " " : v)} />
-              </Field>
-              {d.city && !inArea && (
-                <>
-                  <Field label="市区町村名">
-                    <Input value={d.city.trim()} onChange={(e) => set("city", e.target.value || " ")} placeholder="例: 鎌倉市" />
-                  </Field>
-                  <Notice tone="warn" icon="pin">
-                    このエリアは現在準備中です。相談内容は保存され、対応会社が増え次第お知らせします。
-                  </Notice>
-                </>
-              )}
-            </div>
-          </StepFrame>
+        {step === "budget" && (
+          <Question title="予算は|どれくらいですか？" headingRef={headingRef}>
+            <Options options={BUDGETS.map((b) => ({ value: b.value, label: b.label }))} value={d.budget} onChange={(v) => choose("budget", v)} />
+          </Question>
         )}
 
-        {step === 2 && (
-          <StepFrame title="お住まいについて教えてください">
-            <div className="space-y-5">
-              <Field group label="住宅タイプ" required>
-                <Chips options={[...HOUSE_TYPES]} value={d.house_type} onChange={(v) => set("house_type", v)} />
-              </Field>
-              <Field label="築年数" hint="わからなければ空欄でOKです">
-                <div className="flex items-center gap-2">
-                  <Input type="number" inputMode="numeric" min={0} max={150} className="w-28" value={d.building_age} onChange={(e) => set("building_age", e.target.value)} />
-                  <span className="text-sm text-muted">年</span>
-                </div>
-              </Field>
-            </div>
-          </StepFrame>
+        {step === "timing" && (
+          <Question title="いつ頃|始めたいですか？" headingRef={headingRef}>
+            <Options options={TIMINGS.map((t) => ({ value: t.value, label: t.label }))} value={d.desired_timing} onChange={(v) => choose("desired_timing", v)} />
+          </Question>
         )}
 
-        {step === 3 && (
-          <StepFrame title="気になっていることは？" sub="当てはまるものをすべて選んでください。">
-            <div className="space-y-5">
-              <div className="flex flex-wrap gap-2">
-                {(category?.concerns ?? []).map((c) => {
-                  const on = d.concerns.includes(c);
-                  return (
-                    <button
-                      type="button"
-                      key={c}
-                      onClick={() => set("concerns", on ? d.concerns.filter((x) => x !== c) : [...d.concerns, c])}
-                      className={cx("rounded-full border px-4 py-2 text-sm font-medium transition-colors", on ? "border-brand bg-brand text-white" : "border-line bg-white hover:border-ink/20")}
-                    >
-                      {on && "✓ "}
-                      {c}
-                    </button>
-                  );
-                })}
+        {step === "area" && (
+          <Question title="工事をする場所は？" sub="市区町村までで大丈夫です。" headingRef={headingRef}>
+            <Options
+              options={[...cities.map((c) => ({ value: c.city, label: c.city })), { value: "__other", label: "それ以外の地域" }]}
+              value={otherCity ? "__other" : inArea ? d.city : ""}
+              onChange={(v) => {
+                if (v === "__other") {
+                  setOtherCity(true);
+                  setD((x) => ({ ...x, city: inArea ? "" : x.city }));
+                } else {
+                  setOtherCity(false);
+                  choose("city", v);
+                }
+              }}
+            />
+            {otherCity ? (
+              <div className="mt-6 space-y-4">
+                <Field label="市区町村">
+                  <Input value={d.city} onChange={(e) => setD((x) => ({ ...x, city: e.target.value }))} placeholder="例：鎌倉市" autoFocus />
+                </Field>
+                <p className="text-[14px] leading-relaxed text-muted">このエリアはまだ準備中です。ご相談は保存し、対応できる会社が見つかり次第お知らせします。</p>
+                <Button size="lg" className="w-full" disabled={!d.city.trim()} onClick={next}>
+                  次へ
+                </Button>
               </div>
-              <Field label="具体的なお悩み・ご要望" hint="例: 南面の色あせが気になる。屋根も一緒に見てほしい。">
-                <Textarea value={d.details} onChange={(e) => set("details", e.target.value)} maxLength={2000} />
-              </Field>
-            </div>
-          </StepFrame>
+            ) : (
+              <details className="mt-8">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center text-[15px] text-muted underline-offset-4 hover:underline">郵便番号で選ぶ</summary>
+                <Input className="mt-3 max-w-[12rem]" inputMode="numeric" placeholder="251-0052" value={d.postal_code} onChange={(e) => onPostal(e.target.value)} aria-label="郵便番号" autoComplete="postal-code" />
+                {inArea && d.postal_code && (
+                  <Button className="mt-4" onClick={next}>
+                    {d.city}で進む
+                  </Button>
+                )}
+              </details>
+            )}
+          </Question>
         )}
 
-        {step === 4 && (
-          <StepFrame title="ご予算の目安は？" sub="あとから変更できます。決まっていなくても大丈夫です。">
-            <OptionList options={BUDGETS.map((b) => ({ value: b.value, label: b.label }))} value={d.budget} onChange={(v) => { set("budget", v); go(5); }} />
-          </StepFrame>
+        {step === "house" && (
+          <Question title="お住まいは？" headingRef={headingRef}>
+            <Options options={HOUSE_CHOICES.map((h) => ({ value: h, label: h }))} value={d.house_type} onChange={(v) => choose("house_type", v)} />
+          </Question>
         )}
 
-        {step === 5 && (
-          <StepFrame title="いつ頃までに工事したいですか？">
-            <div className="space-y-6">
-              <OptionList options={TIMINGS.map((t) => ({ value: t.value, label: t.label }))} value={d.desired_timing} onChange={(v) => set("desired_timing", v)} />
-              <Field group label="連絡を受けやすい時間帯" hint="会社がチャットを送るタイミングの参考になります（電話はかかってきません）">
-                <Chips options={[...CONTACT_TIMES]} value={d.contact_time} onChange={(v) => set("contact_time", v)} />
-              </Field>
-            </div>
-          </StepFrame>
-        )}
-
-        {step === 6 && (
-          <StepFrame title="写真があれば追加してください" sub="気になる箇所の写真があると、会社がより正確に判断できます（任意・最大10枚）。">
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        {step === "photos" && (
+          <Question title="気になる場所の|写真はありますか？" sub="あると、会社がより具体的に考えられます。なくても進めます。" headingRef={headingRef}>
+            <div className="grid grid-cols-3 gap-2">
               {photos.map((p, i) => (
-                <div key={p.url} className="relative aspect-square overflow-hidden rounded-xl bg-soft">
+                <div key={p.url} className="relative aspect-square overflow-hidden rounded-lg bg-soft">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.url} alt="" className="size-full object-cover" />
+                  <img src={p.url} alt={`追加した写真 ${i + 1}`} className="size-full object-cover" />
                   <button
                     type="button"
-                    aria-label="写真を削除"
+                    aria-label={`写真${i + 1}を削除`}
                     onClick={() => setPhotos((x) => x.filter((_, j) => j !== i))}
-                    className="absolute right-1 top-1 grid size-7 place-items-center rounded-full bg-black/55 text-white"
+                    className="absolute right-1.5 top-1.5 grid size-8 place-items-center rounded-md bg-ink/70 text-white"
                   >
                     <Icon name="x" size={14} />
                   </button>
                 </div>
               ))}
               {photos.length < MAX_PROJECT_PHOTOS && (
-                <label className="grid aspect-square cursor-pointer place-items-center rounded-xl border border-dashed border-line text-muted hover:bg-soft">
-                  <span className="flex flex-col items-center gap-1 text-[12px]">
-                    <Icon name="camera" size={22} />
-                    追加
-                  </span>
+                <label className="press grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-line bg-surface text-[14px] text-ink-2 focus-within:outline focus-within:outline-2 focus-within:outline-brand hover:border-ink/30">
+                  写真を追加
                   <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => addPhotos(e.target.files)} />
                 </label>
               )}
             </div>
-            <p className="mt-3 text-[12px] text-muted">写真は、あなたの相談に対応できる会社だけが見られます。</p>
-          </StepFrame>
+            <div className="mt-8">
+              <Field label="ひとこと（任意）">
+                <Textarea rows={3} value={d.details} onChange={(e) => setD((x) => ({ ...x, details: e.target.value }))} maxLength={2000} placeholder="例：南側の色あせが気になります。屋根も一緒に見てほしいです。" />
+              </Field>
+            </div>
+            <Button size="lg" className="mt-8 w-full" onClick={next}>
+              {photos.length ? "次へ" : "写真なしで次へ"}
+            </Button>
+          </Question>
         )}
 
-        {step === 7 && category && estimate && (
-          <div>
-            <div className="text-[12px] font-bold tracking-[0.18em] text-brand">RESULT</div>
-            <h1 className="mt-1.5 text-[26px] font-bold leading-tight tracking-tight">参考相場と、ご相談内容の整理</h1>
-            <div className="mt-6 rounded-3xl border border-line bg-white p-5 sm:p-6">
-              <div className="text-sm text-muted">入力内容から見ると、{category.name}の一般的な価格帯は</div>
-              <div className="mt-2 text-[34px] font-extrabold tracking-tight">約{manRange(estimate.min, estimate.max)}</div>
-              <div className="text-sm text-muted">程度です。{category.price_note && `（${category.price_note}）`}</div>
-              <ul className="mt-4 space-y-1.5 border-t border-line pt-4 text-[13px] leading-relaxed text-ink-2">
-                {estimate.notes.map((n) => (
-                  <li key={n} className="flex gap-2">
-                    <span className="mt-[7px] size-1 shrink-0 rounded-full bg-faint" />
-                    {n}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="mt-4 rounded-3xl bg-soft p-5 text-sm">
-              <div className="mb-3 font-bold">ご相談内容</div>
-              <dl className="grid grid-cols-[6.5rem_1fr] gap-y-2 text-[13px]">
-                <dt className="text-muted">場所</dt>
-                <dd>{d.prefecture}{d.city.trim()}</dd>
-                <dt className="text-muted">お住まい</dt>
-                <dd>
-                  {d.house_type}
-                  {d.building_age && `・築${d.building_age}年`}
-                </dd>
-                <dt className="text-muted">内容</dt>
-                <dd>{[category.name, ...d.concerns].join("・")}</dd>
-                <dt className="text-muted">予算</dt>
-                <dd>{BUDGETS.find((b) => b.value === d.budget)?.label}</dd>
-                <dt className="text-muted">希望時期</dt>
-                <dd>{TIMINGS.find((t) => t.value === d.desired_timing)?.label}</dd>
-                <dt className="text-muted">写真</dt>
-                <dd>{photos.length}枚</dd>
-              </dl>
-              <button type="button" onClick={() => go(0)} className="mt-3 text-[13px] font-semibold text-brand">
-                内容を修正する
-              </button>
-            </div>
-
-            <form action={submit} className="mt-6 space-y-4">
-              {wrongRole ? (
-                <Notice tone="warn" icon="alert">
-                  企業・運営アカウントでログイン中です。相談を作成するには一般ユーザーとして<Link href="/login" className="underline">ログイン</Link>してください。
-                </Notice>
-              ) : (
-                !loggedIn && (
-                  <div className="rounded-3xl border border-line bg-white p-5">
-                    <div className="font-bold">結果を保存して、会社を探す</div>
-                    <p className="mb-4 mt-1 text-[13px] text-muted">
-                      メールアドレスだけで登録できます。電話番号は不要です。登録済みの方は<Link href="/login?next=/diagnosis" className="font-semibold text-brand">ログイン</Link>
-                    </p>
-                    <div className="space-y-3">
-                      <Field label="お名前（ニックネーム可）" required>
-                        <Input name="name" autoComplete="nickname" maxLength={40} required />
-                      </Field>
-                      <Field label="メールアドレス" hint="会社には公開されません" required>
-                        <Input name="email" type="email" inputMode="email" autoComplete="email" required />
-                      </Field>
-                      <Field label="パスワード" hint="8文字以上" required>
-                        <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
-                      </Field>
-                    </div>
-                  </div>
-                )
-              )}
-              {error && <Notice tone="danger" icon="alert">{error}</Notice>}
-              <Button size="lg" className="w-full" disabled={pending || wrongRole}>
-                {pending ? "条件に合う会社を探しています…" : "条件に合う会社を探す"}
+        {step === "confirm" && category && (
+          <Question title="この条件で探します" headingRef={headingRef}>
+            <dl className="border-y border-line">
+              <ConfirmRow label="工事" value={category.name} onEdit={() => go("category")} />
+              <ConfirmRow label="予算" value={BUDGETS.find((b) => b.value === d.budget)?.label} onEdit={() => go("budget")} />
+              <ConfirmRow label="時期" value={TIMINGS.find((t) => t.value === d.desired_timing)?.label} onEdit={() => go("timing")} />
+              <ConfirmRow label="場所" value={`${d.prefecture}${d.city}`} onEdit={() => go("area")} />
+              <ConfirmRow label="お住まい" value={d.house_type} onEdit={() => go("house")} />
+              <ConfirmRow label="写真" value={photos.length ? `${photos.length}枚` : "なし"} onEdit={() => go("photos")} />
+            </dl>
+            {estimate && (
+              <p className="mt-6 text-[15px] leading-relaxed text-ink-2">
+                {category.name}の一般的な費用は<span className="font-medium text-ink">約{manRange(estimate.min, estimate.max)}</span>です。正式な金額は現地確認のあとに決まります。
+              </p>
+            )}
+            {wrongRole ? (
+              <Notice tone="warn" className="mt-8">
+                企業・運営アカウントでログイン中です。相談を作るには<Link href="/login" className="underline">一般ユーザーとしてログイン</Link>してください。
+              </Notice>
+            ) : loggedIn ? (
+              <form action={submit} className="mt-8">
+                {error && <Notice tone="danger" className="mb-4">{error}</Notice>}
+                <Button size="lg" className="w-full" disabled={pending}>
+                  {pending ? "探しています…" : "この条件で会社を探す"}
+                </Button>
+              </form>
+            ) : (
+              <Button size="lg" className="mt-8 w-full" onClick={() => go("account")}>
+                この条件で会社を探す
               </Button>
-              <p className="text-center text-[12px] text-muted">この時点で会社に連絡先が伝わることはありません。</p>
+            )}
+            <p className="mt-4 text-center text-[13px] text-muted">この時点で会社に連絡先が伝わることはありません。</p>
+          </Question>
+        )}
+
+        {step === "account" && (
+          <Question title="最後に、|受け取り先を|教えてください" sub="会社からの返事をお知らせします。電話番号は不要です。" headingRef={headingRef}>
+            <form action={submit} className="space-y-5">
+              <Field label="お名前（ニックネーム可）">
+                <Input name="name" autoComplete="nickname" maxLength={40} required />
+              </Field>
+              <Field label="メールアドレス" hint="会社には公開されません">
+                <Input name="email" type="email" inputMode="email" autoComplete="email" required />
+              </Field>
+              <Field label="パスワード" hint="8文字以上">
+                <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
+              </Field>
+              {error && <Notice tone="danger">{error}</Notice>}
+              <Button size="lg" className="w-full" disabled={pending}>
+                {pending ? "探しています…" : "登録して会社を見る"}
+              </Button>
+              <p className="text-center text-[14px] text-muted">
+                登録済みの方は<Link href="/login?next=/diagnosis" className="text-ink underline underline-offset-4">ログイン</Link>
+              </p>
             </form>
-          </div>
+          </Question>
         )}
       </div>
-
-      {step > 0 && step < 7 && step !== 4 && (
-        <div className="sticky bottom-0 -mx-4 mt-8 border-t border-line bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
-          <Button size="lg" className="w-full" disabled={!canNext} onClick={() => go(step + 1)} type="button">
-            {step === 6 ? (photos.length ? "診断結果を見る" : "写真なしで診断結果を見る") : "次へ"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
 
-function StepFrame({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+function Question({ title, sub, children, headingRef }: { title: string; sub?: string; children: React.ReactNode; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
+  // "|" in a title marks a preferred line break point.
+  const parts = title.split("|");
   return (
     <div>
-      <h1 className="text-[24px] font-bold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
-      {sub && <p className="mt-2 text-sm leading-relaxed text-muted">{sub}</p>}
-      <div className="mt-6">{children}</div>
-    </div>
-  );
-}
-
-function Chips({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <button
-          type="button"
-          key={o}
-          onClick={() => onChange(o)}
-          className={cx("rounded-full border px-4 py-2.5 text-sm font-medium transition-colors", value === o ? "border-ink bg-ink text-white" : "border-line bg-white hover:border-ink/20")}
-        >
-          {o}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function OptionList({ options, value, onChange }: { options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="grid gap-2">
-      {options.map((o) => (
-        <button
-          type="button"
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={cx(
-            "flex items-center justify-between rounded-2xl border px-4 py-3.5 text-left text-[15px] font-medium transition-colors",
-            value === o.value ? "border-brand bg-brand-soft/60 text-brand-ink" : "border-line bg-white hover:border-ink/20",
-          )}
-        >
-          {o.label}
-          <span className={cx("grid size-5 place-items-center rounded-full border", value === o.value ? "border-brand bg-brand text-white" : "border-line")}>
-            {value === o.value && <Icon name="check" size={12} strokeWidth={3} />}
+      <h1 ref={headingRef} tabIndex={-1} className="jp text-[32px] font-semibold leading-[1.3] outline-none sm:text-[38px]">
+        {parts.map((p, i) => (
+          <span key={i}>
+            {p}
+            {i < parts.length - 1 && <wbr />}
           </span>
-        </button>
-      ))}
+        ))}
+      </h1>
+      {sub && <p className="mt-3 text-[16px] leading-relaxed text-muted">{sub}</p>}
+      <div className="mt-10">{children}</div>
+    </div>
+  );
+}
+
+function Options({ options, value, onChange }: { options: { value: string; label: string; sub?: string }[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="grid gap-2.5" role="radiogroup">
+      {options.map((o) => {
+        const on = value === o.value;
+        return (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={on}
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={cx(
+              "press flex min-h-16 flex-col items-start justify-center rounded-xl border px-5 py-3 text-left",
+              on ? "border-brand bg-brand text-white" : "border-line bg-surface hover:border-ink/30",
+            )}
+          >
+            <span className="text-[18px] font-medium">{o.label}</span>
+            {o.sub && <span className={cx("text-[13px]", on ? "text-white/75" : "text-muted")}>{o.sub}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ConfirmRow({ label, value, onEdit }: { label: string; value?: string; onEdit: () => void }) {
+  return (
+    <div className="flex min-h-14 items-center justify-between gap-4 border-b border-line last:border-0">
+      <dt className="w-20 shrink-0 text-[15px] text-muted">{label}</dt>
+      <dd className="min-w-0 flex-1 truncate text-[16px]">{value || "—"}</dd>
+      <button type="button" onClick={onEdit} className="min-h-11 shrink-0 px-1 text-[14px] text-muted underline-offset-4 hover:text-ink hover:underline" aria-label={`${label}を変更`}>
+        変更
+      </button>
     </div>
   );
 }

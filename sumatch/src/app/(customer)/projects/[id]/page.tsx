@@ -4,14 +4,12 @@ import { requireUser } from "@/lib/auth";
 import { projectForCustomer } from "@/lib/access";
 import { get } from "@/lib/db";
 import { candidatesForProject, contractForProject, latestQuotesForProject, projectImages } from "@/lib/queries";
-import { BUDGETS, PROJECT_STATUS, TIMINGS } from "@/lib/constants";
+import { BUDGETS, TIMINGS } from "@/lib/constants";
 import { dateJa, manRange, yen } from "@/lib/format";
 import { fileUrl } from "@/lib/urls";
-import { CompanyAvatar } from "@/components/brand";
-import { Icon } from "@/components/icons";
 import { StatusStepper } from "@/components/status-stepper";
 import { AdvanceContractButton, CancelProjectButton, ReviewForm } from "@/components/project-actions";
-import { Badge, ButtonLink, Card, Notice, PageHeader, SectionTitle, Stars } from "@/components/ui";
+import { ButtonLink, Notice, Row } from "@/components/ui";
 import type { Category, Company, Review } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,165 +22,129 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
   if (!project) notFound();
   const category = get<Category>("SELECT * FROM categories WHERE id = ?", project.category_id)!;
   const images = projectImages(project.id);
-  const candidates = candidatesForProject(project.id).filter((c) => c.status === "matched" || c.customer_interest);
+  const talking = candidatesForProject(project.id).filter((c) => c.status === "matched" || (c.customer_interest && c.company_response !== "no"));
   const quotes = latestQuotesForProject(project.id);
   const contract = contractForProject(project.id);
   const contractCompany = contract ? get<Company>("SELECT * FROM companies WHERE id = ?", contract.company_id) : null;
   const review = get<Review>("SELECT * FROM reviews WHERE project_id = ?", project.id);
   const open = ["consulting", "quoting", "comparing"].includes(project.status);
 
-  return (
-    <div>
-      <PageHeader back={{ href: "/projects", label: "相談一覧" }} eyebrow={`${project.city}・${dateJa(project.created_at)}`} title={project.title} />
-      {decided && <Notice tone="ok" icon="check" className="mb-6">依頼先を決定しました。契約内容はこのページにいつでも記録・確認できます。</Notice>}
+  // The single most useful next step for this consultation.
+  const next = !open
+    ? null
+    : quotes.length > 0
+      ? { label: "見積もりを比べる", href: `/quotes?project=${project.id}` }
+      : talking.some((t) => t.status === "matched")
+        ? { label: "メッセージを開く", href: "/messages" }
+        : { label: "会社を見る", href: `/matches?project=${project.id}` };
 
-      <Card className="p-5 sm:p-6">
+  return (
+    <div className="mx-auto max-w-[760px]">
+      <Link href="/projects" className="-ml-1 mb-4 inline-flex min-h-11 items-center text-[15px] text-muted hover:text-ink">
+        ← 相談
+      </Link>
+      <p className="text-[14px] text-muted">
+        {project.city}・{project.house_type}・{dateJa(project.created_at)}
+      </p>
+      <h1 className="mt-1 text-[30px] font-semibold">{project.title}</h1>
+      <div className="mt-4">
         <StatusStepper status={project.status} />
-      </Card>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-6">
-          {contract && contractCompany && (
-            <Card className="p-5 sm:p-6">
-              <SectionTitle action={<Badge tone="ok">{PROJECT_STATUS[contract.status === "contracted" ? "contracted" : contract.status].label}</Badge>}>契約記録</SectionTitle>
-              <div className="flex items-center gap-3">
-                <CompanyAvatar name={contractCompany.name} color={contractCompany.brand_color} logoFileId={contractCompany.logo_file_id} size={40} />
-                <div className="font-bold">{contractCompany.name}</div>
-              </div>
-              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
-                <Item label="契約予定金額" value={yen(contract.amount)} />
-                <Item label="契約日" value={dateJa(contract.contract_date)} />
-                <Item label="工事予定日" value={dateJa(contract.start_date)} />
-                <Item label="完了日" value={dateJa(contract.end_date)} />
-              </dl>
-              <div className="mt-4 flex flex-wrap gap-3 text-[13px]">
-                {contract.quote_id && <Link href={`/quotes?project=${project.id}`} className="inline-flex items-center gap-1 font-semibold text-brand"><Icon name="doc" size={15} />採用した見積書</Link>}
-                {contract.contract_file_id && <a href={fileUrl(contract.contract_file_id)!} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-semibold text-brand"><Icon name="pdf" size={15} />契約書</a>}
-                <Link href={`/messages/${contract.match_id}`} className="inline-flex items-center gap-1 font-semibold text-brand"><Icon name="chat" size={15} />チャット</Link>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
-                {contract.status === "contracted" && <AdvanceContractButton contractId={contract.id} to="in_progress" label="工事中にする" />}
-                {contract.status === "in_progress" && <AdvanceContractButton contractId={contract.id} to="completed" label="完了にする" variant="primary" />}
-                {contract.status === "completed" && <span className="text-sm text-muted">工事は完了しました。</span>}
-              </div>
-              <p className="mt-3 text-[12px] text-faint">将来、電子契約・お支払い・工事保証・進捗レポートもここで管理できるようになります。</p>
-            </Card>
-          )}
-
-          {contract?.status === "completed" && contractCompany && (
-            <Card className="p-5 sm:p-6">
-              {review ? (
-                <div>
-                  <SectionTitle>あなたの口コミ</SectionTitle>
-                  <Stars value={review.rating} />
-                  <div className="mt-1 font-semibold">{review.title}</div>
-                  <p className="mt-1 text-sm text-ink-2">{review.body}</p>
-                </div>
-              ) : (
-                <ReviewForm projectId={project.id} companyName={contractCompany.name} />
-              )}
-            </Card>
-          )}
-
-          {open && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <NextCard href={`/matches?project=${project.id}`} icon="users" title="会社を選ぶ" body={`${candidates.length}社と進行中`} />
-              <NextCard href={`/quotes?project=${project.id}`} icon="compare" title="見積もりを比較" body={quotes.length ? `${quotes.length}件の見積もり` : "まだ届いていません"} />
-            </div>
-          )}
-
-          {candidates.length > 0 && (
-            <Card className="p-5 sm:p-6">
-              <SectionTitle>やり取り中の会社</SectionTitle>
-              <ul className="divide-y divide-line-2">
-                {candidates.map((c) => {
-                  const q = quotes.find((x) => x.match_id === c.id);
-                  return (
-                    <li key={c.id} className="flex items-center gap-3 py-3">
-                      <CompanyAvatar name={c.company.name} color={c.company.brand_color} logoFileId={c.company.logo_file_id} size={36} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold">{c.company.name}</div>
-                        <div className="text-[12px] text-muted">
-                          {c.status === "matched" ? (q ? `見積もり ${Math.round(q.total / 10000)}万円` : "チャット中・見積もり待ち") : "返答待ち"}
-                        </div>
-                      </div>
-                      {c.status === "matched" ? (
-                        <ButtonLink href={`/messages/${c.id}`} variant="secondary" size="sm">チャット</ButtonLink>
-                      ) : (
-                        <Badge>返答待ち</Badge>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
-          )}
-        </div>
-
-        <aside className="space-y-6">
-          <Card className="p-5">
-            <SectionTitle>相談内容</SectionTitle>
-            <dl className="space-y-2.5 text-[13px]">
-              <Row label="カテゴリ" value={category.name} />
-              <Row label="場所" value={`${project.prefecture}${project.city}`} />
-              <Row label="お住まい" value={`${project.house_type}${project.building_age != null ? `・築${project.building_age}年` : ""}`} />
-              <Row label="気になること" value={project.concerns || "—"} />
-              <Row label="予算" value={BUDGETS.find((b) => b.min === project.budget_min && b.max === project.budget_max)?.label ?? manRange(project.budget_min, project.budget_max)} />
-              <Row label="希望時期" value={TIMINGS.find((t) => t.value === project.desired_timing)?.label ?? "—"} />
-              <Row label="参考相場" value={`約${manRange(project.estimate_min, project.estimate_max)}`} />
-            </dl>
-            {project.details && <p className="mt-3 rounded-2xl bg-soft p-3 text-[13px] leading-relaxed text-ink-2">{project.details}</p>}
-            {images.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-1.5">
-                {images.map((f) => (
-                  <a key={f} href={fileUrl(f)!} target="_blank" rel="noopener" className="aspect-square overflow-hidden rounded-xl bg-soft">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={fileUrl(f)!} alt="" className="size-full object-cover" />
-                  </a>
-                ))}
-              </div>
-            )}
-          </Card>
-          {open && (
-            <div className="text-center">
-              <CancelProjectButton projectId={project.id} />
-            </div>
-          )}
-        </aside>
       </div>
-    </div>
-  );
-}
+      {decided && <Notice tone="ok" className="mt-6">依頼先を決めました。契約の内容はこのページにまとまっています。</Notice>}
+      {next && (
+        <ButtonLink href={next.href} size="lg" className="mt-8 w-full sm:w-auto">
+          {next.label}
+        </ButtonLink>
+      )}
 
-function Item({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[12px] text-muted">{label}</dt>
-      <dd className="mt-0.5 font-semibold">{value}</dd>
-    </div>
-  );
-}
+      {contract && contractCompany && (
+        <section className="mt-14">
+          <h2 className="text-[20px] font-medium">契約</h2>
+          <div className="mt-3">
+            <Row label="会社">
+              <Link href={`/messages/${contract.match_id}`} className="underline underline-offset-4">
+                {contractCompany.name}
+              </Link>
+            </Row>
+            <Row label="契約予定金額">{yen(contract.amount)}</Row>
+            <Row label="契約日">{dateJa(contract.contract_date)}</Row>
+            <Row label="工事予定日">{dateJa(contract.start_date)}</Row>
+            {contract.end_date && <Row label="完了日">{dateJa(contract.end_date)}</Row>}
+            {contract.contract_file_id && (
+              <Row label="契約書">
+                <a href={fileUrl(contract.contract_file_id)!} target="_blank" rel="noopener" className="underline underline-offset-4">
+                  開く
+                </a>
+              </Row>
+            )}
+          </div>
+          <div className="mt-6">
+            {contract.status === "contracted" && <AdvanceContractButton contractId={contract.id} to="in_progress" label="工事が始まった" />}
+            {contract.status === "in_progress" && <AdvanceContractButton contractId={contract.id} to="completed" label="工事が終わった" variant="primary" />}
+          </div>
+        </section>
+      )}
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[5.5rem_1fr] gap-2">
-      <dt className="text-muted">{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
-}
+      {contract?.status === "completed" && contractCompany && (
+        <section className="mt-14">
+          {review ? (
+            <>
+              <h2 className="text-[20px] font-medium">あなたの口コミ</h2>
+              <p className="mt-3 text-[15px]">★ {review.rating}　{review.title}</p>
+              <p className="mt-1 text-[15px] leading-relaxed text-ink-2">{review.body}</p>
+            </>
+          ) : (
+            <ReviewForm projectId={project.id} companyName={contractCompany.name} />
+          )}
+        </section>
+      )}
 
-function NextCard({ href, icon, title, body }: { href: string; icon: string; title: string; body: string }) {
-  return (
-    <Link href={href} className="flex items-center gap-4 rounded-3xl border border-line bg-white p-5 hover:border-ink/20">
-      <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
-        <Icon name={icon} size={21} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-bold">{title}</span>
-        <span className="block text-[13px] text-muted">{body}</span>
-      </span>
-      <Icon name="chevron-right" size={18} className="text-faint" />
-    </Link>
+      {talking.length > 0 && (
+        <section className="mt-14">
+          <h2 className="text-[20px] font-medium">相談している会社</h2>
+          <ul className="mt-3 divide-y divide-line border-y border-line">
+            {talking.map((c) => {
+              const q = quotes.find((x) => x.match_id === c.id);
+              return (
+                <li key={c.id}>
+                  <Link href={c.status === "matched" ? `/messages/${c.id}` : `/company/${c.company.id}?project=${project.id}`} className="flex min-h-16 items-center justify-between gap-4 py-3">
+                    <span className="text-[17px]">{c.company.name}</span>
+                    <span className="text-[14px] text-muted">{c.status === "matched" ? (q ? `見積もり ¥${q.total.toLocaleString("ja-JP")}` : "メッセージ中") : "返事を待っています"}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section className="mt-14">
+        <h2 className="text-[20px] font-medium">相談の内容</h2>
+        <div className="mt-3">
+          <Row label="工事">{category.name}</Row>
+          <Row label="予算">{BUDGETS.find((b) => b.min === project.budget_min && b.max === project.budget_max)?.label ?? manRange(project.budget_min, project.budget_max)}</Row>
+          <Row label="時期">{TIMINGS.find((t) => t.value === project.desired_timing)?.label ?? "—"}</Row>
+          <Row label="場所">{`${project.prefecture}${project.city}`}</Row>
+          <Row label="目安">{`約${manRange(project.estimate_min, project.estimate_max)}`}</Row>
+        </div>
+        {project.details && <p className="mt-5 text-[15px] leading-relaxed text-ink-2">{project.details}</p>}
+        {images.length > 0 && (
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {images.map((f) => (
+              <a key={f} href={fileUrl(f)!} target="_blank" rel="noopener" className="aspect-square overflow-hidden rounded-lg bg-soft">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={fileUrl(f)!} alt="相談の写真" className="size-full object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {open && (
+        <div className="mt-16">
+          <CancelProjectButton projectId={project.id} />
+        </div>
+      )}
+    </div>
   );
 }

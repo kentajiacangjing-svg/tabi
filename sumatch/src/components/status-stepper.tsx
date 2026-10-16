@@ -2,21 +2,20 @@ import { PROJECT_STATUS, STATUS_FLOW } from "@/lib/constants";
 import type { ProjectStatus } from "@/lib/types";
 import { cx } from "./ui";
 
+/** Where the consultation is, in words. A thin line, no colourful progress bar. */
 export function StatusStepper({ status }: { status: ProjectStatus }) {
   const current = PROJECT_STATUS[status].step;
-  if (status === "cancelled") return <div className="rounded-2xl bg-soft px-4 py-3 text-sm text-muted">この相談は取り下げ済みです。</div>;
+  if (status === "cancelled") return <p className="text-[15px] text-muted">この相談は取り下げました。</p>;
   return (
-    <ol className="grid grid-cols-6 gap-1">
-      {STATUS_FLOW.map((s, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <li key={s} className="min-w-0">
-            <div className={cx("h-1.5 rounded-full", done || active ? "bg-brand" : "bg-line-2")} />
-            <div className={cx("mt-2 truncate text-center text-[11px] sm:text-[12px]", active ? "font-bold text-ink" : done ? "text-ink-2" : "text-faint")}>{PROJECT_STATUS[s].label}</div>
-          </li>
-        );
-      })}
+    <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]" aria-label="進み具合">
+      {STATUS_FLOW.map((s, i) => (
+        <li key={s} className="flex items-center gap-2">
+          <span className={cx(i === current ? "font-medium text-ink" : i < current ? "text-ink-2" : "text-faint")} aria-current={i === current ? "step" : undefined}>
+            {PROJECT_STATUS[s].label}
+          </span>
+          {i < STATUS_FLOW.length - 1 && <span className={cx("h-px w-4", i < current ? "bg-ink-2" : "bg-line")} aria-hidden="true" />}
+        </li>
+      ))}
     </ol>
   );
 }

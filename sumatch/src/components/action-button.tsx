@@ -35,7 +35,7 @@ export function ActionButton({
           });
         }}
         className={cx(
-          "rounded-full border px-3 py-1 text-[12px] font-semibold disabled:opacity-50",
+          "min-h-10 rounded-lg border px-3.5 text-[13px] font-medium disabled:opacity-50",
           tone === "brand" && "border-brand bg-brand text-white",
           tone === "danger" && "border-danger/30 text-danger hover:bg-danger-soft",
           tone === "neutral" && "border-line text-ink-2 hover:bg-soft",

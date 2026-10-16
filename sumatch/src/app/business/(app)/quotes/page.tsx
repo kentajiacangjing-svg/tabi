@@ -26,42 +26,42 @@ export default async function BusinessQuotes({ searchParams }: { searchParams: P
     membership.company.id,
   );
   return (
-    <div className="max-w-4xl">
-      <PageHeader title="見積もり" description="SUMATCH上で提出した見積もりは、お客様の比較画面にそのまま表示されます。" />
+    <div className="mx-auto max-w-[760px]">
+      <PageHeader title="見積もり" description="提出した見積もりは、そのままお客様の比較画面に並びます。" />
       {awaiting.length > 0 && !match && (
-        <div className="mb-6 rounded-3xl border border-line bg-white p-5">
-          <div className="mb-3 font-bold">見積もり未提出のお客様</div>
-          <ul className="divide-y divide-line-2">
+        <div className="mb-14">
+          <h2 className="text-[15px] text-muted">まだ見積もりを出していない相談</h2>
+          <ul className="mt-2 divide-y divide-line border-y border-line">
             {awaiting.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="min-w-0 truncate text-sm">{a.customer}様・{a.city}・{a.title}</span>
-                <ButtonLink href={`/business/quotes/new?match=${a.id}`} size="sm">作成</ButtonLink>
+              <li key={a.id} className="flex min-h-16 items-center justify-between gap-3 py-3">
+                <span className="min-w-0 truncate text-[16px]">{a.customer}様・{a.city}・{a.title}</span>
+                <ButtonLink href={`/business/quotes/new?match=${a.id}`} size="sm">見積もりを作る</ButtonLink>
               </li>
             ))}
           </ul>
         </div>
       )}
       {quotes.length === 0 ? (
-        <EmptyState icon="doc" title="提出した見積もりはありません" />
+        <EmptyState title="提出した見積もりはまだありません" />
       ) : (
-        <div className="overflow-hidden rounded-3xl border border-line bg-white">
+        <div className="divide-y divide-line border-y border-line">
           {quotes.map((q) => (
-            <div key={q.id} className={cx("flex items-center gap-3 border-b border-line-2 px-4 py-3.5 last:border-0", q.status === "superseded" && "opacity-60")}>
+            <div key={q.id} className={cx("flex items-center gap-4 py-4", q.status === "superseded" && "opacity-50")}>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <Badge tone={STATUS[q.status][1]}>{STATUS[q.status][0]}</Badge>
-                  {q.version > 1 && <span className="text-[11px] text-faint">第{q.version}版</span>}
-                  <span className="text-[12px] text-faint">{dateShort(q.created_at)}</span>
+                  {q.version > 1 && <span className="text-[13px] text-faint">第{q.version}版</span>}
+                  <span className="text-[13px] text-faint">{dateShort(q.created_at)}</span>
                 </div>
-                <div className="mt-1 truncate font-semibold">{q.customer}様・{q.city}</div>
-                <div className="truncate text-[12px] text-muted">{q.title}・保証{q.warranty_years}年・{q.duration}</div>
+                <div className="mt-1 truncate text-[17px] font-medium">{q.customer}様・{q.city}</div>
+                <div className="truncate text-[14px] text-muted">{q.title}・保証{q.warranty_years}年・{q.duration}</div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold">{man(q.total, 1)}</div>
-                <div className="flex justify-end gap-2 text-[12px]">
+                <div className="text-[20px] font-medium">¥{q.total.toLocaleString("ja-JP")}</div>
+                <div className="mt-1 flex justify-end gap-3 text-[14px]">
                   {q.pdf_file_id && <a href={`/api/files/${q.pdf_file_id}`} target="_blank" rel="noopener" className="text-brand"><Icon name="pdf" size={14} /></a>}
-                  <Link href={`/business/messages/${q.match_id}`} className="font-semibold text-brand">チャット</Link>
-                  {q.status === "submitted" && <Link href={`/business/quotes/new?match=${q.match_id}`} className="font-semibold text-brand">改訂</Link>}
+                  <Link href={`/business/messages/${q.match_id}`} className="text-brand">メッセージ</Link>
+                  {q.status === "submitted" && <Link href={`/business/quotes/new?match=${q.match_id}`} className="text-brand">作り直す</Link>}
                 </div>
               </div>
             </div>

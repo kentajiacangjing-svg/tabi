@@ -10,8 +10,8 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const user = await getCurrentUser();
   if (user) redirect(homeFor(user.role));
   return (
-    <div className="w-full max-w-md rounded-3xl border border-line bg-white p-6 sm:p-8">
-      <h1 className="text-2xl font-bold tracking-tight">無料で登録</h1>
+    <div className="w-full max-w-[440px]">
+      <h1 className="text-[30px] font-semibold">登録</h1>
       <p className="mt-1.5 text-sm text-muted">相談の管理・会社とのチャットに使います。</p>
       <div className="mt-6">
         <SignupForm next={next} />

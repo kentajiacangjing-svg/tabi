@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
 import { AccountForm, PasswordForm } from "@/components/account-forms";
-import { Button, Card, PageHeader, SectionTitle } from "@/components/ui";
+import { Button, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "アカウント" };
 export const dynamic = "force-dynamic";
@@ -9,23 +9,27 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage() {
   const user = await requireUser(["customer"], "/account");
   return (
-    <div className="max-w-xl">
+    <div className="mx-auto max-w-[640px]">
       <PageHeader title="アカウント" description={user.email} />
-      <div className="space-y-6">
-        <Card className="p-5 sm:p-6">
-          <SectionTitle>プロフィールと通知</SectionTitle>
+      <div className="space-y-14">
+        <section>
+          <h2 className="mb-5 text-[20px] font-medium">お名前と通知</h2>
           <AccountForm name={user.name} notifyEmail={!!user.notify_email} notifyBrowser={!!user.notify_browser} />
-        </Card>
-        <Card className="p-5 sm:p-6">
-          <SectionTitle>パスワード</SectionTitle>
+        </section>
+        <section className="border-t border-line pt-10">
+          <h2 className="mb-5 text-[20px] font-medium">パスワード</h2>
           <PasswordForm />
-        </Card>
-        <Card className="p-5 text-[13px] leading-relaxed text-muted sm:p-6">
-          <SectionTitle>プライバシー</SectionTitle>
-          会社に表示されるのは、お名前・市区町村・相談内容・写真のみです。メールアドレスや電話番号が会社に公開されることはありません。
-        </Card>
-        <form action={logoutAction}>
-          <Button variant="secondary" className="w-full">ログアウト</Button>
+        </section>
+        <section className="border-t border-line pt-10">
+          <h2 className="text-[20px] font-medium">会社に伝わる情報</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">
+            お名前、市区町村、相談の内容、写真だけです。メールアドレスや電話番号が会社に伝わることはありません。
+          </p>
+        </section>
+        <form action={logoutAction} className="border-t border-line pt-10">
+          <Button variant="secondary" size="lg" className="w-full">
+            ログアウト
+          </Button>
         </form>
       </div>
     </div>

@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync as DatabaseSyncType, SQLInputValue } from "node:sqlite";
-import { SCHEMA } from "./schema";
+import { MIGRATIONS, SCHEMA } from "./schema";
 import { seed } from "./seed";
 
 // node:sqlite is loaded through getBuiltinModule so the bundler never tries to resolve it.
@@ -20,6 +20,10 @@ function open(): DatabaseSyncType {
   const db = new DatabaseSync(DB_PATH);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  for (const m of MIGRATIONS) {
+    const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === m.column)) db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.ddl}`);
+  }
   return db;
 }
 

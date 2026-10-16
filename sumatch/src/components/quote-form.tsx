@@ -61,7 +61,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
       }
       className="space-y-6"
     >
-      <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
+      <section>
         <Field label="件名" required>
           <Input name="title" defaultValue={defaults.title} required maxLength={120} />
         </Field>
@@ -78,7 +78,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
                   <input className={cx(inputClass, "py-2.5 text-right")} type="number" min={0} value={it.unit_price} onChange={(e) => upd(i, { unit_price: Number(e.target.value) })} aria-label="単価" />
                 </div>
                 <div className="text-right text-sm font-semibold tabular-nums sm:pr-1">{yen(it.quantity * it.unit_price)}</div>
-                <button type="button" onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))} className="grid size-9 place-items-center justify-self-end rounded-full text-muted hover:bg-line-2" aria-label="項目を削除">
+                <button type="button" onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))} className="grid size-11 place-items-center justify-self-end rounded-lg text-muted hover:bg-soft" aria-label="項目を削除">
                   <Icon name="x" size={16} />
                 </button>
               </div>
@@ -110,13 +110,13 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
           </label>
           <Line label={`消費税（${TAX_RATE * 100}%）`} value={yen(tax)} />
           <div className="flex items-baseline justify-between border-t border-line pt-3">
-            <span className="font-bold">合計（税込）</span>
-            <span className="text-2xl font-extrabold tracking-tight">{yen(total)}</span>
+            <span className="font-semibold">合計（税込）</span>
+            <span className="text-[26px] font-medium tracking-tight">{yen(total)}</span>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-3xl border border-line bg-white p-5 sm:grid-cols-2 sm:p-6">
+      <section className="grid gap-5 border-t border-line pt-8 sm:grid-cols-2">
         <Field label="保証内容">
           <Input name="warranty" defaultValue={defaults.warranty} placeholder="外壁10年保証（自社）" />
         </Field>
@@ -154,10 +154,10 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
       </section>
 
       {error && <Notice tone="danger" icon="alert">{error}</Notice>}
-      <div className="sticky bottom-20 z-10 flex items-center justify-between gap-3 rounded-3xl border border-line bg-white/95 p-3 pl-5 shadow-[var(--shadow-pop)] backdrop-blur md:bottom-4">
+      <div className="sticky bottom-[calc(60px+env(safe-area-inset-bottom))] z-10 -mx-5 flex items-center justify-between gap-3 border-t border-line bg-canvas px-5 py-3 md:static md:mx-0 md:px-0">
         <div>
           <div className="text-[11px] text-muted">合計（税込）</div>
-          <div className="text-lg font-bold">{yen(total)}</div>
+          <div className="text-lg font-semibold">{yen(total)}</div>
         </div>
         <Button size="lg" disabled={pending || total <= 0}>
           {pending ? "提出中…" : revision ? "改訂版を提出" : "見積もりを提出"}

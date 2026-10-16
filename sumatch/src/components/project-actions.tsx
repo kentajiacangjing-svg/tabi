@@ -71,10 +71,10 @@ export function ReviewForm({ projectId, companyName }: { projectId: string; comp
       className="space-y-3"
     >
       <input type="hidden" name="project_id" value={projectId} />
-      <div className="font-bold">{companyName}の口コミを書く</div>
+      <div className="font-semibold">{companyName}の口コミを書く</div>
       <div className="flex gap-1" role="radiogroup" aria-label="評価">
         {[1, 2, 3, 4, 5].map((i) => (
-          <button key={i} type="button" role="radio" aria-checked={rating === i} onClick={() => setRating(i)} className={cx("p-0.5", i <= rating ? "text-[#E3A008]" : "text-line")} aria-label={`${i}点`}>
+          <button key={i} type="button" role="radio" aria-checked={rating === i} onClick={() => setRating(i)} className={cx("p-0.5", i <= rating ? "text-ink" : "text-line")} aria-label={`${i}点`}>
             <Icon name="star" size={30} fill="currentColor" strokeWidth={1} />
           </button>
         ))}

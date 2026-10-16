@@ -26,26 +26,26 @@ export function LeadActions({
   const [error, setError] = useState<string | null>(null);
   if (matched)
     return (
-      <Link href={`/business/messages/${matchId}`} className={buttonClass("primary", "md", "w-full")}>
+      <Link href={`/business/messages/${matchId}`} className={buttonClass("primary", "lg", "w-full")}>
         チャットを開く
       </Link>
     );
-  if (closed) return <div className="rounded-full bg-soft py-2.5 text-center text-[13px] text-muted">受付終了</div>;
+  if (closed) return <p className="py-3 text-center text-[15px] text-muted">この相談は受付を終えています</p>;
   const respond = (yes: boolean) =>
     start(async () => {
       setError(null);
       const r = await respondLeadAction(projectId, yes);
       if (!r.ok) return setError(r.error);
-      if (r.status === "matched") router.push(`/business/messages/${r.matchId}`);
+      if (r.status === "matched") return router.push(`/business/match/${r.matchId}`);
       router.refresh();
     });
   if (response === "yes")
     return (
-      <div className="rounded-full bg-brand-soft py-2.5 text-center text-[13px] font-semibold text-brand-ink">対応希望を送信済み・お客様の選択待ち</div>
+      <p className="py-3 text-center text-[15px] text-ink-2">「対応したい」を送りました。お客様が選ぶとメッセージが始まります。</p>
     );
   if (response === "no")
     return (
-      <div className="flex items-center justify-between gap-2 rounded-full bg-soft py-1.5 pl-4 pr-1.5 text-[13px] text-muted">
+      <div className="flex items-center justify-between gap-2 py-1.5 text-[15px] text-muted">
         見送りました
         <Button size="sm" variant="secondary" disabled={pending} onClick={() => respond(true)}>
           やっぱり対応したい
@@ -55,10 +55,10 @@ export function LeadActions({
   return (
     <div>
       <div className="flex gap-2">
-        <Button variant="secondary" className="flex-1" disabled={pending || !!disabled} onClick={() => respond(false)}>
+        <Button variant="secondary" size="lg" className="flex-1" disabled={pending} onClick={() => respond(false)}>
           見送る
         </Button>
-        <Button className="flex-[2]" disabled={pending || !!disabled} onClick={() => respond(true)}>
+        <Button size="lg" className="flex-[1.6]" disabled={pending || !!disabled} onClick={() => respond(true)}>
           対応したい
         </Button>
       </div>

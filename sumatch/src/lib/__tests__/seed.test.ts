@@ -47,3 +47,23 @@ describe("seed + domain flow", async () => {
     expect(() => services.customerRequest(cands[1].id, yamada.id)).toThrow();
   });
 });
+
+describe("save / pass", async () => {
+  const db = await import("../db");
+  const services = await import("../services");
+  type M = import("../types").Match;
+  it("saving, passing and then consulting keep the flags consistent", () => {
+    const watanabe = db.get<{ id: string }>("SELECT id FROM users WHERE email = 'watanabe@demo.sumatch.jp'")!;
+    const project = db.get<{ id: string }>("SELECT id FROM projects WHERE customer_id = ?", watanabe.id)!;
+    const m = db.get<M>("SELECT * FROM matches WHERE project_id = ? AND customer_interest = 0 LIMIT 1", project.id)!;
+    services.customerMark(m.id, watanabe.id, "save");
+    expect(db.get<M>("SELECT * FROM matches WHERE id = ?", m.id)!.customer_saved).toBe(1);
+    services.customerMark(m.id, watanabe.id, "pass");
+    const passed = db.get<M>("SELECT * FROM matches WHERE id = ?", m.id)!;
+    expect([passed.customer_saved, passed.customer_passed]).toEqual([0, 1]);
+    services.customerRequest(m.id, watanabe.id);
+    expect(db.get<M>("SELECT * FROM matches WHERE id = ?", m.id)!.customer_passed).toBe(0);
+    const other = db.get<{ id: string }>("SELECT id FROM users WHERE email = 'ito@demo.sumatch.jp'")!;
+    expect(() => services.customerMark(m.id, other.id, "save")).toThrow();
+  });
+});

@@ -10,18 +10,18 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "dark";
 type Size = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none select-none whitespace-nowrap";
+  "press inline-flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:pointer-events-none select-none whitespace-nowrap";
 const variants: Record<Variant, string> = {
   primary: "bg-brand text-white hover:bg-brand-ink",
   dark: "bg-ink text-white hover:bg-ink-2",
-  secondary: "bg-white text-ink border border-line hover:bg-soft",
+  secondary: "bg-surface text-ink border border-line hover:border-ink/30",
   ghost: "text-ink-2 hover:bg-soft",
-  danger: "bg-white text-danger border border-danger/30 hover:bg-danger-soft",
+  danger: "bg-surface text-danger border border-danger/30 hover:bg-danger-soft",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-4 text-[13px]",
-  md: "h-11 px-5 text-sm",
-  lg: "h-14 px-7 text-base",
+  sm: "h-10 px-4 text-[14px] rounded-[10px]",
+  md: "h-12 px-5 text-[15px] rounded-[10px]",
+  lg: "h-14 px-7 text-[16px] rounded-xl",
 };
 
 export function buttonClass(variant: Variant = "primary", size: Size = "md", extra?: string) {
@@ -46,23 +46,27 @@ export function ButtonLink({
   return <Link className={buttonClass(variant, size, className)} {...rest} />;
 }
 
+/** A plain white surface. Use sparingly — whitespace and dividers come first. */
 export function Card({ className, ...rest }: ComponentProps<"div">) {
-  return <div className={cx("rounded-2xl border border-line bg-white shadow-[var(--shadow-card)]", className)} {...rest} />;
+  return <div className={cx("rounded-xl border border-line bg-surface", className)} {...rest} />;
 }
 
-type Tone = "neutral" | "brand" | "ok" | "warn" | "danger" | "dark";
+type Tone = "neutral" | "brand" | "ok" | "warn" | "danger" | "dark" | "match";
 const tones: Record<Tone, string> = {
-  neutral: "bg-soft text-ink-2",
-  brand: "bg-brand-soft text-brand-ink",
-  ok: "bg-ok-soft text-ok",
-  warn: "bg-warn-soft text-warn",
-  danger: "bg-danger-soft text-danger",
-  dark: "bg-ink text-white",
+  neutral: "text-muted",
+  brand: "text-brand",
+  ok: "text-ok",
+  warn: "text-warn",
+  danger: "text-danger",
+  dark: "text-ink",
+  match: "text-match",
 };
 
+/** Status text with a small dot. Deliberately not a pill. */
 export function Badge({ tone = "neutral", className, children }: { tone?: Tone; className?: string; children: ReactNode }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold leading-5", tones[tone], className)}>
+    <span className={cx("inline-flex items-center gap-1.5 text-[13px] font-medium leading-5", tones[tone], className)}>
+      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
       {children}
     </span>
   );
@@ -82,18 +86,18 @@ export function PageHeader({
   eyebrow?: ReactNode;
 }) {
   return (
-    <div className="mb-6 sm:mb-8">
+    <div className="mb-8 sm:mb-12">
       {back && (
-        <Link href={back.href} className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-          <Icon name="chevron-left" size={16} />
+        <Link href={back.href} className="-ml-1 mb-4 inline-flex min-h-11 items-center gap-1 text-[15px] text-muted hover:text-ink">
+          <Icon name="chevron-left" size={18} />
           {back.label}
         </Link>
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          {eyebrow && <div className="mb-1.5 text-[12px] font-semibold tracking-wider text-brand">{eyebrow}</div>}
-          <h1 className="text-[26px] font-bold leading-tight tracking-tight sm:text-[32px]">{title}</h1>
-          {description && <p className="mt-2 text-[15px] leading-relaxed text-muted">{description}</p>}
+          {eyebrow && <div className="mb-2 text-[14px] text-muted">{eyebrow}</div>}
+          <h1 className="jp text-[28px] font-semibold leading-tight sm:text-[34px]">{title}</h1>
+          {description && <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-muted">{description}</p>}
         </div>
         {action}
       </div>
@@ -103,51 +107,49 @@ export function PageHeader({
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="text-[17px] font-bold tracking-tight">{children}</h2>
+    <div className="mb-4 flex items-baseline justify-between gap-3">
+      <h2 className="text-[20px] font-semibold">{children}</h2>
       {action}
     </div>
   );
 }
 
-export function EmptyState({ icon = "inbox", title, children, action }: { icon?: string; title: string; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({ title, children, action }: { icon?: string; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-line px-6 py-12 text-center">
-      <div className="mb-3 grid size-12 place-items-center rounded-full bg-soft text-muted">
-        <Icon name={icon} size={22} />
-      </div>
-      <div className="font-semibold">{title}</div>
-      {children && <div className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted">{children}</div>}
-      {action && <div className="mt-5">{action}</div>}
+    <div className="flex flex-col items-start border-t border-line py-12">
+      <div className="text-[20px] font-semibold">{title}</div>
+      {children && <div className="mt-2 max-w-md text-[15px] leading-relaxed text-muted">{children}</div>}
+      {action && <div className="mt-6">{action}</div>}
     </div>
   );
 }
 
+/** Big number + label. No box — numbers are the hierarchy. */
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: "brand" }) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-4 sm:p-5">
-      <div className="text-[12px] font-medium text-muted">{label}</div>
-      <div className={cx("mt-1.5 text-2xl font-bold tracking-tight sm:text-[28px]", tone === "brand" && "text-brand")}>{value}</div>
-      {sub && <div className="mt-1 text-[12px] text-muted">{sub}</div>}
+    <div className="py-2">
+      <div className={cx("text-[40px] font-medium leading-none tracking-tight sm:text-[48px]", tone === "brand" && "text-brand")}>{value}</div>
+      <div className="mt-2 text-[15px] text-ink-2">{label}</div>
+      {sub && <div className="mt-0.5 text-[13px] text-muted">{sub}</div>}
     </div>
   );
 }
 
 export const inputClass =
-  "block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink placeholder:text-faint focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:bg-soft";
+  "block w-full rounded-[10px] border border-line bg-surface px-4 py-3 text-[16px] text-ink placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:bg-soft";
 
 /** `group` renders a div[role=group] instead of <label> — use it when the field contains buttons (chips). */
 export function Field({ label, hint, error, children, required, group }: { label: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; required?: boolean; group?: boolean }) {
   const Tag = group ? "div" : "label";
   return (
     <Tag className="block" {...(group ? { role: "group" } : {})}>
-      <span className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-ink-2">
+      <span className="mb-2 flex items-center gap-2 text-[14px] font-medium text-ink-2">
         {label}
-        {required && <span className="text-[11px] font-medium text-brand">必須</span>}
+        {required && <span className="text-[12px] font-normal text-muted">必須</span>}
       </span>
       {children}
-      {hint && !error && <span className="mt-1.5 block text-[12px] text-muted">{hint}</span>}
-      {error && <span className="mt-1.5 block text-[12px] text-danger">{error}</span>}
+      {hint && !error && <span className="mt-1.5 block text-[13px] text-muted">{hint}</span>}
+      {error && <span className="mt-1.5 block text-[13px] text-danger">{error}</span>}
     </Tag>
   );
 }
@@ -178,8 +180,8 @@ export function Notice({ tone = "brand", icon, children, className }: { tone?: "
     neutral: "bg-soft text-ink-2",
   }[tone];
   return (
-    <div className={cx("flex gap-2.5 rounded-xl px-4 py-3 text-[13px] leading-relaxed", t, className)}>
-      {icon && <Icon name={icon} size={18} className="mt-px shrink-0" />}
+    <div className={cx("flex gap-2.5 rounded-[10px] px-4 py-3 text-[14px] leading-relaxed", t, className)} role={tone === "danger" ? "alert" : undefined}>
+      {icon && <Icon name={icon} size={18} className="mt-0.5 shrink-0" />}
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -187,14 +189,24 @@ export function Notice({ tone = "brand", icon, children, className }: { tone?: "
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-[#E3A008]" aria-label={`評価 ${value.toFixed(1)}`}>
+    <span className="inline-flex items-center gap-0.5 text-ink" aria-label={`評価 ${value.toFixed(1)}`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <Icon key={i} name="star" size={size} strokeWidth={1.4} fill={value >= i - 0.25 ? "currentColor" : "none"} />
+        <Icon key={i} name="star" size={size} strokeWidth={1.3} fill={value >= i - 0.25 ? "currentColor" : "none"} />
       ))}
     </span>
   );
 }
 
 export function Container({ className, ...rest }: ComponentProps<"div">) {
-  return <div className={cx("mx-auto w-full max-w-5xl px-4 sm:px-6", className)} {...rest} />;
+  return <div className={cx("mx-auto w-full max-w-5xl px-5 sm:px-8", className)} {...rest} />;
+}
+
+/** Quiet row used instead of nested cards: label on the left, value on the right. */
+export function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-6 border-b border-line py-3.5 text-[15px] last:border-0">
+      <span className="shrink-0 text-muted">{label}</span>
+      <span className="min-w-0 text-right">{children}</span>
+    </div>
+  );
 }

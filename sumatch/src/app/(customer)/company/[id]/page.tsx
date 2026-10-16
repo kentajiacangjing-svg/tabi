@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { get } from "@/lib/db";
 import { companyProfile, workImage } from "@/lib/queries";
-import { dateShort, manRange, responseSpeed } from "@/lib/format";
-import { CompanyAvatar } from "@/components/brand";
+import { cityOf, dateShort, manRange, responseSpeed } from "@/lib/format";
+import { MAX_MATCHES_PER_PROJECT } from "@/lib/constants";
 import { Icon } from "@/components/icons";
-import { Badge, ButtonLink, Card, SectionTitle, Stars } from "@/components/ui";
+import { ConsultButton } from "@/components/saved-actions";
+import { Row } from "@/components/ui";
+import type { Match } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const p = companyProfile(id);
-  return { title: p?.company.name ?? "企業プロフィール" };
+  return { title: companyProfile(id)?.company.name ?? "会社" };
 }
 
 export default async function CompanyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ project?: string }> }) {
@@ -21,109 +23,130 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
   const p = companyProfile(id);
   const user = await getCurrentUser();
   if (!p || (p.company.status !== "approved" && user?.role !== "admin")) notFound();
-  const { company: c } = p;
+  const c = p.company;
+
+  // Offer 「相談する」 only when the visitor is looking at this company for one of their own consultations.
+  const match =
+    project && user?.role === "customer"
+      ? get<Match & { customer_id: string; project_status: string }>(
+          "SELECT m.*, p.customer_id, p.status AS project_status FROM matches m JOIN projects p ON p.id = m.project_id WHERE m.project_id = ? AND m.company_id = ?",
+          project,
+          c.id,
+        )
+      : undefined;
+  const own = match && match.customer_id === user?.id ? match : undefined;
+  const requested = own
+    ? (get<{ n: number }>("SELECT COUNT(*) n FROM matches WHERE project_id = ? AND customer_interest = 1 AND company_response != 'no'", own.project_id)?.n ?? 0)
+    : 0;
+  const hero = p.works[0];
+
   return (
-    <div>
-      <Link href={project ? `/matches?project=${project}` : "/projects"} className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-        <Icon name="chevron-left" size={16} />
-        {project ? "候補一覧へ戻る" : "戻る"}
+    <div className="mx-auto max-w-[760px]">
+      <Link href={project ? `/matches?project=${project}` : "/"} className="-ml-1 mb-4 inline-flex min-h-11 items-center gap-1 text-[15px] text-muted hover:text-ink">
+        <Icon name="chevron-left" size={18} />
+        戻る
       </Link>
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <CompanyAvatar name={c.name} color={c.brand_color} logoFileId={c.logo_file_id} size={72} className="rounded-2xl" />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] font-bold tracking-tight">{c.name}</h1>
-          <p className="mt-1 text-ink-2">{c.tagline}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
-            <span className="flex items-center gap-1.5"><Stars value={c.rating_avg} /><b className="text-ink">{c.rating_avg.toFixed(1)}</b>（口コミ{c.review_count}件）</span>
-            <span>施工実績 {c.works_total.toLocaleString()}件</span>
-            {c.founded_year && <span>創業 {c.founded_year}年</span>}
-          </div>
-        </div>
-      </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {p.categories.map((cat) => <Badge key={cat.id} tone="brand">{cat.name}（{cat.works_count}件）</Badge>)}
-        {c.self_construction ? <Badge tone="ok">自社施工</Badge> : <Badge>提携職人と施工</Badge>}
-      </div>
-
-      {p.works.length > 0 && (
-        <div className="no-scrollbar -mx-4 mt-8 flex snap-x gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
-          {p.works.map((w) => (
-            <figure key={w.id} className="w-64 shrink-0 snap-start sm:w-auto">
-              <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-soft">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {workImage(w) && <img src={workImage(w)!} alt={w.title} className="size-full object-cover" />}
-              </div>
-              <figcaption className="mt-2 text-[13px]">
-                <div className="font-semibold">{w.title}</div>
-                <div className="text-muted">{w.cost_label}</div>
-              </figcaption>
-            </figure>
-          ))}
+      {hero && workImage(hero) && (
+        <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-soft sm:aspect-[16/9]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={workImage(hero)!} alt={hero.title} className="size-full object-cover" />
         </div>
       )}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          <Card className="p-5 sm:p-6">
-            <SectionTitle>会社紹介</SectionTitle>
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink-2">{c.description}</p>
-          </Card>
-          <Card className="p-5 sm:p-6">
-            <SectionTitle>口コミ</SectionTitle>
-            {p.reviews.length === 0 ? (
-              <p className="text-sm text-muted">まだ口コミはありません。</p>
-            ) : (
-              <ul className="divide-y divide-line-2">
-                {p.reviews.map((r) => (
-                  <li key={r.id} className="py-4 first:pt-0">
-                    <div className="flex items-center justify-between">
-                      <Stars value={r.rating} />
-                      <span className="text-[12px] text-faint">{r.author_label}・{dateShort(r.created_at)}</span>
-                    </div>
-                    {r.title && <div className="mt-1.5 font-semibold">{r.title}</div>}
-                    <p className="mt-1 text-sm leading-relaxed text-ink-2">{r.body}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
-        <aside className="space-y-4">
-          <Card className="p-5">
-            <dl className="space-y-3 text-[13px]">
-              <Row label="対応エリア" value={p.areas.map((a) => a.city).join("、")} />
-              <Row label="得意工事" value={c.specialties} />
-              <Row label="価格帯" value={manRange(c.price_band_min, c.price_band_max)} />
-              <Row label="保証" value={c.warranty} />
-              <Row label="返信速度" value={responseSpeed(c.avg_response_minutes)} />
-              <Row label="営業時間" value={c.business_hours} />
-              {c.license_number && <Row label="建設業許可" value={c.license_number} />}
-              {c.qualifications && <Row label="資格" value={c.qualifications} />}
-              <Row label="所在地" value={c.address} />
-            </dl>
-            {c.website_url && (
-              <a href={c.website_url} target="_blank" rel="nofollow noopener noreferrer" className="mt-4 inline-flex items-center gap-1 text-[12px] text-muted hover:text-ink">
-                公式サイト <Icon name="external" size={12} />
-              </a>
-            )}
-          </Card>
-          <div className="rounded-3xl bg-soft p-5 text-[13px] leading-relaxed text-ink-2">
-            <div className="mb-1 flex items-center gap-1.5 font-bold text-ink"><Icon name="shield" size={16} />SUMATCHで相談するメリット</div>
-            見積もり・やり取りが記録に残り、契約内容もまとめて管理できます。今後は工事保証・お支払い管理も追加予定です。
-          </div>
-          {!project && <ButtonLink href="/diagnosis" className="w-full">この分野で相談する</ButtonLink>}
-        </aside>
-      </div>
-    </div>
-  );
-}
+      <h1 className="mt-8 text-[30px] font-semibold leading-tight">{c.name}</h1>
+      <p className="mt-1 text-[16px] text-ink-2">
+        {cityOf(c.address)} / {p.categories.map((x) => x.name).join("・")}
+      </p>
+      <p className="mt-2 text-[15px] text-ink-2">
+        ★ {c.rating_avg.toFixed(1)}
+        <span className="text-muted">（口コミ{c.review_count}件）</span>
+        <span className="mx-2 text-line">|</span>施工実績 {c.works_total.toLocaleString()}件
+      </p>
+      <p className="mt-6 text-[18px] leading-relaxed">「{c.tagline}」</p>
+      <p className="mt-4 whitespace-pre-wrap text-[16px] leading-[1.9] text-ink-2">{c.description}</p>
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-muted">{label}</dt>
-      <dd className="mt-0.5 font-medium">{value || "—"}</dd>
+      {own && own.status !== "matched" && !own.customer_interest && (
+        <div className="mt-10">
+          <ConsultButton
+            matchId={own.id}
+            disabledReason={
+              !["consulting", "quoting", "comparing"].includes(own.project_status)
+                ? "この相談は依頼先が決まっています。"
+                : requested >= MAX_MATCHES_PER_PROJECT
+                  ? `相談できるのは${MAX_MATCHES_PER_PROJECT}社までです。`
+                  : undefined
+            }
+          />
+        </div>
+      )}
+      {own?.status === "matched" && (
+        <Link href={`/messages/${own.id}`} className="mt-10 flex h-14 items-center justify-center rounded-xl bg-brand text-white">
+          メッセージを開く
+        </Link>
+      )}
+
+      {p.works.length > 1 && (
+        <section className="mt-16">
+          <h2 className="text-[22px] font-semibold">施工事例</h2>
+          <div className="no-scrollbar -mx-5 mt-5 flex snap-x gap-3 overflow-x-auto px-5 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0">
+            {p.works.map((w) => (
+              <figure key={w.id} className="w-72 shrink-0 snap-start sm:w-auto">
+                <div className="aspect-[4/3] overflow-hidden rounded-xl bg-soft">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {workImage(w) && <img src={workImage(w)!} alt={w.title} className="size-full object-cover" />}
+                </div>
+                <figcaption className="mt-2 text-[15px]">
+                  {w.title}
+                  <span className="block text-[14px] text-muted">{w.cost_label}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-16">
+        <h2 className="text-[22px] font-semibold">会社について</h2>
+        <div className="mt-4">
+          <Row label="対応エリア">{p.areas.map((a) => a.city).join("、")}</Row>
+          <Row label="得意な工事">{c.specialties}</Row>
+          <Row label="価格帯">{manRange(c.price_band_min, c.price_band_max)}</Row>
+          <Row label="保証">{c.warranty}</Row>
+          <Row label="施工">{c.self_construction ? "自社の職人が施工" : "提携職人と施工（品質管理は自社）"}</Row>
+          <Row label="返信の目安">{responseSpeed(c.avg_response_minutes)}</Row>
+          {c.license_number && <Row label="建設業許可">{c.license_number}</Row>}
+          {c.qualifications && <Row label="資格">{c.qualifications}</Row>}
+          {c.founded_year && <Row label="創業">{c.founded_year}年</Row>}
+          <Row label="所在地">{c.address}</Row>
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <h2 className="text-[22px] font-semibold">口コミ</h2>
+        {p.reviews.length === 0 ? (
+          <p className="mt-4 text-[15px] text-muted">まだ口コミはありません。</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line border-y border-line">
+            {p.reviews.map((r) => (
+              <li key={r.id} className="py-6">
+                <div className="flex items-baseline justify-between gap-3 text-[14px]">
+                  <span>★ {r.rating}</span>
+                  <span className="text-muted">{r.author_label}・{dateShort(r.created_at)}</span>
+                </div>
+                {r.title && <div className="mt-2 text-[16px] font-medium">{r.title}</div>}
+                <p className="mt-1 text-[15px] leading-relaxed text-ink-2">{r.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {c.website_url && (
+        <a href={c.website_url} target="_blank" rel="nofollow noopener noreferrer" className="mt-10 inline-flex min-h-11 items-center gap-1 text-[14px] text-muted hover:text-ink">
+          公式サイト <Icon name="external" size={13} />
+        </a>
+      )}
     </div>
   );
 }

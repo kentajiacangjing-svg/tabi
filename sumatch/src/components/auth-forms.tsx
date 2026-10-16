@@ -67,7 +67,7 @@ export function SignupForm({ next }: { next?: string }) {
       <Button className="w-full" size="lg" disabled={pending}>
         {pending ? "登録中…" : "無料で登録する"}
       </Button>
-      <p className="text-center text-[12px] text-muted">電話番号の登録は不要です。</p>
+      <p className="text-center text-[13px] text-muted">電話番号の登録は不要です。</p>
     </form>
   );
 }
@@ -83,11 +83,11 @@ export function DemoLogin() {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {DEMO.map((g) => (
         <div key={g.group}>
-          <div className="mb-1.5 text-[12px] font-semibold text-muted">{g.group}</div>
-          <div className="grid gap-1.5">
+          <div className="mb-1 text-[13px] text-muted">{g.group}</div>
+          <div className="divide-y divide-line border-y border-line">
             {g.items.map(([email, name, note]) => (
               <button
                 key={email}
@@ -101,17 +101,17 @@ export function DemoLogin() {
                     router.refresh();
                   })
                 }
-                className="flex items-center justify-between rounded-xl border border-line bg-white px-3.5 py-2.5 text-left text-sm hover:bg-soft disabled:opacity-50"
+                className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-[15px] hover:text-brand disabled:opacity-50"
               >
-                <span className="font-semibold">{name}</span>
-                <span className="text-[12px] text-muted">{note}</span>
+                <span>{name}</span>
+                <span className="text-[13px] text-muted">{note}</span>
               </button>
             ))}
           </div>
         </div>
       ))}
       {error && <Notice tone="danger">{error}</Notice>}
-      <p className="text-[12px] text-faint">
+      <p className="text-[13px] text-muted">
         デモ用パスワードはすべて <code className="rounded bg-soft px-1">sumatch123</code> です。<Link href="/" className="underline">トップへ戻る</Link>
       </p>
     </div>

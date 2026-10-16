@@ -57,3 +57,9 @@ export function responseSpeed(minutes: number) {
 export function pct(n: number) {
   return `${Math.round(n * 100)}%`;
 }
+
+/** "神奈川県藤沢市辻堂" -> "藤沢市" */
+export function cityOf(address: string) {
+  const m = address.replace(/^(東京都|北海道|(?:京都|大阪)府|.{2,3}県)/, "").match(/^(.+?[市区町村])/);
+  return m ? m[1] : address;
+}

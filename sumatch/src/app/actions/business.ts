@@ -110,7 +110,7 @@ export async function businessSignupAction(fd: FormData) {
         price_band_max: input.price_band_max,
         lead_time_weeks: input.lead_time_weeks,
         self_construction: input.self_construction ? 1 : 0,
-        brand_color: ["#2557D6", "#2F6F5E", "#6B4E3D", "#3B3F46", "#1F7A8C", "#8A6D3B"][Math.floor(Math.random() * 6)],
+        brand_color: "#3d3a35",
         plan_id: plan?.id ?? null,
         trial_ends_at: trialDays ? new Date(Date.now() + trialDays * 86400_000).toISOString().slice(0, 10) : null,
         created_at: ts,

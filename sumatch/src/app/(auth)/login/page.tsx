@@ -11,28 +11,26 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (user) redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : homeFor(user.role));
   const demo = process.env.DEMO_MODE !== "false";
   return (
-    <div className="grid w-full max-w-4xl gap-6 md:grid-cols-2">
-      <div className="rounded-3xl border border-line bg-white p-6 sm:p-8">
-        <h1 className="text-2xl font-bold tracking-tight">ログイン</h1>
-        <p className="mt-1.5 text-sm text-muted">一般の方・企業の方共通です。</p>
-        <div className="mt-6">
-          <LoginForm next={next} />
-        </div>
-        <div className="mt-6 space-y-2 text-center text-sm text-muted">
-          <div>
-            はじめての方は <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand">新規登録</Link>
-          </div>
-          <div>
-            工事会社の方は <Link href="/business/signup" className="font-semibold text-brand">企業登録</Link>
-          </div>
-        </div>
+    <div className="w-full max-w-[440px]">
+      <h1 className="text-[30px] font-semibold">ログイン</h1>
+      <div className="mt-8">
+        <LoginForm next={next} />
+      </div>
+      <div className="mt-8 space-y-2 text-[15px] text-muted">
+        <p>
+          はじめての方は<Link href="/" className="text-ink underline underline-offset-4">相談を始める</Link>と、そのまま登録できます。
+        </p>
+        <p>
+          施工会社の方は<Link href="/business/signup" className="text-ink underline underline-offset-4">企業登録</Link>
+        </p>
       </div>
       {demo && (
-        <div className="rounded-3xl border border-dashed border-line bg-white/60 p-6 sm:p-8">
-          <h2 className="font-bold">デモアカウントで試す</h2>
-          <p className="mb-5 mt-1 text-sm text-muted">ワンクリックでログインし、各立場の画面を確認できます。</p>
-          <DemoLogin />
-        </div>
+        <details className="mt-12 border-t border-line pt-6">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center text-[15px] text-ink-2">デモアカウントで試す</summary>
+          <div className="mt-4">
+            <DemoLogin />
+          </div>
+        </details>
       )}
     </div>
   );

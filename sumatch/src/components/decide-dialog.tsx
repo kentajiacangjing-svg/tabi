@@ -27,11 +27,11 @@ export function DecideButton({
   const today = new Date().toISOString().slice(0, 10);
   return (
     <>
-      <Button variant={variant} className="w-full" onClick={() => setOpen(true)}>
+      <Button variant={variant} size="lg" className="w-full" onClick={() => setOpen(true)}>
         {label}
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-3 sm:items-center" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 sm:items-center" onClick={() => setOpen(false)}>
           <form
             onClick={(e) => e.stopPropagation()}
             action={(fd) =>
@@ -42,12 +42,12 @@ export function DecideButton({
                 router.refresh();
               })
             }
-            className="max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto rounded-3xl bg-white p-6"
+            className="max-h-[92dvh] w-full max-w-md space-y-5 overflow-y-auto rounded-2xl bg-surface p-6"
           >
             <div>
-              <div className="text-[12px] font-semibold text-muted">依頼先の決定</div>
-              <div className="mt-0.5 text-xl font-bold">{companyName}に決める</div>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted">決定内容は相談に記録され、他の会社には「今回は別の会社に依頼する」旨をSUMATCHからお伝えします。</p>
+              
+              <div className="text-[24px] font-semibold">{companyName}に決める</div>
+              <p className="mt-2 text-[15px] leading-relaxed text-muted">決定内容は相談に記録され、他の会社には「今回は別の会社に依頼する」旨をSUMATCHからお伝えします。</p>
             </div>
             <input type="hidden" name="match_id" value={matchId} />
             <input type="hidden" name="quote_id" value={quoteId ?? ""} />

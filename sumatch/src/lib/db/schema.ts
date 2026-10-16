@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS companies (
   review_count INTEGER NOT NULL DEFAULT 0,
   avg_response_minutes INTEGER NOT NULL DEFAULT 120,
   logo_file_id TEXT,
-  brand_color TEXT NOT NULL DEFAULT '#2557D6',
+  brand_color TEXT NOT NULL DEFAULT '#3d3a35',
   plan_id TEXT REFERENCES plans(id),
   trial_ends_at TEXT,
   web_interest INTEGER NOT NULL DEFAULT 0,
@@ -190,6 +190,10 @@ CREATE TABLE IF NOT EXISTS matches (
   reasons TEXT NOT NULL DEFAULT '[]',
   customer_interest INTEGER NOT NULL DEFAULT 0,
   customer_interest_at TEXT,
+  customer_saved INTEGER NOT NULL DEFAULT 0,
+  customer_passed INTEGER NOT NULL DEFAULT 0,
+  customer_match_seen_at TEXT,
+  company_match_seen_at TEXT,
   company_response TEXT NOT NULL DEFAULT 'none' CHECK (company_response IN ('none','yes','no')),
   company_response_at TEXT,
   status TEXT NOT NULL DEFAULT 'candidate' CHECK (status IN ('candidate','matched','closed')),
@@ -339,3 +343,11 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, crea
 CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind, created_at);
 CREATE INDEX IF NOT EXISTS idx_members_user ON company_members(user_id);
 `;
+
+/** Columns added after the first release. Applied with ALTER TABLE when missing. */
+export const MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  { table: "matches", column: "customer_saved", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "matches", column: "customer_passed", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "matches", column: "customer_match_seen_at", ddl: "TEXT" },
+  { table: "matches", column: "company_match_seen_at", ddl: "TEXT" },
+];

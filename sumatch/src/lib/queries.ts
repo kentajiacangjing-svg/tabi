@@ -48,6 +48,8 @@ export interface CandidateRow extends Match {
   company: Company;
   works_in_category: number;
   cover_image: string | null;
+  cover_title: string | null;
+  category_name: string;
 }
 
 export function candidatesForProject(projectId: string): CandidateRow[] {
@@ -63,12 +65,13 @@ export function candidatesForProject(projectId: string): CandidateRow[] {
   );
   const project = get<Project>("SELECT category_id FROM projects WHERE id = ?", projectId);
   return rows.map((r) => {
-    const w = get<{ image_url: string | null; file_id: string | null }>(
-      "SELECT image_url, file_id FROM company_works WHERE company_id = ? ORDER BY (category_id = ?) DESC, created_at DESC LIMIT 1",
+    const w = get<{ image_url: string | null; file_id: string | null; title: string }>(
+      "SELECT image_url, file_id, title FROM company_works WHERE company_id = ? ORDER BY (category_id = ?) DESC, created_at DESC LIMIT 1",
       r.company_id,
       project?.category_id ?? "",
     );
-    return { ...r, company: get<Company>("SELECT * FROM companies WHERE id = ?", r.company_id)!, cover_image: workImage(w) };
+    const category_name = get<{ name: string }>("SELECT name FROM categories WHERE id = ?", project?.category_id ?? "")?.name ?? "";
+    return { ...r, company: get<Company>("SELECT * FROM companies WHERE id = ?", r.company_id)!, cover_image: workImage(w), cover_title: w?.title ?? null, category_name };
   });
 }
 

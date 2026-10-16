@@ -3,23 +3,22 @@ import type { ProjectStatus } from "./types";
 export const HOUSE_TYPES = ["戸建て", "マンション", "アパート・集合住宅", "店舗・事務所", "その他"] as const;
 
 export const TIMINGS = [
-  { value: "asap", label: "できるだけ早く", weeks: 2 },
-  { value: "1m", label: "1ヶ月以内", weeks: 4 },
+  { value: "asap", label: "すぐ", weeks: 4 },
   { value: "3m", label: "3ヶ月以内", weeks: 12 },
   { value: "6m", label: "半年以内", weeks: 26 },
-  { value: "undecided", label: "時期は未定・相談したい", weeks: 52 },
+  { value: "undecided", label: "まだ決めていない", weeks: 52 },
 ] as const;
 
 export const BUDGETS = [
-  { value: "0-30", label: "30万円未満", min: 0, max: 300000 },
-  { value: "30-50", label: "30〜50万円", min: 300000, max: 500000 },
+  { value: "0-50", label: "〜50万円", min: 0, max: 500000 },
   { value: "50-100", label: "50〜100万円", min: 500000, max: 1000000 },
-  { value: "100-150", label: "100〜150万円", min: 1000000, max: 1500000 },
-  { value: "150-200", label: "150〜200万円", min: 1500000, max: 2000000 },
-  { value: "200-300", label: "200〜300万円", min: 2000000, max: 3000000 },
-  { value: "300-", label: "300万円以上", min: 3000000, max: null },
-  { value: "unknown", label: "わからない・相場を知りたい", min: null, max: null },
+  { value: "100-200", label: "100〜200万円", min: 1000000, max: 2000000 },
+  { value: "200-", label: "200万円〜", min: 2000000, max: null },
+  { value: "unknown", label: "まだ分からない", min: null, max: null },
 ] as const;
+
+/** Shown in the question flow; HOUSE_TYPES keeps the full list for data. */
+export const HOUSE_CHOICES = ["戸建て", "マンション", "その他"] as const;
 
 export const CONTACT_TIMES = ["平日 日中", "平日 夕方以降", "土日祝", "いつでも可"] as const;
 

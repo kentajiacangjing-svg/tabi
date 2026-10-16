@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Icon } from "./icons";
 
 interface Evt {
   type: "message" | "read" | "notification" | "match" | "quote" | "ping";
@@ -42,19 +41,28 @@ export function RealtimeClient({ browserNotify }: { browserNotify: boolean }) {
         if (e.type === "ping") return;
         window.dispatchEvent(new CustomEvent("sumatch:event", { detail: e }));
         if (e.type === "notification" && e.title) {
-          const onThisChat = e.link && window.location.pathname === e.link;
-          if (!onThisChat) {
-            const id = Date.now() + Math.random();
-            setToasts((t) => [...t.slice(-2), { id, title: e.title!, body: e.body, link: e.link }]);
-            setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
-            if (browserNotify && document.hidden && "Notification" in window && Notification.permission === "granted") {
-              const n = new Notification(e.title, { body: e.body, tag: e.link, icon: "/icon.svg" });
-              n.onclick = () => {
-                window.focus();
-                if (e.link) router.push(e.link);
-              };
+          const title = e.title;
+          // Decide after a beat: the page that triggered the event may be navigating to the same place.
+          setTimeout(() => {
+            const here = window.location.pathname;
+            const onThisChat = (e.link && here === e.link) || /\/match\//.test(here) || (e.link && /\/match\//.test(e.link) && /\/(leads|matches)/.test(here));
+            if (!onThisChat) {
+              const id = Date.now() + Math.random();
+              setToasts((t) => [...t.slice(-2), { id, title, body: e.body, link: e.link }]);
+              setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
+              if (browserNotify && document.hidden && "Notification" in window && Notification.permission === "granted") {
+                const n = new Notification(title, {
+                  body: e.body,
+                  tag: e.link,
+                  icon: "/icon.svg",
+                });
+                n.onclick = () => {
+                  window.focus();
+                  if (e.link) router.push(e.link);
+                };
+              }
             }
-          }
+          }, 700);
           // Refresh server components (badges, lists) — debounced.
           if (refreshTimer.current) clearTimeout(refreshTimer.current);
           refreshTimer.current = setTimeout(() => router.refresh(), 400);
@@ -80,13 +88,11 @@ export function RealtimeClient({ browserNotify }: { browserNotify: boolean }) {
           key={t.id}
           href={t.link || "#"}
           onClick={() => setToasts((x) => x.filter((y) => y.id !== t.id))}
-          className="animate-fade-up pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[var(--shadow-pop)] backdrop-blur"
+          className="animate-fade-up pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 shadow-[var(--shadow-pop)]"
         >
-          <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-brand">
-            <Icon name="bell" size={16} />
-          </span>
+          <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />
           <span className="min-w-0">
-            <span className="block text-sm font-semibold">{t.title}</span>
+            <span className="block text-[15px] font-medium">{t.title}</span>
             {t.body && <span className="mt-0.5 block truncate text-[13px] text-muted">{t.body}</span>}
           </span>
         </Link>

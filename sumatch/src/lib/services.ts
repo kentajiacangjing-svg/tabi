@@ -52,6 +52,10 @@ export function generateCandidates(project: Project) {
       reasons: JSON.stringify(reasons),
       customer_interest: 0,
       customer_interest_at: null,
+      customer_saved: 0,
+      customer_passed: 0,
+      customer_match_seen_at: null,
+      company_match_seen_at: null,
       company_response: "none",
       company_response_at: null,
       status: "candidate",
@@ -116,8 +120,8 @@ function becomeMatched(match: Match, project: Project, company: Company) {
     body: "マッチが成立しました。ここから先のご相談・現地調査の日程調整・見積もりのやり取りは、すべてSUMATCH内で行えます。",
     created_at: ts,
   });
-  notify([project.customer_id], "match", "マッチが成立しました", `${company.name}とチャットを始められます。`, `/messages/${match.id}`);
-  notify(companyUserIds(company.id), "match", "マッチが成立しました", `${project.city}の案件のお客様とチャットを始められます。`, `/business/messages/${match.id}`);
+  notify([project.customer_id], "match", "マッチしました", `${company.name}と相談を始められます。`, `/match/${match.id}`);
+  notify(companyUserIds(company.id), "match", "マッチしました", `${project.city}のお客様と相談を始められます。`, `/business/match/${match.id}`);
 }
 
 /** Customer: 「この会社と話したい」 */
@@ -134,7 +138,7 @@ export function customerRequest(matchId: string, customerId: string) {
     if (activeCustomerRequests(project.id) >= MAX_MATCHES_PER_PROJECT)
       throw new DomainError(`1つの相談で話せる会社は最大${MAX_MATCHES_PER_PROJECT}社までです。`);
     const company = get<Company>("SELECT * FROM companies WHERE id = ?", match.company_id)!;
-    update("matches", match.id, { customer_interest: 1, customer_interest_at: now() });
+    update("matches", match.id, { customer_interest: 1, customer_interest_at: now(), customer_passed: 0 });
     if (match.company_response === "yes") {
       becomeMatched(match, project, company);
     } else {
@@ -148,6 +152,25 @@ export function customerRequest(matchId: string, customerId: string) {
     }
     return get<Match>("SELECT * FROM matches WHERE id = ?", match.id)!;
   });
+}
+
+/** Customer: 「保存」 toggles a bookmark; 「見送る」 hides the company from the deck. */
+export function customerMark(matchId: string, customerId: string, mark: "save" | "unsave" | "pass" | "unpass") {
+  const match = get<Match>("SELECT * FROM matches WHERE id = ?", matchId);
+  if (!match) throw new DomainError("候補が見つかりません。");
+  const project = get<Project>("SELECT customer_id FROM projects WHERE id = ?", match.project_id);
+  if (project?.customer_id !== customerId) throw new DomainError("この操作は許可されていません。");
+  if (mark === "save") update("matches", match.id, { customer_saved: 1, customer_passed: 0 });
+  if (mark === "unsave") update("matches", match.id, { customer_saved: 0 });
+  if (mark === "pass") {
+    if (match.status === "matched") throw new DomainError("マッチ済みの会社は見送れません。");
+    update("matches", match.id, { customer_passed: 1, customer_saved: 0 });
+  }
+  if (mark === "unpass") update("matches", match.id, { customer_passed: 0 });
+}
+
+export function markMatchSeen(matchId: string, side: "customer" | "company") {
+  run(`UPDATE matches SET ${side === "customer" ? "customer_match_seen_at" : "company_match_seen_at"} = COALESCE(${side === "customer" ? "customer_match_seen_at" : "company_match_seen_at"}, ?) WHERE id = ?`, now(), matchId);
 }
 
 /** Customer: withdraw a pending request (not possible once matched). */

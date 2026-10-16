@@ -130,6 +130,10 @@ export interface Match {
   reasons: string; // JSON string[]
   customer_interest: number;
   customer_interest_at: string | null;
+  customer_saved: number;
+  customer_passed: number;
+  customer_match_seen_at: string | null;
+  company_match_seen_at: string | null;
   company_response: "none" | "yes" | "no";
   company_response_at: string | null;
   status: "candidate" | "matched" | "closed";

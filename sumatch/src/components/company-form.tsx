@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { businessSignupAction, updateCompanyProfileAction } from "@/app/actions/business";
 import { Button, Field, Input, Notice, Select, Textarea, cx } from "./ui";
@@ -80,6 +80,20 @@ export function CompanyForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
+  // Signup is one section per screen; editing shows everything on one page.
+  const stepped = mode === "signup";
+  const [step, setStep] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const STEPS = 4;
+  const goNext = () => {
+    const section = formRef.current?.querySelector<HTMLElement>(`[data-step="${step}"]`);
+    const fields = section ? Array.from(section.querySelectorAll<HTMLInputElement>("input, select, textarea")) : [];
+    for (const f of fields) if (!f.checkValidity()) return f.reportValidity();
+    if (step === 1 && (!Object.keys(cats).length || !areaIds.length)) return setError("対応する工事とエリアを1つ以上選んでください。");
+    setError(null);
+    setStep((s) => s + 1);
+    window.scrollTo({ top: 0 });
+  };
 
   return (
     <form
@@ -107,8 +121,9 @@ export function CompanyForm({
         })
       }
       className="space-y-8"
+      ref={formRef}
     >
-      <Section title="会社情報">
+      <Section title="会社のこと" step={0} current={stepped ? step : null}>
         <Field label="会社名" required>
           <Input name="name" defaultValue={initial.name} required maxLength={80} />
         </Field>
@@ -137,14 +152,14 @@ export function CompanyForm({
         </div>
       </Section>
 
-      <Section title="対応カテゴリ・エリア" sub="選んだカテゴリ×エリアの相談だけが届きます。">
+      <Section title="対応する工事とエリア" sub="選んだ工事とエリアの相談だけが届きます。" step={1} current={stepped ? step : null}>
         <div>
           <div className="mb-2 text-[13px] font-semibold text-ink-2">対応カテゴリと施工実績数</div>
           <div className="grid gap-2 sm:grid-cols-2">
             {categories.map((c) => {
               const on = c.id in cats;
               return (
-                <div key={c.id} className={cx("flex items-center gap-3 rounded-2xl border px-3.5 py-2.5", on ? "border-brand bg-brand-soft/40" : "border-line")}>
+                <div key={c.id} className={cx("flex items-center gap-3 rounded-[10px] border px-4 py-3", on ? "border-brand bg-brand-soft/40" : "border-line")}>
                   <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-sm font-medium">
                     <input
                       type="checkbox"
@@ -190,7 +205,7 @@ export function CompanyForm({
                   type="button"
                   key={a.id}
                   onClick={() => setAreaIds((x) => (on ? x.filter((y) => y !== a.id) : [...x, a.id]))}
-                  className={cx("rounded-full border px-4 py-2 text-sm font-medium", on ? "border-ink bg-ink text-white" : "border-line bg-white hover:border-ink/20")}
+                  className={cx("min-h-11 rounded-[10px] border px-4 text-[15px]", on ? "border-brand bg-brand text-white" : "border-line bg-surface hover:border-ink/20")}
                 >
                   {a.name}
                   {a.sub && <span className={cx("ml-1 text-[11px]", on ? "text-white/60" : "text-faint")}>{a.sub}</span>}
@@ -201,7 +216,7 @@ export function CompanyForm({
         </div>
       </Section>
 
-      <Section title="強み・条件">
+      <Section title="強みと条件" step={2} current={stepped ? step : null}>
         <Field label="得意工事" hint="カンマ区切り">
           <Input name="specialties" defaultValue={initial.specialties} placeholder="外壁塗装, 屋根塗装, 防水" />
         </Field>
@@ -225,7 +240,7 @@ export function CompanyForm({
         </label>
       </Section>
 
-      <Section title="許可・資格・Web" sub="任意。登録すると信頼性の表示に使われます。">
+      <Section title="許可・資格・Web（任意）" sub="登録すると、お客様に安心してもらえます。" step={2} current={stepped ? step : null}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="建設業許可番号">
             <Input name="license_number" defaultValue={initial.license_number} />
@@ -251,7 +266,7 @@ export function CompanyForm({
       </Section>
 
       {mode === "signup" && (
-        <Section title="管理者アカウント" sub="ログインに使います。あとから担当者を追加できます。">
+        <Section title="ログイン情報" sub="あとから担当者を追加できます。" step={3} current={stepped ? step : null}>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="管理者のお名前" required>
               <Input name="owner_name" required />
@@ -285,21 +300,46 @@ export function CompanyForm({
 
       {error && <Notice tone="danger" icon="alert">{error}</Notice>}
       {saved && <Notice tone="ok" icon="check">保存しました。</Notice>}
-      <div className="sticky bottom-20 z-10 md:bottom-4">
-        <Button size="lg" className="w-full shadow-[var(--shadow-pop)] sm:w-auto" variant={mode === "signup" ? "dark" : "primary"} disabled={pending}>
-          {pending ? "送信中…" : mode === "signup" ? "登録して審査を申し込む" : "保存する"}
-        </Button>
-      </div>
+      {stepped && step < STEPS - 1 ? (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[14px] tabular-nums text-muted">{step + 1} / {STEPS}</span>
+          <div className="flex gap-2">
+            {step > 0 && (
+              <Button type="button" variant="ghost" size="lg" onClick={() => setStep((s) => s - 1)}>
+                戻る
+              </Button>
+            )}
+            <Button type="button" size="lg" onClick={goNext}>
+              次へ
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          {stepped && <span className="text-[14px] tabular-nums text-muted">{STEPS} / {STEPS}</span>}
+          <div className="flex gap-2">
+            {stepped && (
+              <Button type="button" variant="ghost" size="lg" onClick={() => setStep((s) => s - 1)}>
+                戻る
+              </Button>
+            )}
+            <Button size="lg" disabled={pending}>
+              {pending ? "送信中…" : stepped ? "登録して審査を申し込む" : "保存する"}
+            </Button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
 
-function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+function Section({ title, sub, children, step, current }: { title: string; sub?: string; children: React.ReactNode; step: number; current: number | null }) {
+  // In stepped mode, hidden sections stay mounted so their fields are still submitted.
   return (
-    <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
-      <h2 className="text-[17px] font-bold">{title}</h2>
-      {sub && <p className="mt-1 text-[13px] text-muted">{sub}</p>}
-      <div className="mt-5 space-y-4">{children}</div>
+    <section data-step={step} className={cx("border-t border-line pt-8 first:border-0 first:pt-0", current !== null && current !== step && "hidden")}>
+      <h2 className="text-[22px] font-semibold">{title}</h2>
+      {sub && <p className="mt-1 text-[15px] text-muted">{sub}</p>}
+      <div className="mt-6 space-y-5">{children}</div>
     </section>
   );
 }

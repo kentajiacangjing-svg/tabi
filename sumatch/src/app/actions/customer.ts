@@ -13,6 +13,7 @@ import { BUDGETS, CONTACT_TIMES, HOUSE_TYPES, MAX_PROJECT_PHOTOS, TIMINGS } from
 import {
   customerRequest,
   customerWithdraw,
+  customerMark,
   generateCandidates,
   notifyNewLeads,
   trackEvent,
@@ -135,6 +136,24 @@ export async function requestMatchAction(matchId: string) {
     revalidatePath("/matches");
     return { status: m.status, matchId: m.id };
   });
+}
+
+export async function markCompanyAction(matchId: string, mark: "save" | "unsave" | "pass" | "unpass") {
+  return handle(async () => {
+    const user = await actionUser(["customer"]);
+    customerMark(matchId, user.id, mark);
+    revalidatePath("/saved");
+    return {};
+  });
+}
+
+/** Funnel metric 「会社閲覧」: counted once per (project, company) card shown. */
+export async function trackCompanyViewAction(matchId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "customer") return;
+  if (get("SELECT 1 FROM events WHERE kind = 'company_view' AND meta = ?", matchId)) return;
+  const m = get<{ customer_id: string }>("SELECT p.customer_id FROM matches m JOIN projects p ON p.id = m.project_id WHERE m.id = ?", matchId);
+  if (m?.customer_id === user.id) trackEvent("company_view", user.id, null, matchId);
 }
 
 export async function withdrawRequestAction(matchId: string) {
