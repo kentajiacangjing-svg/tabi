@@ -1,23 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  /* SUMATCH — clean off-white, near-black text, one deep green. Coral only for the match moment. */
+  /* SUMATCH — warm off-white, near-black text, two deep greens, and a warm accent kept under 5%:
+     match moments, "おすすめ", notification dots, the odd important status. */
   --color-ink: #111111;
-  --color-ink-2: #3a3a38;
-  --color-muted: #6b6b6b;
-  --color-faint: #a3a3a0;
-  --color-line: #e8e8e5;
-  --color-line-2: #f0f0ed;
-  --color-soft: #f0f0ed;
-  --color-canvas: #f7f7f5;
+  --color-ink-2: #34362f;
+  --color-muted: #666a66;
+  --color-faint: #8a8d89;
+  --color-line: #e4e5e1;
+  --color-line-2: #eeefeb;
+  --color-soft: #eef0ec;
+  --color-canvas: #f7f7f4;
   --color-surface: #ffffff;
-  --color-brand: #1f5a46;
-  --color-brand-ink: #174535;
-  --color-brand-soft: #ddebe4;
-  --color-match: #e86a4a;
-  --color-match-soft: #fbe9e3;
-  --color-ok: #1f5a46;
-  --color-ok-soft: #ddebe4;
+  --color-brand: #184d3a;
+  --color-brand-2: #2f6b55;
+  --color-brand-ink: #123a2c;
+  --color-brand-soft: #e7f0ea;
+  --color-accent: #d97a4a;
+  --color-accent-soft: #f8e9df;
+  --color-match: #d97a4a;
+  --color-match-soft: #f8e9df;
+  --color-ok: #184d3a;
+  --color-ok-soft: #e7f0ea;
   --color-warn: #8a5a12;
   --color-warn-soft: #f6eedf;
   --color-danger: #a8402c;
@@ -25,15 +29,18 @@
 
   --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif;
 
-  /* Cards 20px, buttons 16px, small controls 12px. */
+  /* Cards 20–28px, buttons 16px, small controls 12px. */
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-2xl: 20px;
   --radius-3xl: 24px;
-  --shadow-card: 0 1px 2px rgb(17 17 17 / 0.04), 0 1px 1px rgb(17 17 17 / 0.02);
-  --shadow-pop: 0 16px 40px -16px rgb(17 17 17 / 0.16), 0 2px 6px rgb(17 17 17 / 0.04);
+  --radius-4xl: 28px;
+  --shadow-card: 0 1px 2px rgb(17 17 17 / 0.03), 0 6px 20px -8px rgb(17 17 17 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(17 17 17 / 0.03), 0 14px 32px -12px rgb(17 17 17 / 0.12);
+  --shadow-pop: 0 12px 40px rgb(0 0 0 / 0.06), 0 2px 6px rgb(0 0 0 / 0.03);
+  --shadow-deck: 0 12px 40px rgb(0 0 0 / 0.08), 0 2px 8px rgb(0 0 0 / 0.04);
 }
 
 html {
@@ -81,11 +88,7 @@ button {
   scrollbar-width: none;
 }
 
-/* Japanese headings break only at <wbr> / punctuation, never mid-word. */
 /* Japanese line breaks at phrase boundaries (Chrome 119+); elsewhere fall back to normal breaking. */
-.jp {
-  overflow-wrap: anywhere;
-}
 @supports (word-break: auto-phrase) {
   body,
   .jp {
@@ -94,6 +97,13 @@ button {
 }
 body {
   overflow-wrap: break-word;
+  overflow-x: clip;
+}
+
+/* Full-width band inside a centered container (section backgrounds). */
+.bleed {
+  margin-inline: calc(50% - 50vw);
+  padding-inline: calc(50vw - 50%);
 }
 
 h1,
@@ -136,15 +146,18 @@ h3 {
   animation: match-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
 
-/* Page transition: a short fade on every navigation (see app/template.tsx).
-   Opacity only — a transform here would turn fixed tab bars and the chat screen into page-relative boxes. */
+/* Page transition: fade + a 6px rise on every navigation (see the route groups' template.tsx).
+   It animates `top`, not `transform`: a transform would turn fixed tab bars and the chat screen
+   into page-relative boxes. */
 @keyframes page-in {
   from {
     opacity: 0;
+    top: 6px;
   }
 }
 .page-in {
-  animation: page-in 0.2s ease-out backwards;
+  position: relative;
+  animation: page-in 0.22s ease-out backwards;
 }
 
 @keyframes zoom-in {
@@ -161,11 +174,54 @@ h3 {
   animation: zoom-in 0.18s ease-out both;
 }
 
+/* Buttons: lift 1px on hover, sink to 0.98 on tap. Cards: lift 2px. */
 .press {
-  transition: transform 0.12s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
-.press:active {
+.lift {
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+@media (hover: hover) {
+  .press:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
+}
+.press:active:not(:disabled) {
   transform: scale(0.98);
+}
+
+/* Photos: a quiet scrim so white type sits on any picture. */
+.scrim-b {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) 38%, rgb(0 0 0 / 0.55) 100%);
+}
+.scrim-full {
+  background: linear-gradient(180deg, rgb(10 14 12 / 0.38) 0%, rgb(10 14 12 / 0.55) 55%, rgb(10 14 12 / 0.78) 100%);
+}
+
+/* The match moment: scale + fade + a little blur clearing. */
+@keyframes match-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.animate-reveal {
+  animation: match-reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -173,6 +229,7 @@ h3 {
   .animate-match,
   .animate-match-late,
   .animate-zoom,
+  .animate-reveal,
   .page-in {
     animation: none;
   }

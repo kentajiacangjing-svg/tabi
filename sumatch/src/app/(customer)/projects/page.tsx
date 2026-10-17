@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
+import { categoryPhoto } from "@/lib/visuals";
+import { Icon } from "@/components/icons";
 import { projectsForCustomer } from "@/lib/queries";
 import { StatusStepper } from "@/components/status-stepper";
 import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
@@ -17,16 +19,21 @@ export default async function ProjectsPage() {
     user.id,
   );
   return (
-    <div className="mx-auto max-w-[760px]">
+    <div className="mx-auto max-w-[960px]">
       <PageHeader title="相談" />
 
       {unseen.map((m) => (
-        <Link key={m.id} href={`/match/${m.id}`} className="mb-6 flex min-h-16 items-center justify-between gap-4 rounded-xl border border-match/40 bg-surface px-5 py-4">
-          <span>
-            <span className="block text-[13px] text-match">マッチしました</span>
-            <span className="text-[17px] font-medium">{m.name}と相談を始められます</span>
+        <Link key={m.id} href={`/match/${m.id}`} className="lift mb-6 flex min-h-16 items-center justify-between gap-4 rounded-[20px] bg-surface px-5 py-4 shadow-[var(--shadow-card)]">
+          <span className="flex items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-white" aria-hidden="true">
+              <Icon name="check" size={18} strokeWidth={2.6} />
+            </span>
+            <span>
+              <span className="block text-[13px] font-medium text-accent">マッチしました</span>
+              <span className="text-[16px] font-semibold">{m.name}と相談を始められます</span>
+            </span>
           </span>
-          <span className="text-[15px] text-ink-2">開く</span>
+          <Icon name="chevron-right" size={18} className="shrink-0 text-muted" />
         </Link>
       ))}
 
@@ -35,7 +42,7 @@ export default async function ProjectsPage() {
           工事の種類を選ぶところから始められます。
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-line border-y border-line">
+        <ul className="grid gap-5 md:grid-cols-2">
           {projects.map((p) => {
             const next =
               p.status === "consulting"
@@ -47,23 +54,27 @@ export default async function ProjectsPage() {
                 : p.status === "quoting" || p.status === "comparing"
                   ? { text: `見積を比べる（${p.quote_count}件）`, href: `/quotes?project=${p.id}` }
                   : { text: "契約と工事の状況を見る", href: `/projects/${p.id}` };
+            const slug = get<{ slug: string }>("SELECT slug FROM categories WHERE id = ?", p.category_id)?.slug;
             return (
-              <li key={p.id} className="py-7">
-                <Link href={`/projects/${p.id}`} className="block">
-                  <div className="text-[14px] text-muted">
-                    {[p.city, p.house_type].filter(Boolean).join("・")}
-                  </div>
-                  <div className="mt-1 text-[22px] font-medium">{p.title}</div>
+              <li key={p.id} className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)]">
+                <Link href={`/projects/${p.id}`} className="relative block h-36 bg-soft sm:h-40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={categoryPhoto(slug)} alt="" className="size-full object-cover" />
+                  <span className="scrim-b absolute inset-0" />
+                  <span className="absolute inset-x-5 bottom-4 text-white">
+                    <span className="block text-[13px] text-white/85">{[p.city, p.house_type].filter(Boolean).join("・")}</span>
+                    <span className="block truncate text-[20px] font-bold">{p.title}</span>
+                  </span>
                 </Link>
-                <div className="mt-3">
+                <div className="p-5">
                   <StatusStepper status={p.status} />
+                  {p.status !== "cancelled" && (
+                    <Link href={next.href} className="press mt-5 flex h-12 items-center justify-center gap-2 rounded-2xl bg-brand-soft text-[15px] font-semibold text-brand hover:bg-[#dcebe1]">
+                      {next.text}
+                      {p.unread > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] text-white">{p.unread}</span>}
+                    </Link>
+                  )}
                 </div>
-                {p.status !== "cancelled" && (
-                  <Link href={next.href} className="mt-5 inline-flex min-h-11 items-center text-[16px] font-medium text-brand underline-offset-4 hover:underline">
-                    {next.text}
-                    {p.unread > 0 && <span className="ml-2 text-[14px] font-normal text-ink-2">未読{p.unread}件</span>}
-                  </Link>
-                )}
               </li>
             );
           })}

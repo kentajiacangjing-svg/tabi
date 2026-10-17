@@ -4,7 +4,8 @@ import { matchForUser } from "@/lib/access";
 import { get } from "@/lib/db";
 import { markMatchSeen } from "@/lib/services";
 import { MatchMoment } from "@/components/match-moment";
-import { fileUrl } from "@/lib/urls";
+import { workImage } from "@/lib/queries";
+import { categoryPhoto } from "@/lib/visuals";
 
 export const metadata = { title: "マッチしました" };
 export const dynamic = "force-dynamic";
@@ -19,8 +20,8 @@ export default async function BusinessMatchPage({ params }: { params: Promise<{ 
   return (
     <MatchMoment
       title="マッチしました"
-      sub={`${customer?.name ?? ""}様（${ctx.project.city}）と相談できます`}
-      photo={fileUrl(get<{ file_id: string }>("SELECT file_id FROM project_images WHERE project_id = ? ORDER BY sort LIMIT 1", ctx.project.id)?.file_id)}
+      sub={`${customer?.name ?? ""}様（${ctx.project.city}）`}
+      photo={workImage(get<{ image_url: string | null; file_id: string | null }>("SELECT image_url, file_id FROM company_works WHERE company_id = ? AND category_id = ? LIMIT 1", ctx.company.id, ctx.project.category_id)) ?? categoryPhoto(get<{ slug: string }>("SELECT slug FROM categories WHERE id = ?", ctx.project.category_id)?.slug)}
       initial={customer?.name.slice(0, 1)}
       cta="メッセージを送る"
       href={`/business/messages/${id}`}

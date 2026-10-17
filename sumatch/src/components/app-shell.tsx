@@ -41,7 +41,7 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
 
   return (
     <div className={cx("min-h-dvh", items.length > 0 && "pb-24 md:pb-0")}>
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/95">
+      <header className="sticky top-0 z-30 border-b border-line/70 bg-canvas/85 backdrop-blur-md">
         <div className={cx("mx-auto flex h-16 items-center justify-between gap-3 px-5 sm:px-8", width)}>
           <Logo href={homeHref} sub={mode === "business" ? "for Business" : mode === "admin" ? "Admin" : undefined} />
           <div className="flex items-center gap-1">
@@ -50,7 +50,7 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
               <>
                 <Link href="/notifications" className="relative grid size-11 place-items-center rounded-lg text-ink-2 hover:bg-soft" aria-label={`お知らせ（未読${unreadNotes}件）`}>
                   <Icon name="bell" size={20} />
-                  {unreadNotes > 0 && <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-brand" />}
+                  {unreadNotes > 0 && <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-accent" />}
                 </Link>
                 {mode !== "customer" && (
                   <form action={logoutAction}>

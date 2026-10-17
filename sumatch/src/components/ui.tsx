@@ -12,9 +12,9 @@ type Size = "sm" | "md" | "lg";
 const base =
   "press inline-flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:pointer-events-none select-none whitespace-nowrap";
 const variants: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-ink",
+  primary: "bg-brand text-white shadow-[0_6px_16px_-8px_rgb(24_77_58/0.6)] hover:bg-brand-2",
   dark: "bg-ink text-white hover:bg-ink-2",
-  secondary: "bg-surface text-ink border border-line shadow-[var(--shadow-card)] hover:border-ink/25",
+  secondary: "bg-surface text-ink border border-line shadow-[var(--shadow-card)] hover:border-ink/20",
   ghost: "text-ink-2 hover:bg-soft",
   danger: "bg-surface text-danger border border-danger/30 hover:bg-danger-soft",
 };
@@ -96,7 +96,7 @@ export function PageHeader({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           {eyebrow && <div className="mb-2 text-[14px] text-muted">{eyebrow}</div>}
-          <h1 className="jp text-[28px] font-semibold leading-tight sm:text-[34px]">{title}</h1>
+          <h1 className="jp text-[30px] font-bold leading-tight tracking-tight sm:text-[40px]">{title}</h1>
           {description && <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-muted">{description}</p>}
         </div>
         {action}
@@ -114,10 +114,13 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
   );
 }
 
-export function EmptyState({ title, children, action }: { icon?: string; title: string; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({ icon, title, children, action }: { icon?: string; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-start border-t border-line py-12">
-      <div className="text-[20px] font-semibold">{title}</div>
+    <div className="flex flex-col items-start rounded-[24px] bg-surface p-7 shadow-[var(--shadow-card)] sm:p-9">
+      <span className="grid size-12 place-items-center rounded-full bg-brand-soft text-brand" aria-hidden="true">
+        <Icon name={icon ?? "sparkle"} size={22} />
+      </span>
+      <div className="mt-5 text-[20px] font-bold">{title}</div>
       {children && <div className="mt-2 max-w-md text-[15px] leading-relaxed text-muted">{children}</div>}
       {action && <div className="mt-6">{action}</div>}
     </div>
@@ -128,7 +131,7 @@ export function EmptyState({ title, children, action }: { icon?: string; title: 
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: "brand" }) {
   return (
     <div className="py-2">
-      <div className={cx("text-[40px] font-medium leading-none tracking-tight sm:text-[48px]", tone === "brand" && "text-brand")}>{value}</div>
+      <div className={cx("tnum text-[40px] font-semibold leading-none sm:text-[48px]", tone === "brand" && "text-brand")}>{value}</div>
       <div className="mt-2 text-[15px] text-ink-2">{label}</div>
       {sub && <div className="mt-0.5 text-[13px] text-muted">{sub}</div>}
     </div>

@@ -1,4 +1,4 @@
-/** Every navigation gets a short fade (150–250ms). */
+/** Every navigation fades the page content in (the header and tab bar stay put). */
 export default function Template({ children }: { children: React.ReactNode }) {
   return <div className="page-in">{children}</div>;
 }

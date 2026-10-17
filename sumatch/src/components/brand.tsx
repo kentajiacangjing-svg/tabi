@@ -7,7 +7,7 @@ export function LogoMark({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <rect x="1" y="1" width="14" height="14" rx="3" fill="#111111" />
-      <rect x="9" y="9" width="14" height="14" rx="3" fill="#1f5a46" />
+      <rect x="9" y="9" width="14" height="14" rx="3" fill="#184d3a" />
     </svg>
   );
 }
@@ -26,20 +26,23 @@ export function Logo({ href = "/", sub }: { href?: string; sub?: string }) {
 export function CompanyAvatar({
   name,
   logoFileId,
+  photo,
   size = 44,
   className,
 }: {
   name: string;
   color?: string;
   logoFileId?: string | null;
+  /** fallback image when there is no logo (e.g. a work photo) */
+  photo?: string | null;
   size?: number;
   className?: string;
 }) {
-  const url = fileUrl(logoFileId);
+  const url = fileUrl(logoFileId) ?? photo ?? null;
   const initials = name.replace(/株式会社|有限会社|\s/g, "").slice(0, name.match(/^[A-Za-z]/) ? 2 : 1);
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt="" width={size} height={size} className={cx("shrink-0 rounded-xl object-cover", className)} style={{ width: size, height: size }} />;
+    return <img src={url} alt="" width={size} height={size} className={cx("shrink-0 rounded-[14px] object-cover", className)} style={{ width: size, height: size }} />;
   }
   return (
     <div

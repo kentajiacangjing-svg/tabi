@@ -40,20 +40,20 @@ export default async function BusinessAnalytics() {
       <PageHeader back={{ href: "/business/dashboard", label: "ホーム" }} title="分析" description="過去30日" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {pipeline.map(([label, v]) => (
-          <div key={label} className="rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
-            <div className="text-[36px] font-medium leading-none">{v}</div>
+          <div key={label} className="rounded-[22px] bg-surface p-5 shadow-[var(--shadow-card)] sm:p-6">
+            <div className="tnum text-[40px] font-semibold leading-none">{v}</div>
             <div className="mt-2 text-[14px] text-ink-2">{label}</div>
           </div>
         ))}
       </div>
-      <dl className="mt-10 divide-y divide-line border-y border-line">
+      <dl className="mt-10 divide-y divide-line overflow-hidden rounded-[22px] bg-surface px-6 shadow-[var(--shadow-card)]">
         {metrics.map(([label, v, note]) => (
           <div key={label} className="flex min-h-[76px] items-center justify-between gap-4 py-3">
             <div>
               <dt className="text-[16px]">{label}</dt>
               <dd className="text-[13px] text-muted">{note}</dd>
             </div>
-            <dd className="text-[28px] font-medium tabular-nums">{v}</dd>
+            <dd className="tnum text-[30px] font-semibold text-brand">{v}</dd>
           </div>
         ))}
       </dl>

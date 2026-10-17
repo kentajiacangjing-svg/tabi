@@ -8,6 +8,7 @@ import { manRange, relative } from "@/lib/format";
 import { fileUrl } from "@/lib/urls";
 import { LeadDeck } from "@/components/lead-deck";
 import { cx } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 export const metadata = { title: "ホーム" };
 export const dynamic = "force-dynamic";
@@ -32,10 +33,10 @@ export default async function BusinessHome() {
   const blocked = monthlyMatchUsage(c.id) >= limit ? `今月のマッチ上限（${limit}件）に達しています。` : undefined;
 
   const todo = [
-    { label: "新しい相談", value: fresh.length, href: "/business/leads", strong: fresh.length > 0 },
-    { label: "返信待ち", value: awaitingReply, href: "/business/messages", strong: awaitingReply > 0 },
-    { label: "見積作成", value: toQuote, href: "/business/quotes", strong: toQuote > 0 },
-    { label: "契約", value: contracts, href: "/business/active", strong: false },
+    { label: "新しい相談", value: fresh.length, href: "/business/leads", strong: fresh.length > 0, icon: "inbox" },
+    { label: "返信待ち", value: awaitingReply, href: "/business/messages", strong: awaitingReply > 0, icon: "chat" },
+    { label: "見積作成", value: toQuote, href: "/business/quotes", strong: toQuote > 0, icon: "doc" },
+    { label: "契約", value: contracts, href: "/business/active", strong: false, icon: "check" },
   ];
 
   const leads = fresh.map((l) => {
@@ -55,33 +56,46 @@ export default async function BusinessHome() {
       received: relative(l.created_at),
     };
   });
+  // the customer already asked for this company → those first
+  leads.sort((a, b) => Number(b.customerWants) - Number(a.customerWants));
+
+  const todayCount = fresh.length + awaitingReply + toQuote;
 
   return (
-    <div className="mx-auto max-w-[960px]">
-      <p className="text-[14px] text-muted">{c.name}</p>
-      <h1 className="mt-1 text-[30px] font-semibold sm:text-[36px]">今日やること</h1>
-      <p className="mt-1 text-[15px] text-muted">{user.name.split(" ")[0]}さん、おつかれさまです。</p>
+    <div className="mx-auto max-w-[1080px]">
+      <p className="text-[14px] font-medium text-brand-2">{c.name}</p>
+      <h1 className="mt-1 text-[34px] font-bold tracking-tight sm:text-[44px]">今日やること</h1>
+      <p className="mt-1 text-[15px] text-muted">
+        {user.name.split(" ")[0]}さん、おつかれさまです。{todayCount > 0 ? `${todayCount}件が待っています。` : "今日は落ち着いています。"}
+      </p>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {todo.map((t) => (
-          <Link key={t.label} href={t.href} className="press rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] hover:border-ink/25">
-            <div className={cx("text-[40px] font-medium leading-none tracking-tight", t.strong ? "text-brand" : "text-ink")}>{t.value}</div>
-            <div className="mt-2 text-[15px]">{t.label}</div>
+          <Link
+            key={t.label}
+            href={t.href}
+            className={cx("lift relative rounded-[22px] p-5 sm:p-6", t.strong ? "bg-brand text-white shadow-[var(--shadow-lift)]" : "bg-surface shadow-[var(--shadow-card)]")}
+          >
+            <span className={cx("absolute right-4 top-4 grid size-9 place-items-center rounded-full", t.strong ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
+              <Icon name={t.icon} size={18} />
+            </span>
+            <div className="tnum text-[44px] font-semibold leading-none">{t.value}</div>
+            <div className={cx("mt-3 text-[15px] font-medium", t.strong ? "text-white/90" : "text-ink-2")}>{t.label}</div>
           </Link>
         ))}
       </div>
 
       <section className="mt-14">
         <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="text-[20px] font-semibold">新着の相談</h2>
+          <h2 className="text-[22px] font-bold">最優先の相談</h2>
           <Link href="/business/analytics" className="text-[14px] text-muted hover:text-ink">
             分析を見る
           </Link>
         </div>
         {c.status !== "approved" ? (
-          <p className="rounded-2xl border border-line bg-surface p-6 text-[15px] text-muted">審査が終わると、ここに相談が届きます。</p>
+          <p className="rounded-[22px] bg-surface p-6 text-[15px] text-muted shadow-[var(--shadow-card)]">審査が終わると、ここに相談が届きます。</p>
         ) : (
-          <LeadDeck leads={leads} blockedReason={blocked} />
+          <LeadDeck leads={leads} blockedReason={blocked} withRest />
         )}
       </section>
     </div>

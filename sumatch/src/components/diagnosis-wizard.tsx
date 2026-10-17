@@ -7,6 +7,7 @@ import { submitDiagnosisAction } from "@/app/actions/customer";
 import { estimateRange } from "@/lib/estimate";
 import { BUDGETS, TIMINGS } from "@/lib/constants";
 import { manRange } from "@/lib/format";
+import { categoryPhoto } from "@/lib/visuals";
 import { Icon } from "./icons";
 import { Button, Field, Input, Notice, cx } from "./ui";
 
@@ -133,8 +134,16 @@ export function DiagnosisWizard({
 
   if (!hydrated) return <div className="min-h-[70dvh]" />;
 
+  const answered: [string, string | undefined][] = [
+    ["工事", category?.name],
+    ["予算", BUDGETS.find((x) => x.value === d.budget)?.label],
+    ["時期", TIMINGS.find((x) => x.value === d.desired_timing)?.label],
+    ["場所", d.city || undefined],
+  ];
+
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-[640px] flex-col">
+    <div className="mx-auto grid max-w-[1080px] items-start gap-14 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[600px] flex-col lg:mx-0">
       {/* thin progress bar + back */}
       <div className="flex items-center gap-3">
         <button type="button" onClick={back} className="-ml-2 grid size-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-soft" aria-label="戻る">
@@ -148,7 +157,7 @@ export function DiagnosisWizard({
       <div key={step} className="animate-fade-up flex flex-1 flex-col justify-center py-8">
         {step === "category" && (
           <Question title="どんな工事？" headingRef={headingRef}>
-            <Options columns options={categories.map((c) => ({ value: c.id, label: c.name, sub: c.description }))} value={d.category_id} onChange={(v) => setD((x) => ({ ...x, category_id: v }))} />
+            <Options columns options={categories.map((c) => ({ value: c.id, label: c.name, sub: c.description, photo: categoryPhoto(c.slug) }))} value={d.category_id} onChange={(v) => setD((x) => ({ ...x, category_id: v }))} />
           </Question>
         )}
 
@@ -226,7 +235,7 @@ export function DiagnosisWizard({
       </div>
 
       {/* one action, always in the same place */}
-      <div className="sticky bottom-0 -mx-5 border-t border-line bg-canvas/95 px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
+      <div className="sticky bottom-0 -mx-5 border-t border-line/60 bg-canvas/90 px-5 backdrop-blur-md pb-[max(env(safe-area-inset-bottom),16px)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
         {error && (
           <Notice tone="danger" className="mb-3">
             {error}
@@ -255,22 +264,48 @@ export function DiagnosisWizard({
         )}
       </div>
     </div>
+
+    {/* wide screens: the job, as a photo, and what's been decided so far */}
+    <aside className="sticky top-24 hidden lg:block" aria-label="現在の条件">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img key={category?.slug ?? "none"} src={categoryPhoto(category?.slug)} alt="" className="animate-fade-up size-full object-cover" />
+        <div className="scrim-b absolute inset-0" />
+        <div className="absolute inset-x-4 bottom-4 rounded-[20px] bg-surface/95 p-5 backdrop-blur">
+          <div className="text-[13px] font-medium text-brand-2">あなたの条件</div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
+            {answered.map(([k, v]) => (
+              <div key={k} className="min-w-0">
+                <dt className="text-[12px] text-muted">{k}</dt>
+                <dd className={cx("truncate text-[15px]", v ? "font-semibold" : "text-faint")}>{v ?? "—"}</dd>
+              </div>
+            ))}
+          </dl>
+          {estimate && (
+            <div className="mt-4 border-t border-line pt-3 text-[13px] text-muted">
+              目安 <span className="tnum text-[18px] font-semibold text-ink">約{manRange(estimate.min, estimate.max)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>
+    </div>
   );
 }
 
 function Question({ title, sub, children, headingRef }: { title: string; sub?: string; children: React.ReactNode; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
   return (
     <div>
-      <h1 ref={headingRef} tabIndex={-1} className="jp text-[34px] font-semibold leading-tight outline-none sm:text-[42px]">
+      <h1 ref={headingRef} tabIndex={-1} className="jp text-[42px] font-bold leading-[1.15] tracking-tight outline-none sm:text-[52px]">
         {title}
       </h1>
-      {sub && <p className="mt-2 text-[15px] text-muted">{sub}</p>}
-      <div className="mt-8">{children}</div>
+      {sub && <p className="mt-3 text-[15px] text-muted">{sub}</p>}
+      <div className="mt-9">{children}</div>
     </div>
   );
 }
 
-function Options({ options, value, onChange, columns }: { options: { value: string; label: string; sub?: string }[]; value: string; onChange: (v: string) => void; columns?: boolean }) {
+function Options({ options, value, onChange, columns }: { options: { value: string; label: string; sub?: string; photo?: string }[]; value: string; onChange: (v: string) => void; columns?: boolean }) {
   return (
     <div className={cx("grid gap-3", columns && "grid-cols-2")} role="radiogroup">
       {options.map((o) => {
@@ -283,18 +318,28 @@ function Options({ options, value, onChange, columns }: { options: { value: stri
             key={o.value}
             onClick={() => onChange(o.value)}
             className={cx(
-              "press relative flex min-h-[64px] flex-col items-start justify-center rounded-2xl border px-5 py-4 text-left shadow-[var(--shadow-card)]",
-              columns && "min-h-[96px]",
-              on ? "border-brand bg-brand text-white" : "border-line bg-surface hover:border-ink/25",
+              "lift relative flex flex-col overflow-hidden rounded-[20px] border-2 text-left shadow-[var(--shadow-card)]",
+              on ? "border-brand bg-brand-soft" : "border-transparent bg-surface",
             )}
           >
-            <span className="text-[18px] font-medium leading-snug">{o.label}</span>
-            {o.sub && <span className={cx("mt-0.5 text-[13px] leading-snug", on ? "text-white/75" : "text-muted")}>{o.sub}</span>}
-            {on && (
-              <span className="absolute right-4 top-4" aria-hidden="true">
-                <Icon name="check" size={18} strokeWidth={2.4} />
-              </span>
+            {o.photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={o.photo} alt="" className="aspect-[16/10] w-full object-cover" />
             )}
+            <span className={cx("flex min-h-[64px] flex-col justify-center py-4 pl-5 pr-12", columns && !o.photo && "min-h-[96px]")}>
+              <span className={cx("text-[18px] font-semibold leading-snug", on && "text-brand")}>{o.label}</span>
+              {o.sub && <span className="mt-0.5 truncate text-[13px] leading-snug text-muted">{o.sub}</span>}
+            </span>
+            <span
+              className={cx(
+                "absolute right-4 grid size-6 place-items-center rounded-full border-2 transition-colors duration-200",
+                o.photo ? "top-3 border-white/90" : "top-1/2 -translate-y-1/2 border-line",
+                on && "border-brand bg-brand text-white",
+              )}
+              aria-hidden="true"
+            >
+              {on && <Icon name="check" size={13} strokeWidth={2.8} />}
+            </span>
           </button>
         );
       })}

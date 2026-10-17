@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { projectForCustomer } from "@/lib/access";
 import { candidatesForProject, projectsForCustomer, reasons } from "@/lib/queries";
-import { MAX_MATCHES_PER_PROJECT } from "@/lib/constants";
+import { BUDGETS, MAX_MATCHES_PER_PROJECT, TIMINGS } from "@/lib/constants";
 import { manRange } from "@/lib/format";
-import { all as allQ } from "@/lib/db";
+import { all as allQ, get } from "@/lib/db";
 import { CompanyDeck, type DeckCompany } from "@/components/company-deck";
 import { ButtonLink, EmptyState } from "@/components/ui";
 
@@ -51,6 +51,14 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       wantsYou: c.company_response === "yes",
     }));
 
+  const category = get<{ name: string }>("SELECT name FROM categories WHERE id = ?", project.category_id);
+  const conditions: [string, string][] = [
+    ["工事", category?.name ?? "—"],
+    ["予算", BUDGETS.find((b) => b.min === project.budget_min && b.max === project.budget_max)?.label ?? manRange(project.budget_min, project.budget_max)],
+    ["時期", TIMINGS.find((t) => t.value === project.desired_timing)?.label ?? "—"],
+    ["場所", project.city],
+  ];
+
   return (
     <div>
       {!project.area_id ? (
@@ -58,7 +66,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       ) : (
         <>
           <h1 className="sr-only">あなたに合いそうな会社</h1>
-          <CompanyDeck projectId={project.id} deck={deck} consultLeft={MAX_MATCHES_PER_PROJECT - requested} />
+          <CompanyDeck projectId={project.id} deck={deck} consultLeft={MAX_MATCHES_PER_PROJECT - requested} conditions={conditions} />
         </>
       )}
     </div>

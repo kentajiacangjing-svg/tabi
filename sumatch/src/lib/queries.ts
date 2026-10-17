@@ -90,6 +90,8 @@ export interface Conversation {
   company_name: string;
   company_color: string;
   company_logo: string | null;
+  /** a work photo of the company, shown as its avatar when there is no logo */
+  company_cover: string | null;
   customer_name: string;
   last_message: string | null;
   last_kind: string | null;
@@ -103,6 +105,7 @@ function conversations(where: string, side: "customer" | "company", param: strin
   return all<Conversation>(
     `SELECT m.id AS match_id, p.id AS project_id, p.title AS project_title, p.city AS project_city, p.status AS project_status,
             co.id AS company_id, co.name AS company_name, co.brand_color AS company_color, co.logo_file_id AS company_logo,
+            (SELECT COALESCE(w.image_url, '/api/files/' || w.file_id) FROM company_works w WHERE w.company_id = co.id ORDER BY w.created_at, w.rowid LIMIT 1) AS company_cover,
             u.name AS customer_name,
             (SELECT body FROM messages g WHERE g.match_id = m.id ORDER BY created_at DESC LIMIT 1) AS last_message,
             (SELECT kind FROM messages g WHERE g.match_id = m.id ORDER BY created_at DESC LIMIT 1) AS last_kind,

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { projectForCustomer } from "@/lib/access";
 import { all, get } from "@/lib/db";
-import { contractForProject, latestQuotesForProject, projectsForCustomer } from "@/lib/queries";
+import { contractForProject, latestQuotesForProject, projectsForCustomer, workImage } from "@/lib/queries";
 import { compareQuotes } from "@/lib/quote-compare";
 import { ButtonLink, EmptyState, PageHeader, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -13,7 +13,9 @@ import type { Category, Match } from "@/lib/types";
 export const metadata = { title: "見積を比べる" };
 export const dynamic = "force-dynamic";
 
-export default async function QuotesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+type View = "price" | "safe" | "days";
+
+export default async function QuotesPage({ searchParams }: { searchParams: Promise<{ project?: string; view?: string }> }) {
   const sp = await searchParams;
   const user = await requireUser(["customer"], "/quotes");
   if (!sp.project) {
@@ -48,17 +50,26 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
     const w = quotes.filter(pick);
     return w.length === 1 ? w[0] : null;
   };
-  const summary = multi
-    ? ([
-        ["価格", winner((q) => q.total === best.price), (q: (typeof quotes)[number]) => `¥${q.total.toLocaleString("ja-JP")}`],
-        ["安心", winner((q) => q.warranty_years === best.warranty), (q: (typeof quotes)[number]) => `保証${q.warranty_years}年`],
-        ["工期", winner((q) => q.duration_days === best.days), (q: (typeof quotes)[number]) => `約${q.duration_days}日`],
-      ] as const)
-    : [];
-  const tags = (q: (typeof quotes)[number]) =>
+  type Q = (typeof quotes)[number];
+  const view: View = sp.view === "safe" || sp.view === "days" ? sp.view : "price";
+  const views: { key: View; label: string; win: Q | null; value: (q: Q) => string }[] = [
+    { key: "price", label: "価格で選ぶ", win: winner((q) => q.total === best.price), value: (q) => `¥${q.total.toLocaleString("ja-JP")}` },
+    { key: "safe", label: "安心で選ぶ", win: winner((q) => q.warranty_years === best.warranty), value: (q) => `保証${q.warranty_years}年` },
+    { key: "days", label: "工期で選ぶ", win: winner((q) => q.duration_days === best.days), value: (q) => `約${q.duration_days}日` },
+  ];
+  const bestRating = Math.max(...quotes.map((q) => q.company.rating_avg));
+  // Small tags, at most two per card.
+  const tags = (q: Q) =>
     multi
-      ? [q.total === best.price && "いちばん安い", q.warranty_years === best.warranty && "保証がいちばん長い", q.duration_days === best.days && "工期がいちばん短い"].filter(Boolean)
+      ? ([q.total === best.price && "最安", q.warranty_years === best.warranty && "保証最長", q.duration_days === best.days && "最短", q.company.rating_avg === bestRating && "高評価"].filter(Boolean) as string[]).slice(0, 2)
       : [];
+  const order: Record<View, (a: Q, b: Q) => number> = {
+    price: (a, b) => a.total - b.total,
+    safe: (a, b) => b.warranty_years - a.warranty_years || b.company.rating_avg - a.company.rating_avg,
+    days: (a, b) => (a.duration_days ?? 999) - (b.duration_days ?? 999),
+  };
+  const sorted = [...quotes].sort(order[view]);
+  const cover = (companyId: string) => workImage(get<{ image_url: string | null; file_id: string | null }>("SELECT image_url, file_id FROM company_works WHERE company_id = ? ORDER BY (category_id = ?) DESC, created_at LIMIT 1", companyId, project.category_id));
   const cautions = compareQuotes(
     quotes.map((q) => ({
       companyId: q.company_id,
@@ -82,55 +93,76 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
         </EmptyState>
       ) : (
         <>
-          {summary.length > 0 && (
-            <div className="mb-8 divide-y divide-brand/10 rounded-2xl bg-brand-soft px-5 md:grid md:grid-cols-3 md:divide-x md:divide-y-0 md:px-0">
-              {summary.map(([label, q, fmt]) => (
-                <div key={label} className="flex items-baseline justify-between gap-3 py-3.5 md:block md:px-5 md:py-4">
-                  <div className="shrink-0 text-[13px] text-brand">{label}で選ぶなら</div>
-                  <div className="min-w-0 text-right md:mt-1 md:text-left">
-                    <div className="truncate text-[16px] font-medium">{q ? q.company.name : "差はありません"}</div>
-                    {q && <div className="text-[13px] text-ink-2">{fmt(q)}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
+          {multi && (
+            <nav className="mb-8 grid grid-cols-3 gap-2 sm:gap-3" aria-label="比べる視点">
+              {views.map((v) => {
+                const on = v.key === view;
+                return (
+                  <Link
+                    key={v.key}
+                    href={`/quotes?project=${project.id}&view=${v.key}`}
+                    scroll={false}
+                    aria-current={on ? "true" : undefined}
+                    className={cx(
+                      "lift min-w-0 rounded-[20px] border-2 p-3.5 sm:p-5",
+                      on ? "border-brand bg-brand text-white shadow-[var(--shadow-lift)]" : "border-transparent bg-surface shadow-[var(--shadow-card)]",
+                    )}
+                  >
+                    <div className={cx("text-[13px] font-semibold sm:text-[15px]", on ? "text-white" : "text-brand")}>{v.label}</div>
+                    <div className={cx("mt-1.5 truncate text-[12px] sm:text-[14px]", on ? "text-white/80" : "text-muted")}>{v.win ? v.win.company.name : "差はありません"}</div>
+                    {v.win && <div className={cx("tnum truncate text-[14px] font-semibold sm:text-[18px]", on ? "text-white" : "text-ink")}>{v.value(v.win)}</div>}
+                  </Link>
+                );
+              })}
+            </nav>
           )}
 
-          <div className="no-scrollbar -mx-5 flex snap-x gap-4 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
-            {quotes.map((q) => {
+          <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+            {sorted.map((q, i) => {
               const chosen = contract?.quote_id === q.id;
+              const lead = multi && i === 0 && !contract;
+              const photo = cover(q.company_id);
               const mine = cautions.filter((n) => n.companyId === q.company_id);
               return (
                 <section
                   key={q.id}
                   aria-labelledby={`q-${q.id}`}
-                  className={cx("w-[84vw] max-w-[360px] shrink-0 snap-start rounded-3xl border bg-surface p-6 shadow-[var(--shadow-card)] md:w-auto md:max-w-none", chosen ? "border-brand" : "border-line", contract && !chosen && "opacity-60")}
+                  className={cx(
+                    "w-[84vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[24px] border-2 bg-surface md:w-auto md:max-w-none",
+                    chosen || lead ? "border-brand shadow-[var(--shadow-lift)]" : "border-transparent shadow-[var(--shadow-card)]",
+                    contract && !chosen && "opacity-60",
+                  )}
                 >
-                  <div className="flex min-h-6 flex-wrap gap-1.5">
-                    {chosen && <span className="rounded-lg bg-brand px-2 py-0.5 text-[12px] text-white">決定</span>}
-                    {tags(q).map((t) => (
-                      <span key={t as string} className="rounded-lg bg-brand-soft px-2 py-0.5 text-[12px] text-brand">
-                        {t}
-                      </span>
-                    ))}
+                  <div className="relative h-24 bg-soft">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {photo && <img src={photo} alt="" className="size-full object-cover" />}
+                    <div className="absolute left-4 top-3 flex flex-wrap gap-1.5">
+                      {chosen && <span className="rounded-full bg-brand px-2.5 py-1 text-[12px] font-medium text-white">決定</span>}
+                      {tags(q).map((t) => (
+                        <span key={t} className="rounded-full bg-surface/95 px-2.5 py-1 text-[12px] font-semibold text-brand shadow-[var(--shadow-card)]">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <h2 id={`q-${q.id}`} className="mt-3 text-[18px] font-medium">
+                  <div className="p-6 pt-5">
+                  <h2 id={`q-${q.id}`} className="text-[17px] font-semibold">
                     {q.company.name}
                   </h2>
-                  <div className="mt-2 text-[34px] font-medium leading-none tracking-tight">¥{q.total.toLocaleString("ja-JP")}</div>
-                  <div className="mt-1 text-[13px] text-muted">税込</div>
+                  <div className={cx("tnum mt-2 text-[40px] font-semibold leading-none", view === "price" && lead && "text-brand")}>¥{q.total.toLocaleString("ja-JP")}</div>
+                  <div className="mt-1.5 text-[13px] text-muted">税込</div>
                   <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
                     <div>
                       <dt className="text-[12px] text-muted">工期</dt>
-                      <dd className="mt-0.5 text-[17px]">{q.duration_days ? `${q.duration_days}日` : "—"}</dd>
+                      <dd className={cx("tnum mt-0.5 text-[19px] font-semibold", view === "days" && lead && "text-brand")}>{q.duration_days ? `${q.duration_days}日` : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[12px] text-muted">保証</dt>
-                      <dd className="mt-0.5 text-[17px]">{q.warranty_years ? `${q.warranty_years}年` : "—"}</dd>
+                      <dd className={cx("tnum mt-0.5 text-[19px] font-semibold", view === "safe" && lead && "text-brand")}>{q.warranty_years ? `${q.warranty_years}年` : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[12px] text-muted">評価</dt>
-                      <dd className="mt-0.5 text-[17px]">★{q.company.rating_avg.toFixed(1)}</dd>
+                      <dd className="tnum mt-0.5 text-[19px] font-semibold">★{q.company.rating_avg.toFixed(1)}</dd>
                     </div>
                   </dl>
                   <details className="group mt-4 border-t border-line">
@@ -151,9 +183,16 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                       {n.text}
                     </p>
                   ))}
-                  <Link href={`/quotes/${q.id}`} className="press mt-5 flex h-12 items-center justify-center rounded-xl border border-line text-[15px] font-medium hover:border-ink/25">
+                  <Link
+                    href={`/quotes/${q.id}`}
+                    className={cx(
+                      "press mt-5 flex h-12 items-center justify-center rounded-2xl text-[15px] font-medium",
+                      lead ? "bg-brand text-white hover:bg-brand-2" : "border border-line hover:border-ink/20",
+                    )}
+                  >
                     見積を見る
                   </Link>
+                  </div>
                 </section>
               );
             })}

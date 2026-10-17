@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { activeAreas, activeCategories, projectsForCustomer } from "@/lib/queries";
+import { activeAreas, activeCategories, projectsForCustomer, workImage } from "@/lib/queries";
+import { all, get } from "@/lib/db";
+import { HERO_PHOTO } from "@/lib/visuals";
+import { Icon } from "@/components/icons";
 import { getCurrentUser } from "@/lib/auth";
 import { CategoryPicker } from "@/components/category-picker";
 import { Track } from "@/components/track";
@@ -32,59 +35,125 @@ export default async function Home() {
   const areas = activeAreas();
   const user = await getCurrentUser();
   const ongoing = user?.role === "customer" ? projectsForCustomer(user.id).filter((p) => !["completed", "cancelled"].includes(p.status)) : [];
+  const works = all<{ id: string; title: string; cost_label: string; image_url: string | null; file_id: string | null; company: string }>(
+    `SELECT w.id, w.title, w.cost_label, w.image_url, w.file_id, c.name AS company FROM company_works w JOIN companies c ON c.id = w.company_id
+      WHERE c.status = 'approved' ORDER BY w.created_at DESC, w.id LIMIT 8`,
+  );
+  const stats = get<{ n: number; rating: number }>("SELECT COUNT(*) n, AVG(rating_avg) rating FROM companies WHERE status = 'approved'");
   return (
     <>
       <Track kind="visit" />
-      <section className="mx-auto max-w-[560px] pb-20 pt-4 sm:pt-12">
-        {ongoing.length > 0 && (
-          <Link href="/projects" className="mb-10 flex min-h-14 items-center justify-between rounded-2xl border border-line bg-surface px-5 shadow-[var(--shadow-card)]">
-            <span className="text-[15px]">進行中の相談 {ongoing.length}件</span>
-            <span className="text-[14px] text-brand">見る</span>
-          </Link>
-        )}
-        <h1 className="jp text-[40px] font-semibold leading-[1.2] sm:text-[52px]">どんな工事？</h1>
-        <p className="mt-3 text-[16px] text-muted">答えるだけで、合う会社が見つかります。無料・営業電話なし。</p>
-        <div className="mt-10">
-          <CategoryPicker featured={cats.slice(0, FEATURED)} more={cats.slice(FEATURED)} />
+      {/* 1. The question, next to a photo of a finished room (photo only on wide screens) */}
+      <section className="grid items-start gap-10 pb-16 pt-2 sm:pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,500px)] lg:gap-14 lg:pb-24">
+        <div className="relative hidden lg:sticky lg:top-24 lg:block">
+          <div className="aspect-[4/5] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={HERO_PHOTO} alt="施工事例：リビングの内装リノベーション" className="size-full object-cover" />
+          </div>
+          <div className="absolute -bottom-6 left-6 right-16 rounded-2xl bg-surface/95 p-5 shadow-[var(--shadow-lift)] backdrop-blur">
+            <div className="flex items-baseline gap-6">
+              <div>
+                <div className="tnum text-[28px] font-semibold leading-none">★ {(stats?.rating ?? 0).toFixed(1)}</div>
+                <div className="mt-1.5 text-[13px] text-muted">掲載会社の平均評価</div>
+              </div>
+              <div>
+                <div className="tnum text-[28px] font-semibold leading-none">{stats?.n ?? 0}社</div>
+                <div className="mt-1.5 text-[13px] text-muted">審査済みの会社</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto w-full max-w-[560px] lg:pt-6">
+          {ongoing.length > 0 && (
+            <Link href="/projects" className="lift mb-8 flex min-h-14 items-center justify-between rounded-2xl bg-brand-soft px-5">
+              <span className="text-[15px] font-medium text-brand">進行中の相談 {ongoing.length}件</span>
+              <Icon name="chevron-right" size={18} className="text-brand" />
+            </Link>
+          )}
+          <p className="text-[14px] font-medium tracking-wide text-brand-2">住まいの工事を、迷わず相談</p>
+          <h1 className="jp mt-2 text-[44px] font-bold leading-[1.15] tracking-tight sm:text-[60px]">どんな工事？</h1>
+          <p className="mt-3 text-[16px] text-muted">答えるだけで、合う会社が見つかります。無料・営業電話なし。</p>
+          <div className="mt-8">
+            <CategoryPicker featured={cats.slice(0, FEATURED)} more={cats.slice(FEATURED)} withTabBar={user?.role === "customer"} />
+          </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[560px] space-y-20 border-t border-line pb-10 pt-16 sm:space-y-24">
-        <section>
-          <h2 className="text-[24px] font-semibold">使い方</h2>
-          <ol className="mt-6 space-y-6">
-            {steps.map(([t, d], i) => (
-              <li key={t} className="grid grid-cols-[2.25rem_1fr]">
-                <span className="text-[20px] font-medium text-brand">{i + 1}</span>
-                <div>
-                  <div className="text-[17px] font-medium">{t}</div>
-                  <p className="mt-0.5 text-[14px] leading-relaxed text-muted">{d}</p>
+      {/* 2. Real work, big */}
+      {works.length > 0 && (
+        <section className="bleed bg-surface py-14 sm:py-20">
+          <div className="mx-auto max-w-[1080px] px-5 sm:px-8">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="text-[26px] font-bold sm:text-[32px]">最近の施工事例</h2>
+              <span className="text-[13px] text-muted">掲載会社の実績から</span>
+            </div>
+          </div>
+          <div className="no-scrollbar mx-auto mt-7 flex max-w-[1080px] snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:scroll-px-8 sm:px-8 lg:grid lg:grid-cols-4 lg:overflow-visible lg:[&>*:nth-child(n+5)]:hidden">
+            {works.map((w) => (
+              <figure key={w.id} className="w-[72vw] max-w-[300px] shrink-0 snap-start lg:w-auto lg:max-w-none">
+                <div className="aspect-[4/3] overflow-hidden rounded-[20px] bg-soft">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={workImage(w) ?? ""} alt={w.title} className="size-full object-cover" loading="lazy" />
                 </div>
+                <figcaption className="mt-3">
+                  <div className="truncate text-[15px] font-medium">{w.title}</div>
+                  <div className="mt-0.5 flex justify-between gap-3 text-[13px] text-muted">
+                    <span className="truncate">{w.company}</span>
+                    <span className="tnum shrink-0 text-ink-2">{w.cost_label}</span>
+                  </div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 3. How it works, on soft green */}
+      <section className="bleed bg-brand-soft py-14 sm:py-20">
+        <div className="mx-auto max-w-[1080px] px-5 sm:px-8">
+          <h2 className="text-[26px] font-bold text-brand-ink sm:text-[32px]">使い方</h2>
+          <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+            {steps.map(([t, d], i) => (
+              <li key={t} className="rounded-[22px] bg-surface p-6 shadow-[var(--shadow-card)]">
+                <span className="tnum text-[40px] font-semibold leading-none text-brand-2">{i + 1}</span>
+                <div className="mt-4 text-[18px] font-semibold">{t}</div>
+                <p className="mt-1 text-[14px] leading-relaxed text-muted">{d}</p>
               </li>
             ))}
           </ol>
-        </section>
+        </div>
+      </section>
 
-        <section>
-          <h2 className="text-[24px] font-semibold">安心して使える理由</h2>
-          <dl className="mt-6 space-y-5">
+      {/* 4. Trust, beside a facade */}
+      <section className="grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-2 lg:gap-16">
+        <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/seed/exterior-5.jpg" alt="施工事例：外壁塗装" className="size-full object-cover" loading="lazy" />
+        </div>
+        <div>
+          <h2 className="text-[26px] font-bold sm:text-[32px]">安心して使える理由</h2>
+          <dl className="mt-8 divide-y divide-line border-y border-line">
             {reasons.map(([t, d]) => (
-              <div key={t}>
-                <dt className="text-[17px] font-medium">{t}</dt>
-                <dd className="mt-0.5 text-[14px] leading-relaxed text-muted">{d}</dd>
+              <div key={t} className="py-5">
+                <dt className="text-[17px] font-semibold">{t}</dt>
+                <dd className="mt-1 text-[14px] leading-relaxed text-muted">{d}</dd>
               </div>
             ))}
           </dl>
-        </section>
+        </div>
+      </section>
 
-        <section>
-          <h2 className="text-[24px] font-semibold">よくある質問</h2>
-          <div className="mt-4 divide-y divide-line">
+      {/* 5. FAQ on white */}
+      <section className="bleed bg-surface py-14 sm:py-20">
+        <div className="mx-auto max-w-[720px] px-5 sm:px-8">
+          <h2 className="text-[26px] font-bold sm:text-[32px]">よくある質問</h2>
+          <div className="mt-6 divide-y divide-line border-y border-line">
             {faq.map(([q, a]) => (
               <details key={q} className="group">
-                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 text-[16px]">
+                <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium">
                   {q}
-                  <span className="text-[20px] text-muted transition-transform group-open:rotate-45" aria-hidden="true">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-soft text-[18px] text-ink-2 transition-transform duration-200 group-open:rotate-45" aria-hidden="true">
                     +
                   </span>
                 </summary>
@@ -92,15 +161,15 @@ export default async function Home() {
               </details>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <footer className="flex flex-col gap-3 text-[13px] text-muted sm:flex-row sm:justify-between">
-          <span>対応エリア：{areas.map((a) => a.city).join("・")}</span>
-          <Link href="/business" className="hover:text-ink">
-            施工会社の方
-          </Link>
-        </footer>
-      </div>
+      <footer className="flex flex-col gap-3 pt-10 text-[13px] text-muted sm:flex-row sm:justify-between">
+        <span>対応エリア：{areas.map((a) => a.city).join("・")}</span>
+        <Link href="/business" className="hover:text-ink">
+          施工会社の方
+        </Link>
+      </footer>
     </>
   );
 }

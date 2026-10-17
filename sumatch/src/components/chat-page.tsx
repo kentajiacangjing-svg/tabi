@@ -23,6 +23,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
   const quoteHref = side === "customer" ? `/quotes?project=${ctx.project.id}` : `/business/quotes?match=${ctx.match.id}`;
   const title = side === "customer" ? ctx.company.name : side === "company" ? `${customer?.name ?? "お客"}様` : `${customer?.name}様 × ${ctx.company.name}`;
   const titleHref = side === "customer" ? `/company/${ctx.company.id}?project=${ctx.project.id}` : side === "company" ? `/business/leads/${ctx.project.id}` : undefined;
+  const cover = get<{ src: string }>("SELECT COALESCE(image_url, '/api/files/' || file_id) AS src FROM company_works WHERE company_id = ? ORDER BY created_at, rowid LIMIT 1", ctx.company.id)?.src;
   const sub = side === "company" ? `${ctx.project.city}・${cat?.name ?? ""}` : `返信の目安 ${responseSpeed(ctx.company.avg_response_minutes)}`;
 
   return (
@@ -32,7 +33,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
           <div className="min-h-0 flex-1 overflow-y-auto">
             {conversations.map((c) => (
               <Link key={c.match_id} href={`${base}/${c.match_id}`} className={cx("flex gap-3 border-b border-line px-5 py-4 hover:bg-soft", c.match_id === ctx.match.id && "bg-soft")}>
-                {side === "company" ? <UserAvatar name={c.customer_name} size={40} /> : <CompanyAvatar name={c.company_name} logoFileId={c.company_logo} size={40} />}
+                {side === "company" ? <UserAvatar name={c.customer_name} size={40} /> : <CompanyAvatar name={c.company_name} logoFileId={c.company_logo} photo={c.company_cover} size={44} />}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[15px] font-medium">{side === "company" ? `${c.customer_name}様` : c.company_name}</span>
@@ -40,7 +41,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-[14px] text-muted">{c.last_kind === "quote" ? "見積が届きました" : c.last_kind === "image" ? "写真" : c.last_kind === "file" ? "ファイル" : c.last_message}</span>
-                    {c.unread > 0 && <span className="size-2 shrink-0 rounded-full bg-brand" aria-label="未読あり" />}
+                    {c.unread > 0 && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="未読あり" />}
                   </div>
                 </div>
               </Link>
@@ -54,8 +55,9 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
           <Link href={side === "admin" ? "/admin?tab=chats" : base} className="grid size-11 place-items-center rounded-lg text-ink-2 hover:bg-soft md:hidden" aria-label="一覧へ戻る">
             <Icon name="chevron-left" size={22} />
           </Link>
+          {side === "customer" && <CompanyAvatar name={ctx.company.name} logoFileId={ctx.company.logo_file_id} photo={cover} size={40} className="ml-1" />}
           <div className="min-w-0 flex-1 px-2">
-            <div className="truncate text-[17px] font-medium">{title}</div>
+            <div className="truncate text-[17px] font-semibold">{title}</div>
             {side !== "admin" && <div className="truncate text-[13px] text-muted">{sub}</div>}
           </div>
           {titleHref && side === "customer" && (
@@ -93,11 +95,11 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
 export function ConversationList({ conversations, side }: { conversations: Conversation[]; side: "customer" | "company" }) {
   const base = side === "company" ? "/business/messages" : "/messages";
   return (
-    <ul className="divide-y divide-line border-y border-line">
+    <ul className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)]">
       {conversations.map((c) => (
-        <li key={c.match_id}>
-          <Link href={`${base}/${c.match_id}`} className="flex gap-4 py-4 hover:bg-soft/60">
-            {side === "company" ? <UserAvatar name={c.customer_name} size={48} /> : <CompanyAvatar name={c.company_name} logoFileId={c.company_logo} size={48} />}
+        <li key={c.match_id} className="border-b border-line last:border-0">
+          <Link href={`${base}/${c.match_id}`} className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-canvas sm:px-5">
+            {side === "company" ? <UserAvatar name={c.customer_name} size={56} /> : <CompanyAvatar name={c.company_name} logoFileId={c.company_logo} photo={c.company_cover} size={56} />}
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
                 <span className={cx("truncate text-[17px]", c.unread ? "font-semibold" : "font-medium")}>{side === "company" ? `${c.customer_name}様` : c.company_name}</span>
@@ -107,7 +109,7 @@ export function ConversationList({ conversations, side }: { conversations: Conve
                 <span className={cx("truncate text-[15px]", c.unread ? "text-ink" : "text-muted")}>
                   {c.last_kind === "quote" ? "見積が届きました" : c.last_kind === "image" ? "写真を送りました" : c.last_kind === "file" ? "ファイルを送りました" : c.last_message}
                 </span>
-                {c.unread > 0 && <span className="shrink-0 text-[13px] font-medium text-brand">{c.unread}件</span>}
+                {c.unread > 0 && <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white">{c.unread}</span>}
               </div>
             </div>
           </Link>

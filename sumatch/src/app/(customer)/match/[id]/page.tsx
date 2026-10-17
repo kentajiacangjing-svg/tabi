@@ -19,7 +19,7 @@ export default async function CustomerMatchPage({ params }: { params: Promise<{ 
   return (
     <MatchMoment
       title="マッチしました"
-      sub={`${ctx.company.name}と相談できます`}
+      sub={ctx.company.name}
       photo={workImage(get<{ image_url: string | null; file_id: string | null }>("SELECT image_url, file_id FROM company_works WHERE company_id = ? ORDER BY (category_id = ?) DESC LIMIT 1", ctx.company.id, ctx.project.category_id)) ?? fileUrl(ctx.company.logo_file_id)}
       initial={ctx.company.name.slice(0, 1)}
       cta="メッセージを送る"
