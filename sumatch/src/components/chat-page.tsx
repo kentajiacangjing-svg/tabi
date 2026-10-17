@@ -27,7 +27,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
   const sub = side === "company" ? `${ctx.project.city}・${cat?.name ?? ""}` : `返信の目安 ${responseSpeed(ctx.company.avg_response_minutes)}`;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-16 z-20 flex bg-canvas md:static md:z-auto md:h-[calc(100dvh-10rem)] md:overflow-hidden md:rounded-[24px] md:border md:border-line">
+    <div className="fixed inset-x-0 bottom-0 top-[60px] z-20 flex bg-canvas md:static md:z-auto md:h-[calc(100dvh-10rem)] md:overflow-hidden md:rounded-[24px] md:border md:border-line">
       {conversations.length > 0 && (
         <aside className="hidden w-80 shrink-0 flex-col border-r border-line md:flex">
           <div className="min-h-0 flex-1 overflow-y-auto">

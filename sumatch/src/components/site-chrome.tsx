@@ -6,7 +6,7 @@ export async function SiteHeader({ business }: { business?: boolean }) {
   const user = await getCurrentUser();
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-canvas/95">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 px-5 sm:px-10 lg:px-14">
+      <div className="mx-auto flex h-[60px] max-w-[1320px] items-center justify-between gap-3 px-5 sm:px-10 md:h-[68px] lg:px-12">
         <Logo href={business ? "/business" : "/"} sub={business ? "for Business" : undefined} />
         <nav className="flex items-center gap-1 text-[15px]">
           {user ? (

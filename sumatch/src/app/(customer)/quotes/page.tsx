@@ -91,7 +91,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
       ) : (
         <>
           {multi && (
-            <nav className="mb-8 grid grid-cols-3 gap-2 sm:gap-3" aria-label="比べる視点">
+            <nav className="mb-6 grid grid-cols-3 gap-2 sm:gap-3" aria-label="比べる視点">
               {views.map((v) => {
                 const on = v.key === view;
                 return (
@@ -101,20 +101,20 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     scroll={false}
                     aria-current={on ? "true" : undefined}
                     className={cx(
-                      "lift min-w-0 rounded-[24px] border-2 p-3.5 sm:p-5",
+                      "lift min-w-0 rounded-[24px] border-2 p-3.5 sm:px-6 sm:py-5",
                       on ? "border-brand bg-brand text-white shadow-[var(--shadow-lift)]" : "border-transparent bg-surface shadow-[var(--shadow-card)]",
                     )}
                   >
-                    <div className={cx("text-[13px] font-semibold sm:text-[15px]", on ? "text-white" : "text-brand")}>{v.label}</div>
+                    <div className={cx("text-[14px] font-bold sm:text-[17px]", on ? "text-white" : "text-brand")}>{v.label}</div>
                     <div className={cx("mt-1.5 truncate text-[12px] sm:text-[14px]", on ? "text-white/80" : "text-muted")}>{v.win ? v.win.company.name : "差はありません"}</div>
-                    {v.win && <div className={cx("tnum truncate text-[14px] font-semibold sm:text-[18px]", on ? "text-white" : "text-ink")}>{v.value(v.win)}</div>}
+                    {v.win && <div className={cx("tnum truncate text-[15px] font-semibold sm:text-[21px]", on ? "text-white" : "text-ink")}>{v.value(v.win)}</div>}
                   </Link>
                 );
               })}
             </nav>
           )}
 
-          <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+          <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
             {sorted.map((q, i) => {
               const chosen = contract?.quote_id === q.id;
               const lead = multi && i === 0 && !contract;
@@ -136,7 +136,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     <div className="absolute left-4 top-3 flex flex-wrap gap-1.5">
                       {chosen && <span className="rounded-full bg-brand px-2.5 py-1 text-[12px] font-medium text-white">決定</span>}
                       {tags(q).map((t) => (
-                        <span key={t} className="rounded-full bg-surface/95 px-2.5 py-1 text-[12px] font-semibold text-brand shadow-[var(--shadow-card)]">
+                        <span key={t} className="rounded-full bg-surface/95 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-brand shadow-[var(--shadow-card)]">
                           {t}
                         </span>
                       ))}
@@ -146,7 +146,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <h2 id={`q-${q.id}`} className="text-[17px] font-semibold">
                     {q.company.name}
                   </h2>
-                  <div className={cx("tnum mt-2 text-[40px] font-semibold leading-none", view === "price" && lead && "text-brand")}>¥{q.total.toLocaleString("ja-JP")}</div>
+                  <div className={cx("tnum mt-2 text-[44px] font-semibold leading-none tracking-tight", view === "price" && lead && "text-brand")}>¥{q.total.toLocaleString("ja-JP")}</div>
                   <div className="mt-1.5 text-[13px] text-muted">税込</div>
                   <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
                     <div>

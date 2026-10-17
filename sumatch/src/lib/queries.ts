@@ -214,6 +214,7 @@ export interface LeadRow {
   city: string;
   house_type: string;
   building_age: number | null;
+  category_slug: string;
   category_name: string;
   concerns: string;
   desired_timing: string;
@@ -231,7 +232,7 @@ export interface LeadRow {
 
 export function leadsForCompany(companyId: string) {
   return all<LeadRow>(
-    `SELECT m.id AS match_id, p.id AS project_id, p.title, p.city, p.house_type, p.building_age, c.name AS category_name, p.concerns,
+    `SELECT m.id AS match_id, p.id AS project_id, p.title, p.city, p.house_type, p.building_age, c.name AS category_name, c.slug AS category_slug, p.concerns,
             p.desired_timing, p.budget_min, p.budget_max,
             (SELECT COUNT(*) FROM project_images i WHERE i.project_id = p.id) AS photo_count,
             m.score, m.reasons, m.customer_interest, m.company_response, m.status AS match_status, p.status AS project_status, p.created_at

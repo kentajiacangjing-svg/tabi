@@ -56,7 +56,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
         戻る
       </Link>
 
-      <div className="grid gap-x-12 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid gap-x-10 lg:grid-cols-[minmax(0,1fr)_440px]">
         {/* 1. photo */}
         <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -65,8 +65,8 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
 
         {/* 2–3. name, rating, area → 相談したい (overlaps the photo on phones, sticks beside it on wide screens) */}
         <aside className="relative z-10 mx-3 -mt-12 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mx-0 lg:mt-0">
-          <div className="rounded-[24px] bg-surface p-6 shadow-[var(--shadow-pop)] lg:sticky lg:top-24">
-            <h1 className="jp text-[26px] font-bold leading-tight sm:text-[30px]">{c.name}</h1>
+          <div className="rounded-[28px] bg-surface p-6 shadow-[var(--shadow-pop)] lg:sticky lg:top-24 lg:p-8">
+            <h1 className="jp text-[26px] font-bold leading-tight sm:text-[32px]">{c.name}</h1>
             <div className="mt-3 flex items-center gap-3">
               <span className="tnum text-[22px] font-semibold leading-none">★ {c.rating_avg.toFixed(1)}</span>
               <span className="text-[14px] text-muted">口コミ{c.review_count}件</span>
@@ -78,13 +78,28 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
                 会社確認済み
               </p>
             )}
+            <dl className="mt-5 space-y-2.5 border-t border-line pt-5 text-[14px]">
+              {[
+                ["保証", c.warranty.split(/[\/／]/)[0]?.trim() || "—"],
+                ["施工", c.self_construction ? "自社の職人" : "提携職人（品質管理は自社）"],
+                ["実績", `${c.works_total.toLocaleString()}件`],
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-baseline gap-3">
+                  <dt className="flex w-12 shrink-0 items-center gap-1.5 text-muted">
+                    <Icon name="check" size={13} strokeWidth={2.4} className="text-brand" />
+                    {k}
+                  </dt>
+                  <dd className="min-w-0 truncate font-medium">{v}</dd>
+                </div>
+              ))}
+            </dl>
             {consultable && (
               <div className="mt-6">
                 <ConsultButton matchId={own.id} disabledReason={reason} />
               </div>
             )}
             {own?.status === "matched" && (
-              <Link href={`/messages/${own.id}`} className="press mt-6 flex h-14 items-center justify-center rounded-xl bg-brand font-medium text-white hover:bg-brand-2">
+              <Link href={`/messages/${own.id}`} className="press mt-6 flex h-[54px] items-center justify-center rounded-xl bg-brand font-medium text-white hover:bg-brand-2">
                 メッセージを開く
               </Link>
             )}

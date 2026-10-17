@@ -37,24 +37,24 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
   }
 
   const homeHref = mode === "business" ? "/business/dashboard" : mode === "admin" ? "/admin" : "/";
-  const width = wide ? "max-w-[1320px]" : "max-w-[1240px]";
+  const width = wide ? "max-w-[1360px]" : "max-w-[1320px]";
 
   return (
     <div className={cx("min-h-dvh", items.length > 0 && "pb-24 md:pb-0")}>
-      <header className="sticky top-0 z-30 border-b border-line/70 bg-canvas/85 backdrop-blur-md">
-        <div className={cx("mx-auto flex h-16 items-center justify-between gap-3 px-5 sm:px-10 lg:px-14", width)}>
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur-sm">
+        <div className={cx("mx-auto flex h-[60px] items-center justify-between gap-3 px-5 sm:px-10 md:h-[68px] lg:px-12", width)}>
           <Logo href={homeHref} sub={mode === "business" ? "for Business" : mode === "admin" ? "Admin" : undefined} />
           <div className="flex items-center gap-1">
             <DesktopNav items={items} />
             {user ? (
               <>
-                <Link href="/notifications" className="relative grid size-11 place-items-center rounded-lg text-ink-2 hover:bg-soft" aria-label={`お知らせ（未読${unreadNotes}件）`}>
-                  <Icon name="bell" size={20} />
-                  {unreadNotes > 0 && <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-accent" />}
+                <Link href="/notifications" className="press relative ml-1 grid size-11 place-items-center rounded-full border border-line bg-surface text-ink hover:border-ink/20" aria-label={`お知らせ（未読${unreadNotes}件）`}>
+                  <Icon name="bell" size={21} strokeWidth={1.8} />
+                  {unreadNotes > 0 && <span className="absolute right-2 top-2 size-2.5 rounded-full border-2 border-surface bg-accent" />}
                 </Link>
                 {mode !== "customer" && (
                   <form action={logoutAction}>
-                    <button className="grid size-11 place-items-center rounded-lg text-ink-2 hover:bg-soft" aria-label="ログアウト">
+                    <button className="press grid size-11 place-items-center rounded-full text-ink-2 hover:bg-soft" aria-label="ログアウト">
                       <Icon name="logout" size={19} />
                     </button>
                   </form>
@@ -68,7 +68,7 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
           </div>
         </div>
       </header>
-      <main className={cx("mx-auto w-full px-5 py-8 sm:px-10 sm:py-12 lg:px-14", width)}>{children}</main>
+      <main className={cx("mx-auto w-full px-5 py-8 sm:px-10 sm:py-12 lg:px-12 lg:py-10", width)}>{children}</main>
       {items.length > 0 && <BottomTabs items={items} />}
       {user && <RealtimeClient browserNotify={!!user.notify_browser} />}
     </div>

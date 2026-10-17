@@ -142,8 +142,8 @@ export function DiagnosisWizard({
   ];
 
   return (
-    <div className="mx-auto grid items-start gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[600px] flex-col lg:col-start-2 lg:row-start-1 lg:mx-0">
+    <div className="mx-auto grid items-start gap-12 lg:grid-cols-[minmax(0,47fr)_minmax(0,53fr)] xl:gap-14">
+    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[600px] flex-col lg:col-start-2 lg:row-start-1 lg:mx-0 lg:min-h-0 lg:max-w-none">
       {/* thin progress bar + back */}
       <div className="flex items-center gap-3">
         <button type="button" onClick={back} className="-ml-2 grid size-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-soft" aria-label="戻る">
@@ -154,7 +154,7 @@ export function DiagnosisWizard({
         </div>
       </div>
 
-      <div key={step} className="animate-fade-up flex flex-1 flex-col justify-center py-8">
+      <div key={step} className="animate-fade-up flex flex-1 flex-col justify-center py-8 lg:flex-none lg:justify-start lg:pb-8 lg:pt-12">
         {step === "category" && (
           <Question title="どんな工事？" kicker="住まいの工事を、迷わず相談" headingRef={headingRef}>
             <Options columns options={categories.map((c) => ({ value: c.id, label: c.name, sub: c.description, photo: categoryPhoto(c.slug) }))} value={d.category_id} onChange={(v) => setD((x) => ({ ...x, category_id: v }))} />
@@ -267,11 +267,11 @@ export function DiagnosisWizard({
 
     {/* wide screens: the job, as a photo, and what's been decided so far */}
     <aside className="sticky top-24 hidden lg:col-start-1 lg:row-start-1 lg:block" aria-label="現在の条件">
-      <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+      <div className="aspect-[4/3] overflow-hidden lg:aspect-[6/5] rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img key={category?.slug ?? "none"} src={categoryPhoto(category?.slug)} alt="" className="animate-fade-up size-full object-cover" />
       </div>
-      <div className="relative mx-8 -mt-14 rounded-[24px] bg-surface p-6 shadow-[var(--shadow-lift)]">
+      <div className="relative mx-6 -mt-14 rounded-[24px] bg-surface p-6 shadow-[var(--shadow-lift)]">
         <Kicker>あなたの条件</Kicker>
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
           {answered.map(([k, v]) => (

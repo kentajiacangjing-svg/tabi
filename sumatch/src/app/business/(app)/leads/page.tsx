@@ -6,6 +6,7 @@ import { BUDGETS, TIMINGS } from "@/lib/constants";
 import { manRange, relative } from "@/lib/format";
 import { fileUrl } from "@/lib/urls";
 import { LeadDeck } from "@/components/lead-deck";
+import { categoryPhoto } from "@/lib/visuals";
 import { EmptyState } from "@/components/ui";
 
 export const metadata = { title: "新しい相談" };
@@ -31,6 +32,7 @@ export default async function LeadsPage() {
         projectId: l.project_id,
         city: l.city,
         category: l.category_name,
+        cover: categoryPhoto(l.category_slug),
         houseType: `${l.house_type}${l.building_age != null ? `・築${l.building_age}年` : ""}`,
         budget: BUDGETS.find((b) => b.min === l.budget_min && b.max === l.budget_max)?.label ?? manRange(l.budget_min, l.budget_max),
         timing: TIMINGS.find((t) => t.value === l.desired_timing)?.label ?? "—",

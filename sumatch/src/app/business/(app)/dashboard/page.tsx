@@ -7,6 +7,7 @@ import { BUDGETS, TIMINGS } from "@/lib/constants";
 import { manRange, relative } from "@/lib/format";
 import { fileUrl } from "@/lib/urls";
 import { LeadDeck } from "@/components/lead-deck";
+import { categoryPhoto } from "@/lib/visuals";
 import { Kicker, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 
@@ -46,6 +47,7 @@ export default async function BusinessHome() {
       projectId: l.project_id,
       city: l.city,
       category: l.category_name,
+      cover: categoryPhoto(l.category_slug),
       houseType: l.house_type,
       budget: BUDGETS.find((b) => b.min === l.budget_min && b.max === l.budget_max)?.label ?? manRange(l.budget_min, l.budget_max),
       timing: TIMINGS.find((t) => t.value === l.desired_timing)?.label ?? "—",
@@ -60,6 +62,8 @@ export default async function BusinessHome() {
   leads.sort((a, b) => Number(b.customerWants) - Number(a.customerWants));
 
   const todayCount = fresh.length + awaitingReply + toQuote;
+  // Green only for the (at most two) things that need doing now; the rest stay white.
+  const green = new Set(todo.filter((t) => t.strong).slice(0, 2).map((t) => t.label));
 
   return (
     <div className="mx-auto">
@@ -70,19 +74,27 @@ export default async function BusinessHome() {
       </p>
 
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        {todo.map((t) => (
-          <Link
-            key={t.label}
-            href={t.href}
-            className={cx("lift relative rounded-[24px] p-5 sm:p-6", t.strong ? "bg-brand text-white shadow-[var(--shadow-lift)]" : "bg-surface shadow-[var(--shadow-card)]")}
-          >
-            <span className={cx("absolute right-4 top-4 grid size-9 place-items-center rounded-full", t.strong ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
-              <Icon name={t.icon} size={18} />
-            </span>
-            <div className="tnum text-[44px] font-semibold leading-none">{t.value}</div>
-            <div className={cx("mt-3 text-[15px] font-medium", t.strong ? "text-white/90" : "text-ink-2")}>{t.label}</div>
-          </Link>
-        ))}
+        {todo.map((t) => {
+          const on = green.has(t.label);
+          return (
+            <Link
+              key={t.label}
+              href={t.href}
+              className={cx(
+                "lift relative overflow-hidden rounded-[24px] p-5 sm:p-6",
+                on
+                  ? "bg-gradient-to-br from-brand-2 to-brand text-white shadow-[0_14px_30px_-14px_rgb(24_77_58/0.55)]"
+                  : "border border-line/70 bg-gradient-to-b from-white to-[#fafaf8] shadow-[var(--shadow-card)]",
+              )}
+            >
+              <span className={cx("absolute right-4 top-4 grid size-9 place-items-center rounded-full", on ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
+                <Icon name={t.icon} size={18} />
+              </span>
+              <div className={cx("tnum text-[44px] font-semibold leading-none", !on && t.strong && "text-brand")}>{t.value}</div>
+              <div className={cx("mt-3 text-[15px] font-medium", on ? "text-white/90" : "text-ink-2")}>{t.label}</div>
+            </Link>
+          );
+        })}
       </div>
 
       <section className="mt-14">

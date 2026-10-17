@@ -11,6 +11,8 @@ export interface DeckLead {
   projectId: string;
   city: string;
   category: string;
+  /** a work photo of this kind of job, so the card isn't just text */
+  cover: string;
   houseType: string;
   budget: string;
   timing: string;
@@ -65,7 +67,7 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
         </span>
         <h2 className="text-[28px] font-bold">新しい相談はすべて確認しました</h2>
         <p className="mt-3 text-[16px] text-muted">新しい相談が届いたら、メールとブラウザ通知でお知らせします。</p>
-        <Link href="/business/active" className="press mt-10 inline-flex h-14 items-center rounded-xl bg-brand px-7 font-medium text-white hover:bg-brand-2">
+        <Link href="/business/active" className="press mt-10 inline-flex h-[54px] items-center rounded-xl bg-brand px-7 font-medium text-white hover:bg-brand-2">
           進行中の相談を見る
         </Link>
       </div>
@@ -75,7 +77,7 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
   const rest = queue.slice(1);
 
   return (
-    <div className={cx(withRest && "grid items-start gap-10 lg:grid-cols-[540px_minmax(0,1fr)]")}>
+    <div className={cx(withRest && "grid grid-cols-[minmax(0,1fr)] items-start gap-10 lg:grid-cols-[540px_minmax(0,1fr)]")}>
     <div className={cx("mx-auto w-full max-w-[540px] transition-[opacity,transform] duration-200 lg:mx-0", !withRest && "lg:mx-auto", leaving && "translate-x-[-8%] opacity-0")}>
       <div className="mb-3 flex justify-between text-[13px] text-muted">
         <span className="tnum">
@@ -84,14 +86,18 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
         <span>{current.received}に届きました</span>
       </div>
       <article key={current.projectId} className="animate-fade-up overflow-hidden rounded-[28px] bg-surface shadow-[var(--shadow-deck)]">
-        {current.photo && (
-          <div className="relative h-36 bg-soft sm:h-44">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={current.photo} alt="お客様の写真" className="size-full object-cover" />
-            <div className="scrim-b absolute inset-0" />
-            {current.photos > 1 && <span className="absolute bottom-3 right-4 text-[12px] text-white/90">写真{current.photos}枚</span>}
-          </div>
-        )}
+        <div className="relative aspect-[16/7] bg-soft">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={current.cover} alt="" className="size-full object-cover" />
+          <div className="scrim-b absolute inset-0" />
+          {current.photo && (
+            <span className="absolute bottom-3 right-4 flex items-center gap-2 rounded-full bg-surface/95 py-1 pl-1 pr-3 text-[12px] font-medium text-ink shadow-[var(--shadow-card)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={current.photo} alt="お客様の写真" className="size-7 rounded-full object-cover" />
+              お客様の写真{current.photos > 1 ? ` ${current.photos}枚` : ""}
+            </span>
+          )}
+        </div>
         {current.customerWants && (
           <p className="flex items-center gap-2 bg-brand-soft px-6 py-3 text-[14px] font-semibold text-brand">
             <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
@@ -115,7 +121,7 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
       {(error || blockedReason) && <p className="mt-4 text-[14px] text-danger" role="alert">{error ?? blockedReason}</p>}
 
       <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-4 grid grid-cols-[1fr_1.6fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
-        <button type="button" disabled={pending} onClick={() => respond(false)} className="press h-14 rounded-xl bg-[#e9ebe6] text-[16px] font-medium text-ink-2 hover:bg-[#e2e4de] disabled:opacity-40">
+        <button type="button" disabled={pending} onClick={() => respond(false)} className="press h-[54px] rounded-xl bg-[#e9ebe6] text-[16px] font-medium text-ink-2 hover:bg-[#e2e4de] disabled:opacity-40">
           見送る
         </button>
         <Button size="lg" className="rounded-xl" disabled={pending || (!!blockedReason && current.customerWants)} onClick={() => respond(true)}>

@@ -33,7 +33,7 @@ export function MatchMoment({
       )}
       <div className="scrim-full absolute inset-0" />
 
-      <div className="relative mx-auto flex w-full max-w-[1240px] items-center gap-2.5 px-5 pt-[max(env(safe-area-inset-top),16px)] sm:px-10 lg:px-14">
+      <div className="relative mx-auto flex w-full max-w-[1320px] items-center gap-2.5 px-5 pt-[max(env(safe-area-inset-top),16px)] sm:px-10 lg:px-12">
         <span className="flex h-12 items-center gap-2.5">
           <span className="rounded-md bg-white/90 p-1">
             <LogoMark size={18} />
@@ -62,7 +62,7 @@ export function MatchMoment({
       </div>
 
       <div className="animate-match-late relative mx-auto w-full max-w-[460px] px-6 pb-[max(env(safe-area-inset-bottom),24px)]">
-        <Link href={href} className="press flex h-14 w-full items-center justify-center rounded-xl bg-surface text-[16px] font-semibold text-brand shadow-[0_12px_30px_-12px_rgb(0_0_0/0.5)] hover:bg-white">
+        <Link href={href} className="press flex h-[54px] w-full items-center justify-center rounded-xl bg-surface text-[16px] font-semibold text-brand shadow-[0_12px_30px_-12px_rgb(0_0_0/0.5)] hover:bg-white">
           {cta}
         </Link>
         <Link href={laterHref} className="mt-2 flex min-h-12 items-center justify-center text-[15px] text-white/80 hover:text-white">

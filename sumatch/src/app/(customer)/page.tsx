@@ -84,7 +84,7 @@ export default async function Home() {
       {/* 2. Real work, big */}
       {works.length > 0 && (
         <section className="bleed bg-surface py-14 sm:py-20">
-          <div className="mx-auto max-w-[1240px] px-5 sm:px-10 lg:px-14">
+          <div className="mx-auto max-w-[1320px] px-5 sm:px-10 lg:px-12">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <Kicker className="mb-2">掲載会社の実績から</Kicker>
@@ -92,7 +92,7 @@ export default async function Home() {
               </div>
             </div>
           </div>
-          <div className="no-scrollbar mx-auto mt-7 flex max-w-[1240px] snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:scroll-px-10 sm:px-10 lg:px-14 lg:grid lg:grid-cols-4 lg:overflow-visible lg:[&>*:nth-child(n+5)]:hidden">
+          <div className="no-scrollbar mx-auto mt-7 flex max-w-[1320px] snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:scroll-px-10 sm:px-10 lg:px-12 lg:grid lg:grid-cols-4 lg:overflow-visible lg:[&>*:nth-child(n+5)]:hidden">
             {works.map((w) => (
               <figure key={w.id} className="w-[72vw] max-w-[300px] shrink-0 snap-start lg:w-auto lg:max-w-none">
                 <div className="aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
@@ -114,7 +114,7 @@ export default async function Home() {
 
       {/* 3. How it works, on soft green */}
       <section className="bleed bg-brand-soft py-14 sm:py-20">
-        <div className="mx-auto max-w-[1240px] px-5 sm:px-10 lg:px-14">
+        <div className="mx-auto max-w-[1320px] px-5 sm:px-10 lg:px-12">
           <Kicker className="mb-2">4つ答えて、1社ずつ</Kicker>
           <h2 className="text-[26px] font-bold text-brand-ink sm:text-[32px]">使い方</h2>
           <ol className="mt-8 grid gap-4 sm:grid-cols-3">

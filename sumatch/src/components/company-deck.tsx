@@ -109,7 +109,7 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
         <h2 className="text-[30px] font-bold">今日のご紹介は以上です</h2>
         <p className="mt-3 text-[15px] text-muted">返事が来たらお知らせします。</p>
         <div className="mt-10 grid gap-3">
-          <Link href={`/projects/${projectId}`} className="press flex h-14 items-center justify-center rounded-xl bg-brand text-white">
+          <Link href={`/projects/${projectId}`} className="press flex h-[54px] items-center justify-center rounded-xl bg-brand text-white">
             相談の状況を見る
           </Link>
           <Link href="/saved" className="flex min-h-12 items-center justify-center text-[15px] text-muted hover:text-ink">
@@ -131,8 +131,8 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
   const upcoming = queue.slice(1, 4);
 
   return (
-    <div className="mx-auto grid max-w-[1120px] items-start gap-14 lg:grid-cols-[560px_minmax(0,1fr)]">
-    <div className="mx-auto w-[92vw] max-w-[560px] sm:w-full">
+    <div className="mx-auto grid max-w-[1120px] items-start gap-12 lg:grid-cols-[600px_minmax(0,1fr)]">
+    <div className="mx-auto w-[92vw] max-w-[600px] sm:w-full">
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
         <Kicker className="min-w-0 truncate">比べる前に、合う会社を</Kicker>
         <span className="tnum shrink-0 text-[13px] text-muted">
@@ -237,31 +237,31 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
     </div>
 
     {/* wide screens: the conditions and who comes next */}
-    <aside className="hidden pt-9 lg:block">
-      <div className="rounded-[24px] bg-brand-soft p-6">
+    <aside className="hidden max-w-[400px] pt-10 lg:block">
+      <div className="rounded-[24px] border border-line/70 bg-surface p-5 shadow-[var(--shadow-card)]">
         <Kicker>あなたの条件</Kicker>
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
           {conditions.map(([k, v]) => (
-            <div key={k}>
+            <div key={k} className="min-w-0">
               <dt className="text-[12px] text-muted">{k}</dt>
-              <dd className="truncate text-[16px] font-semibold">{v}</dd>
+              <dd className="truncate text-[15px] font-semibold">{v}</dd>
             </div>
           ))}
         </dl>
       </div>
       {upcoming.length > 0 && (
-        <div className="mt-8">
-          <Kicker>このあとの会社</Kicker>
-          <ul className="mt-3 space-y-3">
+        <div className="mt-7">
+          <div className="px-1 text-[12px] font-medium text-muted">このあとの会社</div>
+          <ul className="mt-2 divide-y divide-line/70">
             {upcoming.map((c) => (
-              <li key={c.matchId} className="flex items-center gap-4 rounded-[24px] bg-surface p-2.5 pr-4 shadow-[var(--shadow-card)]">
-                <span className="size-16 shrink-0 overflow-hidden rounded-[14px] bg-soft">
+              <li key={c.matchId} className="flex items-center gap-3 px-1 py-2.5 opacity-80">
+                <span className="size-11 shrink-0 overflow-hidden rounded-xl bg-soft">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {c.photo && <img src={c.photo} alt="" className="size-full object-cover" />}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[15px] font-semibold">{c.name}</span>
-                  <span className="tnum block text-[13px] text-muted">★ {c.rating.toFixed(1)}・{c.priceBand}</span>
+                  <span className="block truncate text-[14px] font-medium">{c.name}</span>
+                  <span className="tnum block text-[12px] text-muted">★ {c.rating.toFixed(1)}・{c.priceBand}</span>
                 </span>
               </li>
             ))}
