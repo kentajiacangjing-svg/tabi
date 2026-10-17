@@ -81,8 +81,9 @@ npm run dev          # http://localhost:3100
 ## テスト
 
 ```bash
+npm run typecheck && npm run lint   # 型チェック・ESLint（next/core-web-vitals）
 npm test               # ユニットテスト（マッチ度・連絡先検知・相場・見積もり比較・マッチング成立）
-npm run build && npm run test:e2e   # ブラウザで通しのフロー（相談 → マッチ → チャット → 見積 → 比較 → 決定 → 管理画面）、権限、戻る操作、404、二重送信
+npm run build && npm run test:e2e   # ブラウザで通しのフロー（相談 → マッチ → チャット → 見積 → 比較 → 決定 → 管理画面）、権限、戻る操作、404、二重送信、通信切断、画像失敗、長文メッセージ
 ```
 
 ### 公開前の確認項目（実装済み）

@@ -32,8 +32,6 @@ function dayLabel(iso: string) {
   return `${d.getMonth() + 1}月${d.getDate()}日（${"日月火水木金土"[d.getDay()]}）`;
 }
 
-const yenMan = (n: number | null) => (n == null ? "" : `${(n / 10000).toLocaleString("ja-JP", { maximumFractionDigits: 1 })}万円`);
-
 export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason }: ChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [otherReadAt, setOtherReadAt] = useState(initialOtherReadAt);

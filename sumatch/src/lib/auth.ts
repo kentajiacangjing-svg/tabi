@@ -43,6 +43,7 @@ export function userFromToken(token: string | undefined): User | null {
     tokenHash(token),
   );
   if (!row || row.expires_at < now() || row.status !== "active") return null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropped on purpose
   const { expires_at: _e, ...user } = row;
   return user;
 }

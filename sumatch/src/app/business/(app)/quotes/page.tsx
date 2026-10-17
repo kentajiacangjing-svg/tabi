@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireBusiness } from "@/lib/auth";
 import { all } from "@/lib/db";
-import { dateShort, man } from "@/lib/format";
+import { dateShort } from "@/lib/format";
 import { Badge, ButtonLink, EmptyState, PageHeader, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 

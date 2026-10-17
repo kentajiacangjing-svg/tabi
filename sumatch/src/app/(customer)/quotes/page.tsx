@@ -130,7 +130,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
             );
           })()}
 
-          <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 sm:-mx-10 sm:scroll-px-10 sm:px-10 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sorted.map((q, i) => {
               const chosen = contract?.quote_id === q.id;
               const lead = multi && i === 0 && !contract;
@@ -141,12 +141,12 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   key={q.id}
                   aria-labelledby={`q-${q.id}`}
                   className={cx(
-                    "w-[84vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[24px] border-2 bg-surface lg:w-auto lg:max-w-none",
+                    "overflow-hidden rounded-[24px] border-2 bg-surface",
                     chosen || lead ? "border-brand shadow-[var(--shadow-lift)]" : "border-transparent shadow-[var(--shadow-card)]",
                     contract && !chosen && "opacity-60",
                   )}
                 >
-                  <div className="relative h-24 bg-soft">
+                  <div className="relative h-20 bg-soft sm:h-24">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {photo && <img src={photo} alt="" className="size-full object-cover" loading="lazy" decoding="async" />}
                     <div className="absolute left-4 top-3 flex flex-wrap gap-1.5">

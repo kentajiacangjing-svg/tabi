@@ -9,7 +9,6 @@ import { Kicker, buttonClass } from "./ui";
 export function ErrorState({ reset, homeHref = "/" }: { reset?: () => void; homeHref?: string }) {
   useEffect(() => {
     // keep the detail for the console / monitoring, not for the person
-    // eslint-disable-next-line no-console
     console.error("[SUMATCH] page failed to load");
   }, []);
   return (

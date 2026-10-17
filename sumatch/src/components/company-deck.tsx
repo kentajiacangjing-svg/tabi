@@ -271,10 +271,36 @@ export function CompanyDeck({
         {error ?? note ?? (canConsult ? `あと${left}社まで相談できます` : "相談は3社まで送りました")}
       </p>
 
-      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-1 grid grid-cols-[1fr_1fr_1.4fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
-        <DeckButton label="興味なし" icon="x" tone="neutral" onClick={() => act("pass")} disabled={pending} />
-        <DeckButton label="保存" icon="heart" tone="white" onClick={() => act("save")} disabled={pending} />
-        <DeckButton label={sending === "consult" ? "送信中…" : "相談したい"} icon="check" tone="primary" onClick={() => act("consult")} disabled={pending || !canConsult} />
+      {/* Two decisions, clearly ranked: 興味なし (quiet) and 相談したい (primary). 保存 is a small extra in between. */}
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-1 grid grid-cols-[1fr_56px_1.5fr] items-center gap-2.5 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
+        <button
+          type="button"
+          onClick={() => act("pass")}
+          disabled={pending}
+          className="press flex h-14 items-center justify-center gap-1.5 rounded-xl bg-[#e9ebe6] text-[15px] font-medium text-ink-2 hover:bg-[#e2e4de] disabled:opacity-40"
+        >
+          <Icon name="x" size={18} strokeWidth={2.2} />
+          興味なし
+        </button>
+        <button
+          type="button"
+          onClick={() => act("save")}
+          disabled={pending}
+          aria-label="保存"
+          title="保存（あとで考える）"
+          className="press grid size-14 place-items-center rounded-full border border-line bg-surface text-ink-2 shadow-[var(--shadow-card)] hover:text-accent disabled:opacity-40"
+        >
+          <Icon name="heart" size={22} strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          onClick={() => act("consult")}
+          disabled={pending || !canConsult}
+          className="press flex h-14 items-center justify-center gap-1.5 rounded-xl bg-brand text-[16px] font-semibold text-white shadow-[0_10px_24px_-10px_rgb(24_77_58/0.7)] hover:bg-brand-2 disabled:opacity-40"
+        >
+          <Icon name="check" size={20} strokeWidth={2.4} />
+          {sending === "consult" ? "送信中…" : "相談したい"}
+        </button>
       </div>
       <p className="mt-1 hidden text-center text-[12px] text-faint md:block">キーボード：← 興味なし　→ 相談したい　S 保存</p>
     </div>
@@ -313,24 +339,5 @@ export function CompanyDeck({
       )}
     </aside>
     </div>
-  );
-}
-
-function DeckButton({ label, icon, onClick, disabled, tone }: { label: string; icon: string; onClick: () => void; disabled?: boolean; tone: "neutral" | "white" | "primary" }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cx(
-        "press flex h-[66px] flex-col items-center justify-center gap-1 rounded-xl text-[13px] font-medium disabled:opacity-40",
-        tone === "primary" && "bg-brand text-[15px] text-white shadow-[0_10px_24px_-10px_rgb(24_77_58/0.7)] hover:bg-brand-2",
-        tone === "white" && "border border-line bg-surface text-ink shadow-[var(--shadow-card)]",
-        tone === "neutral" && "bg-[#e9ebe6] text-ink-2 hover:bg-[#e2e4de]",
-      )}
-    >
-      <Icon name={icon} size={tone === "primary" ? 22 : 20} strokeWidth={2.2} />
-      {label}
-    </button>
   );
 }

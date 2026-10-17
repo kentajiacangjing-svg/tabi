@@ -9,7 +9,6 @@ import { fileUrl } from "@/lib/urls";
 import { LeadDeck } from "@/components/lead-deck";
 import { categoryPhoto } from "@/lib/visuals";
 import { Kicker, cx } from "@/components/ui";
-import { Icon } from "@/components/icons";
 
 export const metadata = { title: "ホーム" };
 export const dynamic = "force-dynamic";
@@ -34,10 +33,10 @@ export default async function BusinessHome() {
   const blocked = monthlyMatchUsage(c.id) >= limit ? `今月のマッチ上限（${limit}件）に達しています。` : undefined;
 
   const todo = [
-    { label: "新しい相談", value: fresh.length, href: "/business/leads", strong: fresh.length > 0, icon: "inbox" },
-    { label: "返信待ち", value: awaitingReply, href: "/business/messages", strong: awaitingReply > 0, icon: "chat" },
-    { label: "見積作成", value: toQuote, href: "/business/quotes", strong: toQuote > 0, icon: "doc" },
-    { label: "契約", value: contracts, href: "/business/active", strong: false, icon: "check" },
+    { label: "新しい相談", value: fresh.length, href: "/business/leads", strong: fresh.length > 0 },
+    { label: "返信待ち", value: awaitingReply, href: "/business/messages", strong: awaitingReply > 0 },
+    { label: "見積作成", value: toQuote, href: "/business/quotes", strong: toQuote > 0 },
+    { label: "契約", value: contracts, href: "/business/active", strong: false },
   ];
 
   const leads = fresh.map((l) => {
@@ -62,8 +61,6 @@ export default async function BusinessHome() {
   leads.sort((a, b) => Number(b.customerWants) - Number(a.customerWants));
 
   const todayCount = fresh.length + awaitingReply + toQuote;
-  // Green only for the (at most two) things that need doing now; the rest stay white.
-  const green = new Set(todo.filter((t) => t.strong).slice(0, 2).map((t) => t.label));
 
   return (
     <div className="mx-auto">
@@ -73,31 +70,24 @@ export default async function BusinessHome() {
         {user.name.split(" ")[0]}さん、おつかれさまです。{todayCount > 0 ? `${todayCount}件が待っています。` : "今日は落ち着いています。"}
       </p>
 
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-        {todo.map((t) => {
-          const on = green.has(t.label);
-          return (
-            <Link
-              key={t.label}
-              href={t.href}
-              className={cx(
-                "lift relative overflow-hidden rounded-[24px] px-4 py-4 sm:px-5",
-                on
-                  ? "bg-gradient-to-br from-brand-2 to-brand text-white shadow-[0_14px_30px_-14px_rgb(24_77_58/0.55)]"
-                  : "border border-line/70 bg-gradient-to-b from-white to-[#fafaf8] shadow-[var(--shadow-card)]",
-              )}
-            >
-              <span className={cx("absolute right-3.5 top-3.5 grid size-8 place-items-center rounded-full", on ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
-                <Icon name={t.icon} size={16} />
-              </span>
-              <div className={cx("tnum text-[34px] font-semibold leading-none sm:text-[38px]", !on && t.strong && "text-brand")}>{t.value}</div>
-              <div className={cx("mt-2 text-[14px] font-medium", on ? "text-white/90" : "text-ink-2")}>{t.label}</div>
-            </Link>
-          );
-        })}
-      </div>
+      {/* what's waiting, as small links — the case to handle comes right after, and is the big thing */}
+      <nav className="mt-5 grid grid-cols-4 gap-2" aria-label="今日やることの件数">
+        {todo.map((t) => (
+          <Link
+            key={t.label}
+            href={t.href}
+            className={cx(
+              "press flex min-h-[64px] flex-col justify-center rounded-2xl px-3 py-2 sm:flex-row sm:items-center sm:justify-start sm:gap-3 sm:px-4",
+              t.strong ? "bg-brand-soft text-brand-ink" : "border border-line/70 bg-surface text-ink-2",
+            )}
+          >
+            <span className={cx("tnum text-[24px] font-semibold leading-none", t.strong ? "text-brand" : "text-faint")}>{t.value}</span>
+            <span className="mt-1 text-[12px] font-medium leading-tight sm:mt-0 sm:text-[14px]">{t.label}</span>
+          </Link>
+        ))}
+      </nav>
 
-      <section className="mt-10">
+      <section className="mt-8">
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-[24px] font-bold">最優先の相談</h2>
           <Link href="/business/analytics" className="inline-flex min-h-11 items-center text-[14px] text-muted hover:text-ink">

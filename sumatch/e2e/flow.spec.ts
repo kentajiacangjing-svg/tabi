@@ -1,28 +1,4 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
-import zlib from "node:zlib";
-
-// A tiny valid PNG (1x1) built at runtime, used as a "photo".
-function png(): Buffer {
-  const crc = (buf: Buffer) => {
-    let c = ~0;
-    for (const b of buf) {
-      c ^= b;
-      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
-    }
-    return ~c >>> 0;
-  };
-  const chunk = (type: string, data: Buffer) => {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const td = Buffer.concat([Buffer.from(type), data]);
-    const c = Buffer.alloc(4);
-    c.writeUInt32BE(crc(td));
-    return Buffer.concat([len, td, c]);
-  };
-  const ihdr = Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]);
-  const idat = zlib.deflateSync(Buffer.from([0, 200, 210, 230]));
-  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", idat), chunk("IEND", Buffer.alloc(0))]);
-}
 
 async function demoLogin(browser: Browser, name: string): Promise<Page> {
   const ctx = await browser.newContext();
@@ -31,6 +7,28 @@ async function demoLogin(browser: Browser, name: string): Promise<Page> {
   await page.getByText("デモアカウントで試す").click();
   await page.getByRole("button", { name: new RegExp(name) }).first().click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+  return page;
+}
+
+/** A brand-new customer who has just answered the questions and is looking at company cards. */
+async function freshCustomerAtDeck(browser: Browser): Promise<Page> {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.goto("/");
+  await page.getByRole("radio", { name: /内装/ }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await page.getByRole("radio", { name: "50〜100万円" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await page.getByRole("radio", { name: "3ヶ月以内" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await page.getByRole("radio", { name: "藤沢市" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await page.getByRole("button", { name: "条件に合う会社を探す" }).click();
+  await page.getByLabel(/お名前/).fill("テスト 次郎");
+  await page.getByLabel(/メールアドレス/).fill(`e2e-deck-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`);
+  await page.getByLabel(/パスワード/).fill("password123");
+  await page.getByRole("button", { name: "登録して会社を見る" }).click();
+  await page.waitForURL(/\/matches\?project=/);
   return page;
 }
 
@@ -205,4 +203,49 @@ test("a message sent with a double keypress arrives once", async ({ browser }) =
   await expect(biz.locator("section").getByText(text)).toHaveCount(1);
   await biz.waitForTimeout(800);
   await expect(biz.locator("section").getByText(text)).toHaveCount(1);
+});
+
+test("offline: an action fails with a plain message and works again once back online", async ({ browser }) => {
+  const ito = await freshCustomerAtDeck(browser);
+  await expect(ito.getByRole("button", { name: /相談したい/ })).toBeVisible();
+  await ito.context().setOffline(true);
+  await ito.getByRole("button", { name: /保存/ }).click();
+  await expect(ito.getByText("通信できませんでした。もう一度お試しください。")).toBeVisible();
+  await ito.context().setOffline(false);
+  await ito.getByRole("button", { name: /保存/ }).click();
+  await expect(ito.getByText(/を保存しました/)).toBeVisible();
+});
+
+test("a photo that fails to load leaves its frame, not a broken-image icon", async ({ page }) => {
+  await page.route("**/seed/*.jpg", (r) => r.abort());
+  await page.goto("/");
+  await expect(page.locator("img.img-broken").first()).toBeAttached();
+  // the card keeps its size
+  const box = await page.getByRole("radio", { name: /外壁・屋根/ }).boundingBox();
+  expect(box!.height).toBeGreaterThan(150);
+});
+
+test("holding the → key sends one consultation, not several", async ({ browser }) => {
+  const ito = await freshCustomerAtDeck(browser);
+  const before = Number((await ito.getByText(/あと\d社まで相談できます/).textContent())!.match(/あと(\d)社/)![1]);
+  for (let i = 0; i < 4; i++) await ito.keyboard.press("ArrowRight", { delay: 10 });
+  await ito.waitForTimeout(1200);
+  await ito.reload();
+  const after = Number((await ito.getByText(/あと\d社まで相談できます|相談は3社まで送りました/).textContent())!.match(/あと(\d)社/)?.[1] ?? 0);
+  expect(after).toBe(before - 1);
+});
+
+test("a very long message wraps inside its bubble", async ({ browser }) => {
+  const biz = await demoLogin(browser, "湘南ペイント");
+  await biz.goto("/business/messages");
+  await biz.locator("main a[href^='/business/messages/']").first().click();
+  await biz.waitForURL(/\/business\/messages\/.+/);
+  const long = "外壁の色見本について" + "とても長い説明文".repeat(40) + "abcdefghijklmnopqrstuvwxyz".repeat(8);
+  await biz.getByLabel("メッセージ").fill(long);
+  await biz.getByRole("button", { name: "送信", exact: true }).click();
+  const bubble = biz.locator("section").getByText(long.slice(0, 20), { exact: false }).last();
+  await expect(bubble).toBeVisible();
+  const vw = biz.viewportSize()!.width;
+  const b = await bubble.boundingBox();
+  expect(b!.x + b!.width).toBeLessThanOrEqual(vw);
 });

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { projectForCustomer } from "@/lib/access";
-import { candidatesForProject, projectsForCustomer, reasons } from "@/lib/queries";
+import { candidatesForProject, projectsForCustomer } from "@/lib/queries";
 import { BUDGETS, MAX_MATCHES_PER_PROJECT, TIMINGS } from "@/lib/constants";
 import { manRange } from "@/lib/format";
 import { all as allQ, get } from "@/lib/db";
