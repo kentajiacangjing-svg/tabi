@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -29,7 +30,20 @@ const SWIPE = 110;
  * One company at a time. Buttons always work; swipe and keys are shortcuts:
  * left / ← = 興味なし, right / → = 相談したい, ↓ or S = 保存.
  */
-export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { projectId: string; deck: DeckCompany[]; consultLeft: number; conditions: [string, string][] }) {
+export function CompanyDeck({
+  projectId,
+  deck,
+  consultLeft,
+  conditions,
+  changeHref,
+}: {
+  projectId: string;
+  deck: DeckCompany[];
+  consultLeft: number;
+  conditions: [string, string][];
+  /** where 「条件を変更する」 goes when nothing matched */
+  changeHref: string;
+}) {
   const router = useRouter();
   const [queue, setQueue] = useState(deck);
   const [left, setLeft] = useState(consultLeft);
@@ -44,7 +58,14 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
 
   useEffect(() => {
     if (current) trackCompanyViewAction(current.matchId).catch(() => {});
-  }, [current]);
+    // warm the next card's photo so the swap doesn't flash an empty frame on a slow connection
+    const next = queue[1]?.photo;
+    if (next) new Image().src = next;
+  }, [current, queue]);
+
+  // One action at a time: a held arrow key or a quick double swipe fires before `pending` re-renders.
+  const busy = useRef(false);
+  const [sending, setSending] = useState<Act | null>(null);
 
   const advance = (kind: Act, msg?: string) => {
     setLeaving(kind);
@@ -53,36 +74,45 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
       setLeaving(null);
       setDx(0);
       setNote(msg ?? null);
+      busy.current = false;
     }, 220);
   };
 
   const act = useCallback(
     (kind: Act) => {
-      if (!current || pending || leaving) return;
+      if (!current || pending || leaving || busy.current) return;
       if (kind === "consult" && !canConsult) {
         setDx(0);
         return setError("相談できるのは3社までです。");
       }
       setError(null);
+      busy.current = true;
+      setSending(kind);
+      const fail = (message: string) => {
+        busy.current = false;
+        setDx(0);
+        setError(message);
+      };
       start(async () => {
-        if (kind === "consult") {
-          const r = await requestMatchAction(current.matchId);
-          if (!r.ok) {
-            setDx(0);
-            return setError(r.error);
-          }
-          if (r.status === "matched") return router.push(`/match/${r.matchId}`);
-          setLeft((n) => n - 1);
-          advance("consult", `${current.name}に相談を送りました`);
-        } else {
-          const r = await markCompanyAction(current.matchId, kind);
-          if (!r.ok) {
-            setDx(0);
-            return setError(r.error);
-          }
-          advance(kind, kind === "save" ? `${current.name}を保存しました` : undefined);
+        try {
+          await run();
+        } finally {
+          setSending(null);
         }
       });
+      async function run() {
+        if (kind === "consult") {
+          const r = await soft(requestMatchAction(current!.matchId));
+          if (!r.ok) return fail(r.error);
+          if (r.status === "matched") return router.push(`/match/${r.matchId}`);
+          setLeft((n) => n - 1);
+          advance("consult", `${current!.name}に相談を送りました`);
+        } else {
+          const r = await soft(markCompanyAction(current!.matchId, kind));
+          if (!r.ok) return fail(r.error);
+          advance(kind, kind === "save" ? `${current!.name}を保存しました` : undefined);
+        }
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [current, pending, leaving, canConsult],
@@ -100,18 +130,30 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
   }, [act]);
 
   if (!current) {
+    const none = deck.length === 0; // nothing matched these conditions at all
     return (
       <div className="animate-fade-up mx-auto max-w-[520px] py-12 text-center">
         <div className="mx-auto mb-8 grid size-16 place-items-center rounded-full bg-brand-soft text-brand">
-          <Icon name="check" size={28} strokeWidth={2.2} />
+          <Icon name={none ? "search" : "check"} size={28} strokeWidth={2.2} />
         </div>
         {note && <p className="mb-6 text-[15px] text-brand">{note}</p>}
-        <h2 className="text-[30px] font-bold">今日のご紹介は以上です</h2>
-        <p className="mt-3 text-[15px] text-muted">返事が来たらお知らせします。</p>
-        <div className="mt-10 grid gap-3">
-          <Link href={`/projects/${projectId}`} className="press flex h-[54px] items-center justify-center rounded-xl bg-brand text-white">
-            相談の状況を見る
-          </Link>
+        <h2 className="text-[28px] font-bold sm:text-[30px]">{none ? "条件に合う会社がまだありません" : "今日のご紹介は以上です"}</h2>
+        <p className="mt-3 text-[15px] text-muted">{none ? "予算や時期を変えると見つかることがあります。" : "返事が来たらお知らせします。"}</p>
+        <div className="mt-10 grid gap-2">
+          {none ? (
+            <Link href={changeHref} className="press flex h-[54px] items-center justify-center rounded-xl bg-brand font-medium text-white hover:bg-brand-2">
+              条件を変更する
+            </Link>
+          ) : (
+            <Link href={`/projects/${projectId}`} className="press flex h-[54px] items-center justify-center rounded-xl bg-brand font-medium text-white hover:bg-brand-2">
+              相談の状況を見る
+            </Link>
+          )}
+          {!none && (
+            <Link href={`/matches?project=${projectId}&again=1`} className="flex min-h-12 items-center justify-center text-[15px] text-muted hover:text-ink">
+              見送った会社をもう一度見る
+            </Link>
+          )}
           <Link href="/saved" className="flex min-h-12 items-center justify-center text-[15px] text-muted hover:text-ink">
             保存した会社
           </Link>
@@ -191,9 +233,10 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
             )}
           </div>
           <div className="p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="jp text-[24px] font-bold leading-tight sm:text-[26px]">{current.name}</h2>
-              <span className="tnum shrink-0 pt-1 text-[16px] font-semibold">
+            {/* long names wrap and push the rating onto its own line instead of being cut off */}
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2 className="jp min-w-0 text-[24px] font-bold leading-tight sm:text-[26px]">{current.name}</h2>
+              <span className="tnum shrink-0 text-[16px] font-semibold">
                 ★ {current.rating.toFixed(1)}
                 <span className="font-normal text-muted">（{current.reviews}）</span>
               </span>
@@ -231,7 +274,7 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
       <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-1 grid grid-cols-[1fr_1fr_1.4fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
         <DeckButton label="興味なし" icon="x" tone="neutral" onClick={() => act("pass")} disabled={pending} />
         <DeckButton label="保存" icon="heart" tone="white" onClick={() => act("save")} disabled={pending} />
-        <DeckButton label="相談したい" icon="check" tone="primary" onClick={() => act("consult")} disabled={pending || !canConsult} />
+        <DeckButton label={sending === "consult" ? "送信中…" : "相談したい"} icon="check" tone="primary" onClick={() => act("consult")} disabled={pending || !canConsult} />
       </div>
       <p className="mt-1 hidden text-center text-[12px] text-faint md:block">キーボード：← 興味なし　→ 相談したい　S 保存</p>
     </div>
@@ -257,7 +300,7 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
               <li key={c.matchId} className="flex items-center gap-3 px-1 py-2.5 opacity-80">
                 <span className="size-11 shrink-0 overflow-hidden rounded-xl bg-soft">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {c.photo && <img src={c.photo} alt="" className="size-full object-cover" />}
+                  {c.photo && <img src={c.photo} alt="" className="size-full object-cover" loading="lazy" decoding="async" />}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-medium">{c.name}</span>

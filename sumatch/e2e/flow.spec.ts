@@ -104,6 +104,11 @@ test("customer → company → chat → quote → compare → decide", async ({ 
   await biz.getByRole("button", { name: "見積を提出" }).click();
   await biz.waitForURL(/\/business\/messages\//);
   await expect(biz.locator("section").getByText("¥1,100,000").first()).toBeVisible();
+  // business home and case list reflect it
+  await biz.goto("/business/dashboard");
+  await expect(biz.getByRole("heading", { name: "今日やること" })).toBeVisible();
+  await biz.goto("/business/active");
+  await expect(biz.getByText("テスト 花子").first()).toBeVisible();
 
   // 6. Customer: notification → match moment, chat, compare, decide
   await page.goto("/projects");
@@ -154,4 +159,50 @@ test("access control: customers cannot open other people's chats or business pag
 test("anonymous users are sent to login", async ({ page }) => {
   await page.goto("/projects");
   await expect(page).toHaveURL(/\/login\?next=%2Fprojects/);
+});
+
+test("question flow: browser back keeps answers, missing answers get a short message", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "次へ" }).click();
+  await expect(page.getByText("工事の種類を選んでください")).toBeVisible();
+  await page.getByRole("radio", { name: /外壁・屋根/ }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await page.getByRole("radio", { name: "100〜200万円" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await expect(page.getByRole("heading", { name: "いつ頃？" })).toBeVisible();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await expect(page.getByText("時期を選んでください")).toBeVisible();
+
+  // phone back gesture → previous question, answer still selected
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "予算は？" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "100〜200万円" })).toHaveAttribute("aria-checked", "true");
+  // forward again, then the in-app back arrow does the same
+  await page.getByRole("button", { name: "次へ" }).click();
+  await page.getByRole("radio", { name: "3ヶ月以内" }).click();
+  await page.getByRole("button", { name: "戻る" }).click();
+  await expect(page.getByRole("heading", { name: "予算は？" })).toBeVisible();
+  await page.getByRole("button", { name: "次へ" }).click();
+  await expect(page.getByRole("radio", { name: "3ヶ月以内" })).toHaveAttribute("aria-checked", "true");
+});
+
+test("unknown pages show a friendly 404 with a way back", async ({ page }) => {
+  const res = await page.goto("/this-page-does-not-exist");
+  expect(res?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "ページが見つかりません" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "トップへ戻る" })).toBeVisible();
+});
+
+test("a message sent with a double keypress arrives once", async ({ browser }) => {
+  const biz = await demoLogin(browser, "湘南ペイント");
+  await biz.goto("/business/messages");
+  await biz.locator("main a[href^='/business/messages/']").first().click();
+  await biz.waitForURL(/\/business\/messages\/.+/);
+  const text = `二重送信チェック ${Date.now()}`;
+  await biz.getByLabel("メッセージ").fill(text);
+  await biz.getByLabel("メッセージ").press("Control+Enter");
+  await biz.getByLabel("メッセージ").press("Control+Enter");
+  await expect(biz.locator("section").getByText(text)).toHaveCount(1);
+  await biz.waitForTimeout(800);
+  await expect(biz.locator("section").getByText(text)).toHaveCount(1);
 });

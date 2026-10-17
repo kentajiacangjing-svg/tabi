@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -34,7 +35,7 @@ export function LeadActions({
   const respond = (yes: boolean) =>
     start(async () => {
       setError(null);
-      const r = await respondLeadAction(projectId, yes);
+      const r = await soft(respondLeadAction(projectId, yes));
       if (!r.ok) return setError(r.error);
       if (r.status === "matched") return router.push(`/business/match/${r.matchId}`);
       router.refresh();

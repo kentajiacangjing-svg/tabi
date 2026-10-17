@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { decideCompanyAction } from "@/app/actions/customer";
@@ -31,18 +32,18 @@ export function DecideButton({
         {label}
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 sm:items-center" onClick={() => setOpen(false)}>
+        <div className="animate-zoom fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:items-center" onClick={() => setOpen(false)}>
           <form
             onClick={(e) => e.stopPropagation()}
             action={(fd) =>
               start(async () => {
-                const r = await decideCompanyAction(fd);
+                const r = await soft(decideCompanyAction(fd));
                 if (!r.ok) return setError(r.error);
                 router.push(`/projects/${r.projectId}?decided=1`);
                 router.refresh();
               })
             }
-            className="max-h-[92dvh] w-full max-w-md space-y-5 overflow-y-auto rounded-2xl bg-surface p-6"
+            className="max-h-[calc(100dvh-24px)] w-full max-w-md space-y-5 overflow-y-auto rounded-[24px] bg-surface p-6"
           >
             <div>
               

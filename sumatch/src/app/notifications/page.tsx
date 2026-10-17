@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { all, now, run } from "@/lib/db";
 import { relative } from "@/lib/format";
 import { AppShell } from "@/components/app-shell";
-import { EmptyState, PageHeader, cx } from "@/components/ui";
+import { ButtonLink, EmptyState, PageHeader, cx } from "@/components/ui";
 import type { Notification } from "@/lib/types";
 
 export const metadata = { title: "お知らせ" };
@@ -21,7 +21,7 @@ export default async function NotificationsPage() {
       <div className="mx-auto max-w-[720px]">
         <PageHeader title="お知らせ"  />
         {items.length === 0 ? (
-          <EmptyState icon="bell" title="お知らせはまだありません" />
+          <EmptyState icon="bell" title="お知らせはまだありません" action={<ButtonLink href="/" variant="secondary">ホームへ戻る</ButtonLink>} />
         ) : (
           <ul className="divide-y divide-line border-y border-line">
             {items.map((n) => (

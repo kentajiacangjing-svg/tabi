@@ -17,6 +17,7 @@ export function CategoryPicker({ featured, more, withTabBar }: { featured: Picke
   const router = useRouter();
   const [picked, setPicked] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(false);
+  const [missing, setMissing] = useState(false);
   const options = showMore ? [...featured, ...more] : featured;
 
   return (
@@ -69,7 +70,21 @@ export function CategoryPicker({ featured, more, withTabBar }: { featured: Picke
       </div>
       {/* stays in reach of the thumb while the cards scroll */}
       <div className={cx("z-10 mt-6 lg:static lg:mt-8", picked && "sticky", withTabBar ? "bottom-[calc(76px+env(safe-area-inset-bottom))]" : "bottom-[calc(12px+env(safe-area-inset-bottom))]")}>
-        <Button size="lg" className="w-full" disabled={!picked} onClick={() => picked && router.push(`/diagnosis?category=${picked}`)}>
+        {missing && !picked && (
+          <p role="alert" className="mb-3 flex items-center gap-1.5 text-[14px] text-danger">
+            <Icon name="alert" size={15} />
+            工事の種類を選んでください
+          </p>
+        )}
+        <Button
+          size="lg"
+          className={cx("w-full", !picked && "opacity-55")}
+         
+          onClick={() => {
+            if (!picked) return setMissing(true);
+            router.push(`/diagnosis?category=${picked}`);
+          }}
+        >
           次へ
         </Button>
       </div>

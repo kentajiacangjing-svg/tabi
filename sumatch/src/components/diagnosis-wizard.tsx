@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -85,6 +86,7 @@ export function DiagnosisWizard({
     setHydrated(true);
   }, [categories, initialCategory]);
 
+  useEffect(() => setError(null), [d]);
   useEffect(() => {
     try {
       if (hydrated) sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ d, step }));
@@ -97,18 +99,46 @@ export function DiagnosisWizard({
   const index = step === "account" ? FLOW.length : FLOW.indexOf(step);
   const progress = Math.min(1, (index + 1) / FLOW.length);
 
+  // Each question is a browser-history entry, so the phone's back gesture steps back one question
+  // (answers are kept) instead of leaving the flow. Next's own history state is preserved.
+  const depth = useRef(0);
+  const firstStep = useRef<Step | null>(null);
+  useEffect(() => {
+    if (hydrated && firstStep.current === null) firstStep.current = step;
+  }, [hydrated, step]);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const st = e.state as { sumatchStep?: Step; sumatchDepth?: number } | null;
+      depth.current = st?.sumatchDepth ?? 0;
+      setError(null);
+      setStep(st?.sumatchStep ?? firstStep.current ?? "budget");
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const go = (s: Step) => {
     setError(null);
     setStep(s);
+    depth.current += 1;
+    window.history.pushState({ ...window.history.state, sumatchStep: s, sumatchDepth: depth.current }, "");
     window.scrollTo({ top: 0 });
     requestAnimationFrame(() => headingRef.current?.focus());
   };
   const back = () => {
+    if (depth.current > 0) return window.history.back();
     if (step === "account") return go("confirm");
     if (index <= 0 || (step === "budget" && initialCategory)) return router.push("/");
     go(FLOW[index - 1]);
   };
-  const next = () => go(FLOW[index + 1] ?? "confirm");
+  const MISSING: Partial<Record<Step, string>> = {
+    category: "工事の種類を選んでください",
+    budget: "予算を選んでください",
+    timing: "時期を選んでください",
+    area: "地域を選んでください",
+  };
+  const next = () => (canNext ? go(FLOW[index + 1] ?? "confirm") : setError(MISSING[step] ?? null));
   const canNext =
     (step === "category" && !!d.category_id) ||
     (step === "budget" && !!d.budget) ||
@@ -120,7 +150,7 @@ export function DiagnosisWizard({
     (Object.keys(d) as (keyof Draft)[]).forEach((k) => fd.set(k, d[k].trim()));
     for (const k of ["postal_code", "house_type", "contact_time", "concerns", "details"]) fd.set(k, "");
     start(async () => {
-      const r = await submitDiagnosisAction(fd);
+      const r = await soft(submitDiagnosisAction(fd));
       if (!r.ok) return setError(r.error);
       try {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -237,9 +267,10 @@ export function DiagnosisWizard({
       {/* one action, always in the same place */}
       <div className="sticky bottom-0 -mx-5 border-t border-line/60 bg-canvas/90 px-5 backdrop-blur-md pb-[max(env(safe-area-inset-bottom),16px)] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
         {error && (
-          <Notice tone="danger" className="mb-3">
+          <p role="alert" className="mb-3 flex items-center gap-1.5 text-[14px] text-danger">
+            <Icon name="alert" size={15} />
             {error}
-          </Notice>
+          </p>
         )}
         {step === "confirm" ? (
           loggedIn ? (
@@ -258,7 +289,7 @@ export function DiagnosisWizard({
             {pending ? "探しています…" : "登録して会社を見る"}
           </Button>
         ) : (
-          <Button size="lg" className="w-full" disabled={!canNext} onClick={next}>
+          <Button size="lg" className={cx("w-full", !canNext && "opacity-55")} onClick={next}>
             次へ
           </Button>
         )}

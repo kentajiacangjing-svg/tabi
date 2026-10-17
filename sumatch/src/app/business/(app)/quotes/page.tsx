@@ -42,7 +42,7 @@ export default async function BusinessQuotes({ searchParams }: { searchParams: P
         </div>
       )}
       {quotes.length === 0 ? (
-        <EmptyState title="提出した見積はまだありません" />
+        <EmptyState icon="doc" title="提出した見積はまだありません" action={<ButtonLink href="/business/messages">メッセージを開く</ButtonLink>}>現地を確認したら、メッセージから見積を作れます。</EmptyState>
       ) : (
         <div className="divide-y divide-line border-y border-line">
           {quotes.map((q) => (
@@ -60,8 +60,8 @@ export default async function BusinessQuotes({ searchParams }: { searchParams: P
                 <div className="text-[20px] font-medium">¥{q.total.toLocaleString("ja-JP")}</div>
                 <div className="mt-1 flex justify-end gap-3 text-[14px]">
                   {q.pdf_file_id && <a href={`/api/files/${q.pdf_file_id}`} target="_blank" rel="noopener" className="text-brand"><Icon name="pdf" size={14} /></a>}
-                  <Link href={`/business/messages/${q.match_id}`} className="text-brand">メッセージ</Link>
-                  {q.status === "submitted" && <Link href={`/business/quotes/new?match=${q.match_id}`} className="text-brand">作り直す</Link>}
+                  <Link href={`/business/messages/${q.match_id}`} className="inline-flex min-h-11 items-center text-brand">メッセージ</Link>
+                  {q.status === "submitted" && <Link href={`/business/quotes/new?match=${q.match_id}`} className="inline-flex min-h-11 items-center text-brand">作り直す</Link>}
                 </div>
               </div>
             </div>

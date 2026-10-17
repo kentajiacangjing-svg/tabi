@@ -117,7 +117,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
                   <figure key={w.id} className="w-64 shrink-0 snap-start lg:w-auto">
                     <div className="aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {workImage(w) && <img src={workImage(w)!} alt={w.title} className="size-full object-cover" />}
+                      {workImage(w) && <img src={workImage(w)!} alt={w.title} className="size-full object-cover" loading="lazy" decoding="async" />}
                     </div>
                     <figcaption className="mt-2.5 flex items-baseline justify-between gap-3">
                       <span className="truncate text-[14px] font-medium">{w.title}</span>

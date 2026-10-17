@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { markCompanyAction, requestMatchAction } from "@/app/actions/customer";
@@ -16,7 +17,7 @@ export function SavedActions({ matchId, canConsult }: { matchId: string; canCons
         disabled={pending || !canConsult}
         onClick={() =>
           start(async () => {
-            const r = await requestMatchAction(matchId);
+            const r = await soft(requestMatchAction(matchId));
             if (!r.ok) return setMsg(r.error);
             if (r.status === "matched") return router.push(`/match/${r.matchId}`);
             router.refresh();
@@ -28,7 +29,7 @@ export function SavedActions({ matchId, canConsult }: { matchId: string; canCons
       <button
         type="button"
         disabled={pending}
-        onClick={() => start(async () => void (await markCompanyAction(matchId, "unsave"), router.refresh()))}
+        onClick={() => start(async () => void (await soft(markCompanyAction(matchId, "unsave")), router.refresh()))}
         className="min-h-10 px-3 text-[14px] text-muted hover:text-ink"
       >
         保存を外す
@@ -42,23 +43,25 @@ export function ConsultButton({ matchId, disabledReason }: { matchId: string; di
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   return (
     <div>
       <Button
         size="lg"
         className="w-full"
-        disabled={pending || !!disabledReason}
+        disabled={pending || sent || !!disabledReason}
         onClick={() =>
           start(async () => {
-            const r = await requestMatchAction(matchId);
+            const r = await requestMatchAction(matchId).catch(() => ({ ok: false as const, error: "送れませんでした。もう一度お試しください。" }));
             if (!r.ok) return setMsg(r.error);
             if (r.status === "matched") return router.push(`/match/${r.matchId}`);
+            setSent(true);
             setMsg("相談を送りました。返事が来たらお知らせします。");
             router.refresh();
           })
         }
       >
-        相談したい
+        {pending ? "送信中…" : sent ? "相談を送りました" : "相談したい"}
       </Button>
       {(msg || disabledReason) && <p className="mt-2 text-center text-[14px] text-muted">{msg ?? disabledReason}</p>}
     </div>

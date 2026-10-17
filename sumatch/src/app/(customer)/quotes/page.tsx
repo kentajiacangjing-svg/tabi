@@ -106,15 +106,31 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     )}
                   >
                     <div className={cx("text-[14px] font-bold sm:text-[17px]", on ? "text-white" : "text-brand")}>{v.label}</div>
-                    <div className={cx("mt-1.5 truncate text-[12px] sm:text-[14px]", on ? "text-white/80" : "text-muted")}>{v.win ? v.win.company.name : "差はありません"}</div>
-                    {v.win && <div className={cx("tnum truncate text-[15px] font-semibold sm:text-[21px]", on ? "text-white" : "text-ink")}>{v.value(v.win)}</div>}
+                    <div className={cx("mt-1.5 hidden truncate text-[14px] sm:block", on ? "text-white/80" : "text-muted")}>{v.win ? v.win.company.name : "差はありません"}</div>
+                    {v.win && <div className={cx("tnum hidden truncate text-[21px] font-semibold sm:block", on ? "text-white" : "text-ink")}>{v.value(v.win)}</div>}
                   </Link>
                 );
               })}
             </nav>
           )}
+          {/* phones: the three tabs only fit their labels, so the current pick is spelled out once below */}
+          {multi && (() => {
+            const v = views.find((x) => x.key === view)!;
+            return (
+              <p className="-mt-3 mb-5 text-[14px] text-muted sm:hidden">
+                {v.win ? (
+                  <>
+                    {v.label.replace("で選ぶ", "")}なら <span className="font-semibold text-ink">{v.win.company.name}</span>
+                    <span className="tnum ml-1.5 font-semibold text-ink">{v.value(v.win)}</span>
+                  </>
+                ) : (
+                  "この点では差がありません"
+                )}
+              </p>
+            );
+          })()}
 
-          <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+          <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 sm:-mx-10 sm:scroll-px-10 sm:px-10 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
             {sorted.map((q, i) => {
               const chosen = contract?.quote_id === q.id;
               const lead = multi && i === 0 && !contract;
@@ -125,14 +141,14 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   key={q.id}
                   aria-labelledby={`q-${q.id}`}
                   className={cx(
-                    "w-[84vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[24px] border-2 bg-surface md:w-auto md:max-w-none",
+                    "w-[84vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-[24px] border-2 bg-surface lg:w-auto lg:max-w-none",
                     chosen || lead ? "border-brand shadow-[var(--shadow-lift)]" : "border-transparent shadow-[var(--shadow-card)]",
                     contract && !chosen && "opacity-60",
                   )}
                 >
                   <div className="relative h-24 bg-soft">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {photo && <img src={photo} alt="" className="size-full object-cover" />}
+                    {photo && <img src={photo} alt="" className="size-full object-cover" loading="lazy" decoding="async" />}
                     <div className="absolute left-4 top-3 flex flex-wrap gap-1.5">
                       {chosen && <span className="rounded-full bg-brand px-2.5 py-1 text-[12px] font-medium text-white">決定</span>}
                       {tags(q).map((t) => (
@@ -146,7 +162,9 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <h2 id={`q-${q.id}`} className="text-[17px] font-semibold">
                     {q.company.name}
                   </h2>
-                  <div className={cx("tnum mt-2 text-[44px] font-semibold leading-none tracking-tight", view === "price" && lead && "text-brand")}>¥{q.total.toLocaleString("ja-JP")}</div>
+                  <div className={cx("tnum mt-2 whitespace-nowrap font-semibold leading-none tracking-tight", q.total >= 100_000_000 ? "text-[30px] lg:text-[34px]" : q.total >= 10_000_000 ? "text-[36px] lg:text-[40px]" : "text-[40px] lg:text-[44px]", view === "price" && lead && "text-brand")}>
+                    ¥{q.total.toLocaleString("ja-JP")}
+                  </div>
                   <div className="mt-1.5 text-[13px] text-muted">税込</div>
                   <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
                     <div>

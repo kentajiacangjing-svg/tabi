@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -47,7 +48,7 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
     current &&
     start(async () => {
       setError(null);
-      const r = await respondLeadAction(current.projectId, yes);
+      const r = await soft(respondLeadAction(current.projectId, yes));
       if (!r.ok) return setError(r.error);
       if (r.status === "matched") return router.push(`/business/match/${r.matchId}`);
       setLeaving(true);
@@ -77,8 +78,8 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
   const rest = queue.slice(1);
 
   return (
-    <div className={cx(withRest && "grid grid-cols-[minmax(0,1fr)] items-start gap-10 lg:grid-cols-[540px_minmax(0,1fr)]")}>
-    <div className={cx("mx-auto w-full max-w-[540px] transition-[opacity,transform] duration-200 lg:mx-0", !withRest && "lg:mx-auto", leaving && "translate-x-[-8%] opacity-0")}>
+    <div className={cx(withRest && "grid grid-cols-[minmax(0,1fr)] items-start gap-10 lg:grid-cols-[580px_minmax(0,1fr)]")}>
+    <div className={cx("mx-auto w-full max-w-[580px] transition-[opacity,transform] duration-200 lg:mx-0", !withRest && "lg:mx-auto", leaving && "translate-x-[-8%] opacity-0")}>
       <div className="mb-3 flex justify-between text-[13px] text-muted">
         <span className="tnum">
           <span className="font-semibold text-ink">{leads.length - queue.length + 1}</span> / {leads.length}件目

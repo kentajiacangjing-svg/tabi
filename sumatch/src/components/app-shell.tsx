@@ -40,8 +40,8 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
   const width = wide ? "max-w-[1360px]" : "max-w-[1320px]";
 
   return (
-    <div className={cx("min-h-dvh", items.length > 0 && "pb-24 md:pb-0")}>
-      <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur-sm">
+    <div className={cx("min-h-dvh", items.length > 0 && "pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-0")}>
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/95 pt-[env(safe-area-inset-top)] backdrop-blur-sm">
         <div className={cx("mx-auto flex h-[60px] items-center justify-between gap-3 px-5 sm:px-10 md:h-[68px] lg:px-12", width)}>
           <Logo href={homeHref} sub={mode === "business" ? "for Business" : mode === "admin" ? "Admin" : undefined} />
           <div className="flex items-center gap-1">

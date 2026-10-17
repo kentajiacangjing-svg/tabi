@@ -51,7 +51,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       wantsYou: c.company_response === "yes",
     }));
 
-  const category = get<{ name: string }>("SELECT name FROM categories WHERE id = ?", project.category_id);
+  const category = get<{ name: string; slug: string }>("SELECT name, slug FROM categories WHERE id = ?", project.category_id);
   const conditions: [string, string][] = [
     ["工事", category?.name ?? "—"],
     ["予算", BUDGETS.find((b) => b.min === project.budget_min && b.max === project.budget_max)?.label ?? manRange(project.budget_min, project.budget_max)],
@@ -62,11 +62,11 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   return (
     <div>
       {!project.area_id ? (
-        <EmptyState title={`${project.city.trim()}は準備中のエリアです`}>対応できる会社が見つかり次第、お知らせします。</EmptyState>
+        <EmptyState icon="pin" title={`${project.city.trim()}は準備中のエリアです`} action={<ButtonLink href={`/projects/${project.id}`} variant="secondary">相談の状況を見る</ButtonLink>}>対応できる会社が見つかり次第、お知らせします。</EmptyState>
       ) : (
         <>
           <h1 className="sr-only">あなたに合いそうな会社</h1>
-          <CompanyDeck projectId={project.id} deck={deck} consultLeft={MAX_MATCHES_PER_PROJECT - requested} conditions={conditions} />
+          <CompanyDeck projectId={project.id} deck={deck} consultLeft={MAX_MATCHES_PER_PROJECT - requested} conditions={conditions} changeHref={`/diagnosis?category=${category?.slug ?? ""}`} />
         </>
       )}
     </div>

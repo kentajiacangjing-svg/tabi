@@ -59,7 +59,7 @@ export default async function ProjectsPage() {
               <li key={p.id} className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)]">
                 <Link href={`/projects/${p.id}`} className="relative block h-36 bg-soft sm:h-40">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={categoryPhoto(slug)} alt="" className="size-full object-cover" />
+                  <img src={categoryPhoto(slug)} alt="" className="size-full object-cover" loading="lazy" decoding="async" />
                   <span className="scrim-b absolute inset-0" />
                   <span className="absolute inset-x-5 bottom-4 text-white">
                     <span className="block text-[13px] text-white/85">{[p.city, p.house_type].filter(Boolean).join("・")}</span>

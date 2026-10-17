@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useEffect, useState, useTransition } from "react";
 import { changePasswordAction, markNotificationsReadAction, updateAccountAction } from "@/app/actions/customer";
 import { Button, Field, Input, Notice } from "./ui";
@@ -18,7 +19,7 @@ export function AccountForm({ name, notifyEmail, notifyBrowser }: { name: string
           if (fd.get("notify_browser") && "Notification" in window && Notification.permission === "default") {
             setPerm(await Notification.requestPermission());
           }
-          const r = await updateAccountAction(fd);
+          const r = await soft(updateAccountAction(fd));
           setMsg(r.ok ? { ok: true, text: "保存しました。" } : { ok: false, text: r.error });
         })
       }
@@ -52,7 +53,7 @@ export function PasswordForm() {
     <form
       action={(fd) =>
         start(async () => {
-          const r = await changePasswordAction(fd);
+          const r = await soft(changePasswordAction(fd));
           setMsg(r.ok ? { ok: true, text: "パスワードを変更しました。" } : { ok: false, text: r.error });
         })
       }
@@ -73,7 +74,7 @@ export function PasswordForm() {
 export function MarkAllRead() {
   const [pending, start] = useTransition();
   return (
-    <Button variant="secondary" size="sm" disabled={pending} onClick={() => start(async () => void (await markNotificationsReadAction()))}>
+    <Button variant="secondary" size="sm" disabled={pending} onClick={() => start(async () => void (await soft(markNotificationsReadAction())))}>
       すべて既読にする
     </Button>
   );

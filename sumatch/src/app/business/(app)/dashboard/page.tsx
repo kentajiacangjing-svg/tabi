@@ -73,7 +73,7 @@ export default async function BusinessHome() {
         {user.name.split(" ")[0]}さん、おつかれさまです。{todayCount > 0 ? `${todayCount}件が待っています。` : "今日は落ち着いています。"}
       </p>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
         {todo.map((t) => {
           const on = green.has(t.label);
           return (
@@ -81,26 +81,26 @@ export default async function BusinessHome() {
               key={t.label}
               href={t.href}
               className={cx(
-                "lift relative overflow-hidden rounded-[24px] p-5 sm:p-6",
+                "lift relative overflow-hidden rounded-[24px] px-4 py-4 sm:px-5",
                 on
                   ? "bg-gradient-to-br from-brand-2 to-brand text-white shadow-[0_14px_30px_-14px_rgb(24_77_58/0.55)]"
                   : "border border-line/70 bg-gradient-to-b from-white to-[#fafaf8] shadow-[var(--shadow-card)]",
               )}
             >
-              <span className={cx("absolute right-4 top-4 grid size-9 place-items-center rounded-full", on ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
-                <Icon name={t.icon} size={18} />
+              <span className={cx("absolute right-3.5 top-3.5 grid size-8 place-items-center rounded-full", on ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
+                <Icon name={t.icon} size={16} />
               </span>
-              <div className={cx("tnum text-[44px] font-semibold leading-none", !on && t.strong && "text-brand")}>{t.value}</div>
-              <div className={cx("mt-3 text-[15px] font-medium", on ? "text-white/90" : "text-ink-2")}>{t.label}</div>
+              <div className={cx("tnum text-[34px] font-semibold leading-none sm:text-[38px]", !on && t.strong && "text-brand")}>{t.value}</div>
+              <div className={cx("mt-2 text-[14px] font-medium", on ? "text-white/90" : "text-ink-2")}>{t.label}</div>
             </Link>
           );
         })}
       </div>
 
-      <section className="mt-14">
+      <section className="mt-10">
         <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="text-[22px] font-bold">最優先の相談</h2>
-          <Link href="/business/analytics" className="text-[14px] text-muted hover:text-ink">
+          <h2 className="text-[24px] font-bold">最優先の相談</h2>
+          <Link href="/business/analytics" className="inline-flex min-h-11 items-center text-[14px] text-muted hover:text-ink">
             分析を見る
           </Link>
         </div>

@@ -171,7 +171,7 @@ export default async function Home() {
 
       <footer className="flex flex-col gap-3 pt-10 text-[13px] text-muted sm:flex-row sm:justify-between">
         <span>対応エリア：{areas.map((a) => a.city).join("・")}</span>
-        <Link href="/business" className="hover:text-ink">
+        <Link href="/business" className="inline-flex min-h-11 items-center hover:text-ink">
           施工会社の方
         </Link>
       </footer>

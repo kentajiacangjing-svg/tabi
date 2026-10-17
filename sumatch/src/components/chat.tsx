@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { draftReplyAction, markReadAction, sendMessageAction } from "@/app/actions/chat";
@@ -93,7 +94,10 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
     return () => t.forEach(clearTimeout);
   }, [messages.length, stickToBottom]);
 
+  // A ref, not just `pending`: Cmd+Enter pressed twice fires before React re-renders the disabled button.
+  const sending = useRef(false);
   const doSend = (skipCheck = false) => {
+    if (sending.current || pending) return;
     setError(null);
     const body = text.trim();
     if (!body && !file) return;
@@ -106,20 +110,27 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
     fd.set("match_id", matchId);
     fd.set("body", body);
     if (file) fd.set("file", file);
+    sending.current = true;
     start(async () => {
-      const r = await sendMessageAction(fd);
-      if (!r.ok) return setError(r.error);
-      setText("");
-      setFile(null);
-      setDraftSource(null);
-      await refresh();
+      try {
+        const r = await soft(sendMessageAction(fd));
+        if (!r.ok) return setError(r.error);
+        setText("");
+        setFile(null);
+        setDraftSource(null);
+        await refresh();
+      } catch {
+        setError("送信できませんでした。もう一度お試しください。");
+      } finally {
+        sending.current = false;
+      }
     });
   };
 
   const draft = async () => {
     setDrafting(true);
     setError(null);
-    const r = await draftReplyAction(matchId);
+    const r = await soft(draftReplyAction(matchId));
     setDrafting(false);
     if (!r.ok) return setError(r.error);
     setText(r.text);
@@ -323,8 +334,8 @@ function ReportDialog({ matchId, onClose }: { matchId: string; onClose: () => vo
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-surface p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="animate-zoom fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:items-center" onClick={onClose}>
+      <div className="max-h-[calc(100dvh-24px)] w-full max-w-md overflow-y-auto rounded-[24px] bg-surface p-6" onClick={(e) => e.stopPropagation()}>
         {done ? (
           <div className="py-4 text-center">
             <div className="font-semibold">通報を受け付けました</div>
@@ -337,7 +348,7 @@ function ReportDialog({ matchId, onClose }: { matchId: string; onClose: () => vo
           <form
             action={(fd) =>
               start(async () => {
-                const r = await reportAction(fd);
+                const r = await soft(reportAction(fd));
                 if (!r.ok) return setError(r.error);
                 setDone(true);
               })

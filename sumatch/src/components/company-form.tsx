@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { businessSignupAction, updateCompanyProfileAction } from "@/app/actions/business";
@@ -106,7 +107,7 @@ export function CompanyForm({
             fd.set(`works_${id}`, String(n));
           });
           areaIds.forEach((id) => fd.append("area_ids", id));
-          const r = mode === "signup" ? await businessSignupAction(fd) : await updateCompanyProfileAction(fd);
+          const r = mode === "signup" ? await soft(businessSignupAction(fd)) : await soft(updateCompanyProfileAction(fd));
           if (!r.ok) {
             setError(r.error);
             return;

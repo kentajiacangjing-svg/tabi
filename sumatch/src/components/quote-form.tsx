@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitQuoteAction } from "@/app/actions/chat";
@@ -53,7 +54,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
           setError(null);
           fd.set("items", JSON.stringify(items.filter((i) => i.name.trim())));
           fd.set("match_id", matchId);
-          const r = await submitQuoteAction(fd);
+          const r = await soft(submitQuoteAction(fd));
           if (!r.ok) return setError(r.error);
           router.push(`/business/messages/${r.matchId}`);
           router.refresh();

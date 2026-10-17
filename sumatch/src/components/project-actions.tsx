@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { advanceContractAction, cancelProjectAction, reviewAction } from "@/app/actions/customer";
@@ -19,7 +20,7 @@ export function AdvanceContractButton({ contractId, to, label, variant = "second
         onClick={() => {
           if (!confirm(`ステータスを「${label.replace("にする", "")}」に更新しますか？`)) return;
           start(async () => {
-            const r = await advanceContractAction(contractId, to);
+            const r = await soft(advanceContractAction(contractId, to));
             if (!r.ok) setError(r.error);
             router.refresh();
           });
@@ -43,7 +44,7 @@ export function CancelProjectButton({ projectId }: { projectId: string }) {
       onClick={() => {
         if (!confirm("この相談を取り下げますか？マッチ中の会社とのチャットは閲覧のみになります。")) return;
         start(async () => {
-          await cancelProjectAction(projectId);
+          await soft(cancelProjectAction(projectId));
           router.refresh();
         });
       }}
@@ -63,7 +64,7 @@ export function ReviewForm({ projectId, companyName }: { projectId: string; comp
       action={(fd) =>
         start(async () => {
           fd.set("rating", String(rating));
-          const r = await reviewAction(fd);
+          const r = await soft(reviewAction(fd));
           if (!r.ok) return setError(r.error);
           router.refresh();
         })

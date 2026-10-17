@@ -3,7 +3,7 @@ import { requireBusiness } from "@/lib/auth";
 import { all } from "@/lib/db";
 import { PROJECT_STATUS } from "@/lib/constants";
 import { relative } from "@/lib/format";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 import type { ProjectStatus } from "@/lib/types";
 
 export const metadata = { title: "進行中の相談" };
@@ -48,7 +48,7 @@ export default async function ActivePage() {
     <div className="mx-auto max-w-[760px]">
       <PageHeader title="進行中の相談" />
       {!hasAny && (
-        <EmptyState title="進行中の相談はまだありません">「新しい相談」で対応したい相談を選ぶと、ここに並びます。</EmptyState>
+        <EmptyState icon="doc" title="進行中の案件はまだありません" action={<ButtonLink href="/business/leads">新しい相談を見る</ButtonLink>}>「対応したい」を送った相談がマッチすると、ここに並びます。</EmptyState>
       )}
       <div className="space-y-12">
         {groups

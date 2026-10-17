@@ -1,5 +1,6 @@
 "use client";
 
+import { soft } from "@/lib/soft";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,7 +15,7 @@ export function LoginForm({ next }: { next?: string }) {
     <form
       action={(fd) =>
         start(async () => {
-          const r = await loginAction(fd);
+          const r = await soft(loginAction(fd));
           if (!r.ok) return setError(r.error);
           router.push(r.redirect);
           router.refresh();
@@ -45,7 +46,7 @@ export function SignupForm({ next }: { next?: string }) {
     <form
       action={(fd) =>
         start(async () => {
-          const r = await signupAction(fd);
+          const r = await soft(signupAction(fd));
           if (!r.ok) return setError(r.error);
           router.push(r.redirect);
           router.refresh();
@@ -95,7 +96,7 @@ export function DemoLogin() {
                 disabled={pending}
                 onClick={() =>
                   start(async () => {
-                    const r = await demoLoginAction(email);
+                    const r = await soft(demoLoginAction(email));
                     if (!r.ok) return setError(r.error);
                     router.push(r.redirect);
                     router.refresh();

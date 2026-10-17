@@ -42,7 +42,7 @@ export function CompanyAvatar({
   const initials = name.replace(/株式会社|有限会社|\s/g, "").slice(0, name.match(/^[A-Za-z]/) ? 2 : 1);
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt="" width={size} height={size} className={cx("shrink-0 rounded-[14px] object-cover", className)} style={{ width: size, height: size }} />;
+    return <img src={url} alt="" width={size} height={size} loading="lazy" decoding="async" className={cx("shrink-0 rounded-[14px] object-cover", className)} style={{ width: size, height: size }} />;
   }
   return (
     <div
