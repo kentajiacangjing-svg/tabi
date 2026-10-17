@@ -7,7 +7,7 @@ import { BUDGETS, TIMINGS } from "@/lib/constants";
 import { manRange, relative } from "@/lib/format";
 import { fileUrl } from "@/lib/urls";
 import { LeadDeck } from "@/components/lead-deck";
-import { cx } from "@/components/ui";
+import { Kicker, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 
 export const metadata = { title: "ホーム" };
@@ -62,9 +62,9 @@ export default async function BusinessHome() {
   const todayCount = fresh.length + awaitingReply + toQuote;
 
   return (
-    <div className="mx-auto max-w-[1080px]">
-      <p className="text-[14px] font-medium text-brand-2">{c.name}</p>
-      <h1 className="mt-1 text-[34px] font-bold tracking-tight sm:text-[44px]">今日やること</h1>
+    <div className="mx-auto">
+      <Kicker>{c.name}</Kicker>
+      <h1 className="mt-3 text-[34px] font-bold tracking-tight sm:text-[44px]">今日やること</h1>
       <p className="mt-1 text-[15px] text-muted">
         {user.name.split(" ")[0]}さん、おつかれさまです。{todayCount > 0 ? `${todayCount}件が待っています。` : "今日は落ち着いています。"}
       </p>
@@ -74,7 +74,7 @@ export default async function BusinessHome() {
           <Link
             key={t.label}
             href={t.href}
-            className={cx("lift relative rounded-[22px] p-5 sm:p-6", t.strong ? "bg-brand text-white shadow-[var(--shadow-lift)]" : "bg-surface shadow-[var(--shadow-card)]")}
+            className={cx("lift relative rounded-[24px] p-5 sm:p-6", t.strong ? "bg-brand text-white shadow-[var(--shadow-lift)]" : "bg-surface shadow-[var(--shadow-card)]")}
           >
             <span className={cx("absolute right-4 top-4 grid size-9 place-items-center rounded-full", t.strong ? "bg-white/15 text-white" : "bg-brand-soft text-brand")} aria-hidden="true">
               <Icon name={t.icon} size={18} />
@@ -93,7 +93,7 @@ export default async function BusinessHome() {
           </Link>
         </div>
         {c.status !== "approved" ? (
-          <p className="rounded-[22px] bg-surface p-6 text-[15px] text-muted shadow-[var(--shadow-card)]">審査が終わると、ここに相談が届きます。</p>
+          <p className="rounded-[24px] bg-surface p-6 text-[15px] text-muted shadow-[var(--shadow-card)]">審査が終わると、ここに相談が届きます。</p>
         ) : (
           <LeadDeck leads={leads} blockedReason={blocked} withRest />
         )}

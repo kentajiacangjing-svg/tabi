@@ -6,7 +6,7 @@ export async function SiteHeader({ business }: { business?: boolean }) {
   const user = await getCurrentUser();
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-canvas/95">
-      <div className="mx-auto flex h-16 max-w-[1080px] items-center justify-between gap-3 px-5 sm:px-8">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 px-5 sm:px-10 lg:px-14">
         <Logo href={business ? "/business" : "/"} sub={business ? "for Business" : undefined} />
         <nav className="flex items-center gap-1 text-[15px]">
           {user ? (
@@ -27,7 +27,7 @@ export async function SiteHeader({ business }: { business?: boolean }) {
 export function SiteFooter() {
   return (
     <footer className="border-t border-line">
-      <div className="mx-auto flex max-w-[1080px] flex-col gap-4 px-5 py-10 text-[14px] text-muted sm:flex-row sm:justify-between sm:px-8">
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-4 px-5 py-10 text-[14px] text-muted sm:flex-row sm:justify-between sm:px-8">
         <span>© {new Date().getFullYear()} SUMATCH</span>
         <span className="flex gap-6">
           <Link href="/" className="hover:text-ink">

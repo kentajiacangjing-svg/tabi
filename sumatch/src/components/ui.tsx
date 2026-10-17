@@ -48,7 +48,7 @@ export function ButtonLink({
 
 /** A plain white surface. Use sparingly — whitespace and dividers come first. */
 export function Card({ className, ...rest }: ComponentProps<"div">) {
-  return <div className={cx("rounded-2xl border border-line bg-surface shadow-[var(--shadow-card)]", className)} {...rest} />;
+  return <div className={cx("rounded-[24px] border border-line/60 bg-surface shadow-[var(--shadow-card)]", className)} {...rest} />;
 }
 
 type Tone = "neutral" | "brand" | "ok" | "warn" | "danger" | "dark" | "match";
@@ -72,14 +72,26 @@ export function Badge({ tone = "neutral", className, children }: { tone?: Tone; 
   );
 }
 
+/** SUMATCH's signature: a short brand line above a page title, led by a thin green rule. */
+export function Kicker({ children, className, tone = "brand" }: { children: ReactNode; className?: string; tone?: "brand" | "light" }) {
+  return (
+    <p className={cx("flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.06em]", tone === "light" ? "text-white/85" : "text-brand-2", className)}>
+      <span className={cx("h-[2px] w-5 shrink-0 rounded-full", tone === "light" ? "bg-white/80" : "bg-brand")} aria-hidden="true" />
+      {children}
+    </p>
+  );
+}
+
 export function PageHeader({
   title,
   description,
   back,
   action,
   eyebrow,
+  kicker,
 }: {
   title: ReactNode;
+  kicker?: ReactNode;
   description?: ReactNode;
   back?: { href: string; label: string };
   action?: ReactNode;
@@ -95,6 +107,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
+          {kicker && <Kicker className="mb-3">{kicker}</Kicker>}
           {eyebrow && <div className="mb-2 text-[14px] text-muted">{eyebrow}</div>}
           <h1 className="jp text-[30px] font-bold leading-tight tracking-tight sm:text-[40px]">{title}</h1>
           {description && <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-muted">{description}</p>}

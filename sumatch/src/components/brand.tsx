@@ -3,7 +3,7 @@ import { cx } from "./ui";
 import { fileUrl } from "@/lib/urls";
 
 /** Two overlapping tiles: "you" and "the company" meeting. Ink + forest green only. */
-export function LogoMark({ size = 22 }: { size?: number }) {
+export function LogoMark({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <rect x="1" y="1" width="14" height="14" rx="3" fill="#111111" />
@@ -16,8 +16,8 @@ export function Logo({ href = "/", sub }: { href?: string; sub?: string }) {
   return (
     <Link href={href} className="flex min-h-11 items-center gap-2.5" aria-label="SUMATCH ホーム">
       <LogoMark />
-      <span className="text-[16px] font-semibold tracking-[0.14em]">SUMATCH</span>
-      {sub && <span className="text-[12px] text-muted">{sub}</span>}
+      <span className="text-[17px] font-bold tracking-[0.16em]">SUMATCH</span>
+      {sub && <span className="ml-0.5 whitespace-nowrap rounded-full bg-brand-soft px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-brand sm:text-[11px]">{sub}</span>}
     </Link>
   );
 }

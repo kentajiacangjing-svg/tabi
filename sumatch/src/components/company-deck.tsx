@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { markCompanyAction, requestMatchAction, trackCompanyViewAction } from "@/app/actions/customer";
 import { Icon } from "./icons";
-import { cx } from "./ui";
+import { Kicker, cx } from "./ui";
 
 export interface DeckCompany {
   matchId: string;
@@ -131,13 +131,13 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
   const upcoming = queue.slice(1, 4);
 
   return (
-    <div className="mx-auto grid max-w-[1000px] items-start gap-12 lg:grid-cols-[540px_minmax(0,1fr)]">
-    <div className="mx-auto w-[92vw] max-w-[540px] sm:w-full">
-      <div className="mb-3 flex items-center justify-between px-1 text-[13px] text-muted">
-        <span className="tnum">
+    <div className="mx-auto grid max-w-[1120px] items-start gap-14 lg:grid-cols-[560px_minmax(0,1fr)]">
+    <div className="mx-auto w-[92vw] max-w-[560px] sm:w-full">
+      <div className="mb-3 flex items-center justify-between gap-3 px-1">
+        <Kicker className="min-w-0 truncate">比べる前に、合う会社を</Kicker>
+        <span className="tnum shrink-0 text-[13px] text-muted">
           <span className="font-semibold text-ink">{deck.length - queue.length + 1}</span> / {deck.length}社
         </span>
-        <span>{canConsult ? `あと${left}社まで相談できます` : "相談は3社まで送りました"}</span>
       </div>
 
       <div className="relative pb-5">
@@ -166,7 +166,7 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
           }}
           aria-label={`${current.name}`}
         >
-          <div className="relative aspect-[4/3.4] bg-soft sm:aspect-[4/3] lg:aspect-[16/10]">
+          <div className="relative aspect-[4/3] bg-soft lg:aspect-[16/10]">
             {current.photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={current.photo} alt={current.photoCaption ? `施工事例：${current.photoCaption}` : `${current.name}の施工写真`} className="size-full object-cover" draggable={false} />
@@ -224,11 +224,11 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
         </article>
       </div>
 
-      <p className={cx("mt-2 min-h-6 text-center text-[14px]", error ? "text-danger" : "text-brand")} role="status">
-        {error ?? note ?? ""}
+      <p className={cx("mt-2 min-h-6 text-center text-[13px]", error ? "text-danger" : note ? "text-brand" : "text-muted")} role="status">
+        {error ?? note ?? (canConsult ? `あと${left}社まで相談できます` : "相談は3社まで送りました")}
       </p>
 
-      <div className="sticky bottom-[calc(62px+env(safe-area-inset-bottom))] mt-1 grid grid-cols-[1fr_1fr_1.4fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-1 grid grid-cols-[1fr_1fr_1.4fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
         <DeckButton label="興味なし" icon="x" tone="neutral" onClick={() => act("pass")} disabled={pending} />
         <DeckButton label="保存" icon="heart" tone="white" onClick={() => act("save")} disabled={pending} />
         <DeckButton label="相談したい" icon="check" tone="primary" onClick={() => act("consult")} disabled={pending || !canConsult} />
@@ -239,7 +239,7 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
     {/* wide screens: the conditions and who comes next */}
     <aside className="hidden pt-9 lg:block">
       <div className="rounded-[24px] bg-brand-soft p-6">
-        <div className="text-[13px] font-medium text-brand-2">あなたの条件</div>
+        <Kicker>あなたの条件</Kicker>
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
           {conditions.map(([k, v]) => (
             <div key={k}>
@@ -251,10 +251,10 @@ export function CompanyDeck({ projectId, deck, consultLeft, conditions }: { proj
       </div>
       {upcoming.length > 0 && (
         <div className="mt-8">
-          <div className="text-[13px] font-medium text-muted">このあとの会社</div>
+          <Kicker>このあとの会社</Kicker>
           <ul className="mt-3 space-y-3">
             {upcoming.map((c) => (
-              <li key={c.matchId} className="flex items-center gap-4 rounded-[20px] bg-surface p-2.5 pr-4 shadow-[var(--shadow-card)]">
+              <li key={c.matchId} className="flex items-center gap-4 rounded-[24px] bg-surface p-2.5 pr-4 shadow-[var(--shadow-card)]">
                 <span className="size-16 shrink-0 overflow-hidden rounded-[14px] bg-soft">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {c.photo && <img src={c.photo} alt="" className="size-full object-cover" />}
@@ -280,7 +280,7 @@ function DeckButton({ label, icon, onClick, disabled, tone }: { label: string; i
       onClick={onClick}
       disabled={disabled}
       className={cx(
-        "press flex h-[66px] flex-col items-center justify-center gap-1 rounded-[18px] text-[13px] font-medium disabled:opacity-40",
+        "press flex h-[66px] flex-col items-center justify-center gap-1 rounded-xl text-[13px] font-medium disabled:opacity-40",
         tone === "primary" && "bg-brand text-[15px] text-white shadow-[0_10px_24px_-10px_rgb(24_77_58/0.7)] hover:bg-brand-2",
         tone === "white" && "border border-line bg-surface text-ink shadow-[var(--shadow-card)]",
         tone === "neutral" && "bg-[#e9ebe6] text-ink-2 hover:bg-[#e2e4de]",

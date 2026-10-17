@@ -9,7 +9,7 @@ import { BUDGETS, TIMINGS } from "@/lib/constants";
 import { manRange } from "@/lib/format";
 import { categoryPhoto } from "@/lib/visuals";
 import { Icon } from "./icons";
-import { Button, Field, Input, Notice, cx } from "./ui";
+import { Button, Field, Input, Kicker, Notice, cx } from "./ui";
 
 export interface WizardCategory {
   id: string;
@@ -142,8 +142,8 @@ export function DiagnosisWizard({
   ];
 
   return (
-    <div className="mx-auto grid max-w-[1080px] items-start gap-14 lg:grid-cols-[minmax(0,1fr)_380px]">
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[600px] flex-col lg:mx-0">
+    <div className="mx-auto grid items-start gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
+    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[600px] flex-col lg:col-start-2 lg:row-start-1 lg:mx-0">
       {/* thin progress bar + back */}
       <div className="flex items-center gap-3">
         <button type="button" onClick={back} className="-ml-2 grid size-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-soft" aria-label="戻る">
@@ -156,7 +156,7 @@ export function DiagnosisWizard({
 
       <div key={step} className="animate-fade-up flex flex-1 flex-col justify-center py-8">
         {step === "category" && (
-          <Question title="どんな工事？" headingRef={headingRef}>
+          <Question title="どんな工事？" kicker="住まいの工事を、迷わず相談" headingRef={headingRef}>
             <Options columns options={categories.map((c) => ({ value: c.id, label: c.name, sub: c.description, photo: categoryPhoto(c.slug) }))} value={d.category_id} onChange={(v) => setD((x) => ({ ...x, category_id: v }))} />
           </Question>
         )}
@@ -198,8 +198,8 @@ export function DiagnosisWizard({
         )}
 
         {step === "confirm" && category && (
-          <Question title="この条件で探します" headingRef={headingRef}>
-            <dl className="overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow-card)]">
+          <Question title="この条件で探します" kicker="比べる前に、合う会社を" headingRef={headingRef}>
+            <dl className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)]">
               <ConfirmRow label="工事" value={category.name} onEdit={() => go("category")} />
               <ConfirmRow label="予算" value={BUDGETS.find((b) => b.value === d.budget)?.label} onEdit={() => go("budget")} />
               <ConfirmRow label="時期" value={TIMINGS.find((t) => t.value === d.desired_timing)?.label} onEdit={() => go("timing")} />
@@ -215,7 +215,7 @@ export function DiagnosisWizard({
         )}
 
         {step === "account" && (
-          <Question title="結果の受け取り先" sub="電話番号はいりません。" headingRef={headingRef}>
+          <Question title="結果の受け取り先" sub="電話番号はいりません。" kicker="営業電話はありません" headingRef={headingRef}>
             <form id="account-form" action={submit} className="space-y-4">
               <Field label="お名前（ニックネーム可）">
                 <Input name="name" autoComplete="nickname" maxLength={40} required />
@@ -266,36 +266,37 @@ export function DiagnosisWizard({
     </div>
 
     {/* wide screens: the job, as a photo, and what's been decided so far */}
-    <aside className="sticky top-24 hidden lg:block" aria-label="現在の条件">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+    <aside className="sticky top-24 hidden lg:col-start-1 lg:row-start-1 lg:block" aria-label="現在の条件">
+      <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img key={category?.slug ?? "none"} src={categoryPhoto(category?.slug)} alt="" className="animate-fade-up size-full object-cover" />
-        <div className="scrim-b absolute inset-0" />
-        <div className="absolute inset-x-4 bottom-4 rounded-[20px] bg-surface/95 p-5 backdrop-blur">
-          <div className="text-[13px] font-medium text-brand-2">あなたの条件</div>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
-            {answered.map(([k, v]) => (
-              <div key={k} className="min-w-0">
-                <dt className="text-[12px] text-muted">{k}</dt>
-                <dd className={cx("truncate text-[15px]", v ? "font-semibold" : "text-faint")}>{v ?? "—"}</dd>
-              </div>
-            ))}
-          </dl>
-          {estimate && (
-            <div className="mt-4 border-t border-line pt-3 text-[13px] text-muted">
-              目安 <span className="tnum text-[18px] font-semibold text-ink">約{manRange(estimate.min, estimate.max)}</span>
+      </div>
+      <div className="relative mx-8 -mt-14 rounded-[24px] bg-surface p-6 shadow-[var(--shadow-lift)]">
+        <Kicker>あなたの条件</Kicker>
+        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+          {answered.map(([k, v]) => (
+            <div key={k} className="min-w-0">
+              <dt className="text-[12px] text-muted">{k}</dt>
+              <dd className={cx("truncate text-[15px]", v ? "font-semibold" : "text-faint")}>{v ?? "—"}</dd>
             </div>
-          )}
-        </div>
+          ))}
+        </dl>
+        {estimate && (
+          <div className="mt-4 flex items-baseline justify-between border-t border-line pt-3 text-[13px] text-muted">
+            目安
+            <span className="tnum text-[20px] font-semibold text-ink">約{manRange(estimate.min, estimate.max)}</span>
+          </div>
+        )}
       </div>
     </aside>
     </div>
   );
 }
 
-function Question({ title, sub, children, headingRef }: { title: string; sub?: string; children: React.ReactNode; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
+function Question({ title, sub, kicker = "条件に合う会社だけ", children, headingRef }: { title: string; sub?: string; kicker?: string; children: React.ReactNode; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
   return (
     <div>
+      <Kicker className="mb-3">{kicker}</Kicker>
       <h1 ref={headingRef} tabIndex={-1} className="jp text-[42px] font-bold leading-[1.15] tracking-tight outline-none sm:text-[52px]">
         {title}
       </h1>
@@ -318,7 +319,7 @@ function Options({ options, value, onChange, columns }: { options: { value: stri
             key={o.value}
             onClick={() => onChange(o.value)}
             className={cx(
-              "lift relative flex flex-col overflow-hidden rounded-[20px] border-2 text-left shadow-[var(--shadow-card)]",
+              "lift relative flex flex-col overflow-hidden rounded-[24px] border-2 text-left shadow-[var(--shadow-card)]",
               on ? "border-brand bg-brand-soft" : "border-transparent bg-surface",
             )}
           >

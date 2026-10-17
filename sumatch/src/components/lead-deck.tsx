@@ -65,7 +65,7 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
         </span>
         <h2 className="text-[28px] font-bold">新しい相談はすべて確認しました</h2>
         <p className="mt-3 text-[16px] text-muted">新しい相談が届いたら、メールとブラウザ通知でお知らせします。</p>
-        <Link href="/business/active" className="press mt-10 inline-flex h-14 items-center rounded-2xl bg-brand px-7 font-medium text-white hover:bg-brand-2">
+        <Link href="/business/active" className="press mt-10 inline-flex h-14 items-center rounded-xl bg-brand px-7 font-medium text-white hover:bg-brand-2">
           進行中の相談を見る
         </Link>
       </div>
@@ -114,18 +114,18 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
 
       {(error || blockedReason) && <p className="mt-4 text-[14px] text-danger" role="alert">{error ?? blockedReason}</p>}
 
-      <div className="sticky bottom-[calc(62px+env(safe-area-inset-bottom))] mt-4 grid grid-cols-[1fr_1.6fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
-        <button type="button" disabled={pending} onClick={() => respond(false)} className="press h-14 rounded-[18px] bg-[#e9ebe6] text-[16px] font-medium text-ink-2 hover:bg-[#e2e4de] disabled:opacity-40">
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-4 grid grid-cols-[1fr_1.6fr] gap-3 bg-canvas/90 py-3 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
+        <button type="button" disabled={pending} onClick={() => respond(false)} className="press h-14 rounded-xl bg-[#e9ebe6] text-[16px] font-medium text-ink-2 hover:bg-[#e2e4de] disabled:opacity-40">
           見送る
         </button>
-        <Button size="lg" className="rounded-[18px]" disabled={pending || (!!blockedReason && current.customerWants)} onClick={() => respond(true)}>
+        <Button size="lg" className="rounded-xl" disabled={pending || (!!blockedReason && current.customerWants)} onClick={() => respond(true)}>
           対応したい
         </Button>
       </div>
     </div>
 
     {withRest && rest.length === 0 && (
-      <div className="hidden rounded-[22px] bg-brand-soft p-6 lg:mt-8 lg:block">
+      <div className="hidden rounded-[24px] bg-brand-soft p-6 lg:mt-8 lg:block">
         <div className="text-[16px] font-semibold text-brand-ink">ほかの新しい相談はありません</div>
         <p className="mt-1 text-[14px] text-muted">届いたらメールとブラウザ通知でお知らせします。</p>
         <Link href="/business/active" className="mt-4 inline-flex min-h-11 items-center text-[14px] font-medium text-brand">
@@ -136,7 +136,7 @@ export function LeadDeck({ leads, blockedReason, withRest }: { leads: DeckLead[]
     {withRest && rest.length > 0 && (
       <div className="lg:pt-8">
         <div className="mb-3 text-[14px] font-semibold text-ink-2">ほかの相談 {rest.length}件</div>
-        <ul className="overflow-hidden rounded-[22px] bg-surface shadow-[var(--shadow-card)]">
+        <ul className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)]">
           {rest.map((l) => (
             <li key={l.projectId} className="border-b border-line last:border-0">
               <Link href={`/business/leads/${l.projectId}`} className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-canvas">

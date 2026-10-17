@@ -18,7 +18,7 @@ export default function BusinessLanding() {
   const plans = all<Plan>("SELECT * FROM plans WHERE active = 1 ORDER BY sort");
   const trialDays = Number(getSetting("default_trial_days", "60"));
   return (
-    <main className="mx-auto max-w-[1080px] px-5 sm:px-8">
+    <main className="mx-auto max-w-[1240px] px-5 sm:px-10 lg:px-14">
       <section className="max-w-[720px] pb-20 pt-14 sm:pt-24">
         <p className="text-[15px] text-muted">施工会社の方へ</p>
         <h1 className="jp mt-3 text-[36px] font-semibold leading-[1.3] sm:text-[48px]">

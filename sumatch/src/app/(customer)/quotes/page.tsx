@@ -57,12 +57,9 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
     { key: "safe", label: "安心で選ぶ", win: winner((q) => q.warranty_years === best.warranty), value: (q) => `保証${q.warranty_years}年` },
     { key: "days", label: "工期で選ぶ", win: winner((q) => q.duration_days === best.days), value: (q) => `約${q.duration_days}日` },
   ];
-  const bestRating = Math.max(...quotes.map((q) => q.company.rating_avg));
-  // Small tags, at most two per card.
+  // Small tags: 最安 / 安心 (longest warranty) / 最短.
   const tags = (q: Q) =>
-    multi
-      ? ([q.total === best.price && "最安", q.warranty_years === best.warranty && "保証最長", q.duration_days === best.days && "最短", q.company.rating_avg === bestRating && "高評価"].filter(Boolean) as string[]).slice(0, 2)
-      : [];
+    multi ? ([q.total === best.price && "最安", q.warranty_years === best.warranty && "安心", q.duration_days === best.days && "最短"].filter(Boolean) as string[]) : [];
   const order: Record<View, (a: Q, b: Q) => number> = {
     price: (a, b) => a.total - b.total,
     safe: (a, b) => b.warranty_years - a.warranty_years || b.company.rating_avg - a.company.rating_avg,
@@ -84,8 +81,8 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
   ).filter((n) => n.tone === "caution");
 
   return (
-    <div className="mx-auto max-w-[1080px]">
-      <PageHeader back={{ href: `/projects/${project.id}`, label: "相談" }} eyebrow={`${category?.name ?? ""}・${project.city}`} title="見積を比べる" />
+    <div className="mx-auto">
+      <PageHeader back={{ href: `/projects/${project.id}`, label: "相談" }} eyebrow={`${category?.name ?? ""}・${project.city}`} title="見積を比べる" kicker="比べて、納得して決める" />
 
       {quotes.length === 0 ? (
         <EmptyState title="見積を待っています" action={<ButtonLink href="/messages" variant="secondary">メッセージを開く</ButtonLink>}>
@@ -104,7 +101,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     scroll={false}
                     aria-current={on ? "true" : undefined}
                     className={cx(
-                      "lift min-w-0 rounded-[20px] border-2 p-3.5 sm:p-5",
+                      "lift min-w-0 rounded-[24px] border-2 p-3.5 sm:p-5",
                       on ? "border-brand bg-brand text-white shadow-[var(--shadow-lift)]" : "border-transparent bg-surface shadow-[var(--shadow-card)]",
                     )}
                   >
@@ -186,7 +183,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <Link
                     href={`/quotes/${q.id}`}
                     className={cx(
-                      "press mt-5 flex h-12 items-center justify-center rounded-2xl text-[15px] font-medium",
+                      "press mt-5 flex h-12 items-center justify-center rounded-xl text-[15px] font-medium",
                       lead ? "bg-brand text-white hover:bg-brand-2" : "border border-line hover:border-ink/20",
                     )}
                   >

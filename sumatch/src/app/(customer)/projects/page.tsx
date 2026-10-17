@@ -20,10 +20,10 @@ export default async function ProjectsPage() {
   );
   return (
     <div className="mx-auto max-w-[960px]">
-      <PageHeader title="相談" />
+      <PageHeader title="相談" kicker="いまの進み具合" />
 
       {unseen.map((m) => (
-        <Link key={m.id} href={`/match/${m.id}`} className="lift mb-6 flex min-h-16 items-center justify-between gap-4 rounded-[20px] bg-surface px-5 py-4 shadow-[var(--shadow-card)]">
+        <Link key={m.id} href={`/match/${m.id}`} className="lift mb-6 flex min-h-16 items-center justify-between gap-4 rounded-[24px] bg-surface px-5 py-4 shadow-[var(--shadow-card)]">
           <span className="flex items-center gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-white" aria-hidden="true">
               <Icon name="check" size={18} strokeWidth={2.6} />
@@ -69,7 +69,7 @@ export default async function ProjectsPage() {
                 <div className="p-5">
                   <StatusStepper status={p.status} />
                   {p.status !== "cancelled" && (
-                    <Link href={next.href} className="press mt-5 flex h-12 items-center justify-center gap-2 rounded-2xl bg-brand-soft text-[15px] font-semibold text-brand hover:bg-[#dcebe1]">
+                    <Link href={next.href} className="press mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-soft text-[15px] font-semibold text-brand hover:bg-[#dcebe1]">
                       {next.text}
                       {p.unread > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] text-white">{p.unread}</span>}
                     </Link>

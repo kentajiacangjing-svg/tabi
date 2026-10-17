@@ -46,7 +46,7 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
   // Focused flows hide the tab bar: a chat thread, the question flow, the match moment.
   if (/\/messages\/[^/]+$/.test(pathname) || pathname === "/diagnosis" || /\/match\//.test(pathname)) return null;
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line/80 bg-surface/95 backdrop-blur-md md:hidden" aria-label="メインメニュー">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 shadow-[0_-8px_24px_-16px_rgb(17_17_17/0.12)] backdrop-blur-md md:hidden" aria-label="メインメニュー">
       <div className="mx-auto grid max-w-lg" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
         {items.map((item) => {
           const active = isActive(pathname, item);
@@ -55,11 +55,11 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={cx("press relative flex min-h-[62px] flex-col items-center justify-center gap-1 text-[11px] transition-colors duration-200", active ? "font-medium text-brand" : "text-faint")}
+              className={cx("press relative flex min-h-16 flex-col items-center justify-center gap-1 text-[11.5px] transition-colors duration-200", active ? "font-medium text-brand" : "text-faint")}
             >
-              {active && <span className="absolute top-0 h-[3px] w-6 rounded-b-full bg-brand" aria-hidden="true" />}
+              {active && <span className="absolute bottom-1.5 size-1 rounded-full bg-brand" aria-hidden="true" />}
               <span className="relative">
-                <Icon name={item.icon} size={23} strokeWidth={active ? 2 : 1.6} />
+                <Icon name={item.icon} size={24} strokeWidth={active ? 2 : 1.6} />
                 {!!item.badge && <span className="absolute -right-1.5 -top-0.5 size-2.5 rounded-full border-2 border-surface bg-accent" aria-label={`未読${item.badge}件`} />}
               </span>
               {item.label}

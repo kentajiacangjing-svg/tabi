@@ -95,7 +95,8 @@ export function seed() {
       for (const [slug, n] of list) for (const s of remap[slug] ?? [slug]) out.set(s, (out.get(s) ?? 0) + n);
       return [...out.entries()];
     };
-    const workCat = (img: string, slug: string) => (slug === "water" ? (img.startsWith("kitchen") ? "kitchen" : "bath") : (remap[slug]?.[0] ?? slug));
+    const workCat = (img: string, slug: string) =>
+      slug === "water" ? (img.startsWith("kitchen") ? "kitchen" : img.startsWith("toilet") || img.startsWith("wash") ? "toilet" : "bath") : (remap[slug]?.[0] ?? slug);
     const catId: Record<string, string> = {};
     cats.forEach(([slug, name, group, icon, desc, min, max, note, concerns, active], i) => {
       catId[slug] = newId("cat");
@@ -139,42 +140,42 @@ export function seed() {
         cats: [["exterior-paint", 85], ["roof", 40], ["water", 120], ["interior", 150]], areas: ["藤沢市", "茅ヶ崎市"], band: [800000, 2500000], lead: 4, resp: 50, self: 1,
         tagline: "地元で30年。住まいまるごと相談できるリフォーム会社", desc: "外装から水回り・内装まで、住まい全体のリフォームを手がけています。一級建築士が在籍し、長期保証にも対応。地元密着でアフターフォローを大切にしています。", specialties: "外装リフォーム, 浴室・キッチン, 内装全般",
         warranty: "工事内容に応じて最長15年保証 / 定期点検あり", color: "#2F6F5E", founded: 1994, employees: 22, total: 3100, address: "神奈川県藤沢市藤沢", hours: "9:00〜18:30（水曜定休）", license: "神奈川県知事許可（般-3）第23456号", quals: "一級建築士, 二級建築施工管理技士", plan: "PRO",
-        works: [["exterior-2.jpg", "exterior-paint", "藤沢市 外壁塗装＋シーリング打ち替え", "藤沢市", "約140万円"], ["bath-1.jpg", "water", "茅ヶ崎市 ユニットバス交換", "茅ヶ崎市", "約110万円"], ["kitchen-1.jpg", "water", "藤沢市 システムキッチン交換", "藤沢市", "約95万円"]], site: "https://example.com/fujisawa-reform",
+        works: [["exterior-2.jpg", "exterior-paint", "藤沢市 玄関まわりの外壁塗装", "藤沢市", "約140万円"], ["bath-1.jpg", "water", "茅ヶ崎市 ユニットバス交換", "茅ヶ崎市", "約110万円"], ["kitchen-1.jpg", "water", "藤沢市 システムキッチン交換", "藤沢市", "約95万円"]], site: "https://example.com/fujisawa-reform",
       },
       {
         key: "home-works", name: "HOME WORKS", kana: "ほーむわーくす", owner: ["owner@homeworks.demo", "小林 大輔"],
         cats: [["exterior-paint", 40], ["interior", 90], ["water", 60], ["exterior", 35]], areas: ["藤沢市", "茅ヶ崎市", "平塚市"], band: [900000, 3000000], lead: 5, resp: 90, self: 0,
         tagline: "デザインから考える、暮らしのリノベーション", desc: "設計担当がご要望を丁寧にヒアリングし、仕上がりのイメージを共有してから工事に入ります。施工は提携する専門職人と連携し、品質管理を自社で行います。", specialties: "デザインリフォーム, 内装, 外壁の色彩提案",
         warranty: "外壁12年保証 / 内装2年保証", color: "#3B3F46", founded: 2015, employees: 9, total: 460, address: "神奈川県茅ヶ崎市東海岸", hours: "10:00〜19:00（火曜定休）", quals: "インテリアコーディネーター, 二級建築士", plan: "GROWTH",
-        works: [["exterior-5.jpg", "exterior-paint", "茅ヶ崎市 モノトーン外壁塗装", "茅ヶ崎市", "約150万円"], ["interior-1.jpg", "interior", "藤沢市 リビング内装リノベーション", "藤沢市", "約180万円"], ["garden-2.jpg", "exterior", "平塚市 ウッドフェンス", "平塚市", "約60万円"]], site: "https://example.com/homeworks",
+        works: [["exterior-5.jpg", "exterior-paint", "茅ヶ崎市 モノトーン外壁塗装", "茅ヶ崎市", "約150万円"], ["interior-1.jpg", "interior", "藤沢市 リビング内装リノベーション", "藤沢市", "約180万円"], ["garden-3.jpg", "exterior", "平塚市 サンルーム設置", "平塚市", "約160万円"]], site: "https://example.com/homeworks",
       },
       {
         key: "chigasaki-roof", name: "茅ヶ崎ルーフ工業", kana: "ちがさきるーふこうぎょう", owner: ["owner@chigasaki-roof.demo", "加藤 誠"],
         cats: [["roof", 210], ["exterior-paint", 12]], areas: ["茅ヶ崎市", "藤沢市", "平塚市"], band: [300000, 1600000], lead: 2, resp: 40, self: 1,
         tagline: "屋根一筋。雨漏り調査から葺き替えまで", desc: "屋根工事を専門に、点検・補修・カバー工法・葺き替えまで対応します。ドローンでの屋根点検写真をお渡しし、状態を分かりやすくご説明します。", specialties: "屋根修理, 雨漏り調査, カバー工法",
         warranty: "葺き替え10年 / 補修1年", color: "#6B4E3D", founded: 2003, employees: 11, total: 2200, address: "神奈川県茅ヶ崎市本村", hours: "8:30〜17:30（日曜定休）", license: "神奈川県知事許可（般-2）第34567号", quals: "かわらぶき技能士, 雨漏り診断士", plan: "STARTER",
-        works: [["roof-2.jpg", "roof", "茅ヶ崎市 瓦屋根の葺き替え", "茅ヶ崎市", "約160万円"], ["roof-1.jpg", "roof", "藤沢市 棟板金交換", "藤沢市", "約18万円"], ["exterior-4.jpg", "exterior-paint", "平塚市 外壁部分補修", "平塚市", "約30万円"]],
+        works: [["roof-2.jpg", "roof", "茅ヶ崎市 屋根の葺き替え", "茅ヶ崎市", "約160万円"], ["roof-1.jpg", "roof", "藤沢市 棟板金交換", "藤沢市", "約18万円"], ["exterior-4.jpg", "exterior-paint", "平塚市 外壁部分補修", "平塚市", "約30万円"]],
       },
       {
         key: "hiratsuka-water", name: "平塚みずまわりサービス", kana: "ひらつかみずまわりさーびす", owner: ["owner@hiratsuka-water.demo", "吉田 直樹"],
         cats: [["water", 340]], areas: ["平塚市", "茅ヶ崎市"], band: [150000, 1500000], lead: 1, resp: 20, self: 1,
         tagline: "水まわりのトラブルと交換工事、最短翌日対応", desc: "キッチン・浴室・トイレ・給湯器の交換を中心に、水まわり専門で対応しています。メーカー各社の商品から予算に合わせてご提案します。", specialties: "トイレ交換, ユニットバス, 給湯器",
         warranty: "工事保証5年 / メーカー保証あり", color: "#1F7A8C", founded: 2011, employees: 8, total: 1800, address: "神奈川県平塚市紅谷町", hours: "8:00〜20:00（年中無休）", quals: "給水装置工事主任技術者", plan: "STARTER",
-        works: [["bath-2.jpg", "water", "平塚市 浴室リフォーム", "平塚市", "約98万円"], ["kitchen-2.jpg", "water", "茅ヶ崎市 キッチン交換", "茅ヶ崎市", "約85万円"]],
+        works: [["bath-2.jpg", "water", "平塚市 浴室リフォーム", "平塚市", "約98万円"], ["kitchen-2.jpg", "water", "茅ヶ崎市 キッチン交換", "茅ヶ崎市", "約85万円"], ["toilet-1.jpg", "water", "平塚市 トイレ交換", "平塚市", "約28万円"]],
       },
       {
         key: "shonan-interior", name: "湘南インテリア工房", kana: "しょうなんいんてりあこうぼう", owner: ["owner@shonan-interior.demo", "山本 彩"],
         cats: [["interior", 260]], areas: ["藤沢市", "茅ヶ崎市", "平塚市"], band: [100000, 900000], lead: 2, resp: 35, self: 1,
         tagline: "クロス・床の張替えを、丁寧に早く", desc: "壁紙・床材の張替えを中心とした内装専門店です。家具の移動からお任せいただけます。サンプルをお持ちしてご自宅でお選びいただけます。", specialties: "クロス張替え, フローリング, 和室→洋室",
         warranty: "施工保証2年", color: "#8A6D3B", founded: 2013, employees: 6, total: 2600, address: "神奈川県藤沢市湘南台", hours: "9:00〜18:00（日曜定休）", quals: "内装仕上げ施工技能士", plan: "STARTER",
-        works: [["interior-2.jpg", "interior", "藤沢市 マンション全室クロス張替え", "藤沢市", "約42万円"], ["interior-1.jpg", "interior", "茅ヶ崎市 フローリング張替え", "茅ヶ崎市", "約35万円"]],
+        works: [["interior-1.jpg", "interior", "茅ヶ崎市 リビングの床・クロス張替え", "茅ヶ崎市", "約68万円"], ["interior-2.jpg", "interior", "藤沢市 洗面所のクロス・床張替え", "藤沢市", "約18万円"]],
       },
       {
         key: "green-exterior", name: "グリーンエクステリア湘南", kana: "ぐりーんえくすてりあしょうなん", owner: ["owner@green-exterior.demo", "井上 拓也"],
         cats: [["exterior", 190]], areas: ["藤沢市", "茅ヶ崎市", "平塚市"], band: [300000, 2500000], lead: 4, resp: 120, self: 1,
         tagline: "家の顔をつくる、外構とお庭の専門店", desc: "駐車場・フェンス・門まわり・お庭づくりまで、外構全般を自社施工しています。3Dパースで完成イメージを確認できます。", specialties: "駐車場, フェンス, 植栽, カーポート",
         warranty: "施工保証3年", color: "#4F7A4F", founded: 2008, employees: 10, total: 950, address: "神奈川県平塚市田村", hours: "9:00〜18:00（日曜定休）", license: "神奈川県知事許可（般-4）第45678号", quals: "エクステリアプランナー", plan: "GROWTH",
-        works: [["garden-1.jpg", "exterior", "藤沢市 ウッドフェンスと植栽", "藤沢市", "約75万円"], ["garden-2.jpg", "exterior", "茅ヶ崎市 駐車場拡張", "茅ヶ崎市", "約110万円"]],
+        works: [["garden-1.jpg", "exterior", "藤沢市 ウッドデッキとフェンス", "藤沢市", "約75万円"], ["garden-4.jpg", "exterior", "平塚市 玄関アプローチと植栽", "平塚市", "約48万円"], ["garden-2.jpg", "exterior", "茅ヶ崎市 カーポートと駐車場", "茅ヶ崎市", "約110万円"]],
       },
       {
         key: "shonan-aircon", name: "湘南エアコンサービス", kana: "しょうなんえあこんさーびす", owner: ["owner@shonan-aircon.demo", "松本 亮"],
@@ -188,7 +189,7 @@ export function seed() {
         cats: [["house-cleaning", 1400], ["aircon", 300]], areas: ["藤沢市", "茅ヶ崎市", "平塚市"], band: [10000, 150000], lead: 1, resp: 45, self: 1,
         tagline: "暮らしを整える、プロのハウスクリーニング", desc: "キッチン・浴室・エアコンなどの分解洗浄、引越し前後のまるごと清掃に対応します。環境にやさしい洗剤を使用しています。", specialties: "水回り清掃, エアコン分解洗浄, 空室清掃",
         warranty: "仕上がり保証（1週間以内の再清掃無料）", color: "#2E8B83", founded: 2018, employees: 7, total: 3900, address: "神奈川県茅ヶ崎市新栄町", hours: "9:00〜18:00（年中無休）", quals: "ハウスクリーニング技能士", plan: "STARTER",
-        works: [["clean-1.jpg", "house-cleaning", "茅ヶ崎市 空室まるごとクリーニング", "茅ヶ崎市", "約6万円"]],
+        works: [["clean-1.jpg", "house-cleaning", "茅ヶ崎市 トイレ・水まわりクリーニング", "茅ヶ崎市", "約3万円"], ["wash-1.jpg", "house-cleaning", "藤沢市 洗面所クリーニング", "藤沢市", "約2万円"]],
       },
       {
         key: "umibe-koumuten", name: "海辺の住まい工務店", kana: "うみべのすまいこうむてん", owner: ["owner@umibe.demo", "斎藤 学"], status: "pending",

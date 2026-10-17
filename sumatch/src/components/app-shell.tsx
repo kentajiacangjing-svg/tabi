@@ -37,12 +37,12 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
   }
 
   const homeHref = mode === "business" ? "/business/dashboard" : mode === "admin" ? "/admin" : "/";
-  const width = wide ? "max-w-[1280px]" : "max-w-[1080px]";
+  const width = wide ? "max-w-[1320px]" : "max-w-[1240px]";
 
   return (
     <div className={cx("min-h-dvh", items.length > 0 && "pb-24 md:pb-0")}>
       <header className="sticky top-0 z-30 border-b border-line/70 bg-canvas/85 backdrop-blur-md">
-        <div className={cx("mx-auto flex h-16 items-center justify-between gap-3 px-5 sm:px-8", width)}>
+        <div className={cx("mx-auto flex h-16 items-center justify-between gap-3 px-5 sm:px-10 lg:px-14", width)}>
           <Logo href={homeHref} sub={mode === "business" ? "for Business" : mode === "admin" ? "Admin" : undefined} />
           <div className="flex items-center gap-1">
             <DesktopNav items={items} />
@@ -68,7 +68,7 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
           </div>
         </div>
       </header>
-      <main className={cx("mx-auto w-full px-5 py-8 sm:px-8 sm:py-14", width)}>{children}</main>
+      <main className={cx("mx-auto w-full px-5 py-8 sm:px-10 sm:py-12 lg:px-14", width)}>{children}</main>
       {items.length > 0 && <BottomTabs items={items} />}
       {user && <RealtimeClient browserNotify={!!user.notify_browser} />}
     </div>

@@ -199,7 +199,7 @@ h3 {
   background: linear-gradient(180deg, rgb(0 0 0 / 0) 38%, rgb(0 0 0 / 0.55) 100%);
 }
 .scrim-full {
-  background: linear-gradient(180deg, rgb(10 14 12 / 0.38) 0%, rgb(10 14 12 / 0.55) 55%, rgb(10 14 12 / 0.78) 100%);
+  background: linear-gradient(180deg, rgb(14 30 23 / 0.62) 0%, rgb(14 30 23 / 0.66) 55%, rgb(10 18 14 / 0.86) 100%);
 }
 
 /* The match moment: scale + fade + a little blur clearing. */

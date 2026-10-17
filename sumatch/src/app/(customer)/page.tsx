@@ -3,6 +3,7 @@ import { activeAreas, activeCategories, projectsForCustomer, workImage } from "@
 import { all, get } from "@/lib/db";
 import { HERO_PHOTO } from "@/lib/visuals";
 import { Icon } from "@/components/icons";
+import { Kicker } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { CategoryPicker } from "@/components/category-picker";
 import { Track } from "@/components/track";
@@ -46,7 +47,7 @@ export default async function Home() {
       {/* 1. The question, next to a photo of a finished room (photo only on wide screens) */}
       <section className="grid items-start gap-10 pb-16 pt-2 sm:pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,500px)] lg:gap-14 lg:pb-24">
         <div className="relative hidden lg:sticky lg:top-24 lg:block">
-          <div className="aspect-[4/5] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+          <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={HERO_PHOTO} alt="施工事例：リビングの内装リノベーション" className="size-full object-cover" />
           </div>
@@ -71,8 +72,8 @@ export default async function Home() {
               <Icon name="chevron-right" size={18} className="text-brand" />
             </Link>
           )}
-          <p className="text-[14px] font-medium tracking-wide text-brand-2">住まいの工事を、迷わず相談</p>
-          <h1 className="jp mt-2 text-[44px] font-bold leading-[1.15] tracking-tight sm:text-[60px]">どんな工事？</h1>
+          <Kicker>住まいの工事を、迷わず相談</Kicker>
+          <h1 className="jp mt-3 text-[44px] font-bold leading-[1.15] tracking-tight sm:text-[60px]">どんな工事？</h1>
           <p className="mt-3 text-[16px] text-muted">答えるだけで、合う会社が見つかります。無料・営業電話なし。</p>
           <div className="mt-8">
             <CategoryPicker featured={cats.slice(0, FEATURED)} more={cats.slice(FEATURED)} withTabBar={user?.role === "customer"} />
@@ -83,16 +84,18 @@ export default async function Home() {
       {/* 2. Real work, big */}
       {works.length > 0 && (
         <section className="bleed bg-surface py-14 sm:py-20">
-          <div className="mx-auto max-w-[1080px] px-5 sm:px-8">
+          <div className="mx-auto max-w-[1240px] px-5 sm:px-10 lg:px-14">
             <div className="flex items-end justify-between gap-4">
-              <h2 className="text-[26px] font-bold sm:text-[32px]">最近の施工事例</h2>
-              <span className="text-[13px] text-muted">掲載会社の実績から</span>
+              <div>
+                <Kicker className="mb-2">掲載会社の実績から</Kicker>
+                <h2 className="text-[26px] font-bold sm:text-[32px]">最近の施工事例</h2>
+              </div>
             </div>
           </div>
-          <div className="no-scrollbar mx-auto mt-7 flex max-w-[1080px] snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:scroll-px-8 sm:px-8 lg:grid lg:grid-cols-4 lg:overflow-visible lg:[&>*:nth-child(n+5)]:hidden">
+          <div className="no-scrollbar mx-auto mt-7 flex max-w-[1240px] snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:scroll-px-10 sm:px-10 lg:px-14 lg:grid lg:grid-cols-4 lg:overflow-visible lg:[&>*:nth-child(n+5)]:hidden">
             {works.map((w) => (
               <figure key={w.id} className="w-[72vw] max-w-[300px] shrink-0 snap-start lg:w-auto lg:max-w-none">
-                <div className="aspect-[4/3] overflow-hidden rounded-[20px] bg-soft">
+                <div className="aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={workImage(w) ?? ""} alt={w.title} className="size-full object-cover" loading="lazy" />
                 </div>
@@ -111,11 +114,12 @@ export default async function Home() {
 
       {/* 3. How it works, on soft green */}
       <section className="bleed bg-brand-soft py-14 sm:py-20">
-        <div className="mx-auto max-w-[1080px] px-5 sm:px-8">
+        <div className="mx-auto max-w-[1240px] px-5 sm:px-10 lg:px-14">
+          <Kicker className="mb-2">4つ答えて、1社ずつ</Kicker>
           <h2 className="text-[26px] font-bold text-brand-ink sm:text-[32px]">使い方</h2>
           <ol className="mt-8 grid gap-4 sm:grid-cols-3">
             {steps.map(([t, d], i) => (
-              <li key={t} className="rounded-[22px] bg-surface p-6 shadow-[var(--shadow-card)]">
+              <li key={t} className="rounded-[24px] bg-surface p-6 shadow-[var(--shadow-card)]">
                 <span className="tnum text-[40px] font-semibold leading-none text-brand-2">{i + 1}</span>
                 <div className="mt-4 text-[18px] font-semibold">{t}</div>
                 <p className="mt-1 text-[14px] leading-relaxed text-muted">{d}</p>
@@ -129,9 +133,10 @@ export default async function Home() {
       <section className="grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-2 lg:gap-16">
         <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/seed/exterior-5.jpg" alt="施工事例：外壁塗装" className="size-full object-cover" loading="lazy" />
+          <img src="/seed/exterior-2.jpg" alt="施工事例：玄関まわりの外壁塗装" className="size-full object-cover" loading="lazy" />
         </div>
         <div>
+          <Kicker className="mb-2">条件に合う会社だけ</Kicker>
           <h2 className="text-[26px] font-bold sm:text-[32px]">安心して使える理由</h2>
           <dl className="mt-8 divide-y divide-line border-y border-line">
             {reasons.map(([t, d]) => (

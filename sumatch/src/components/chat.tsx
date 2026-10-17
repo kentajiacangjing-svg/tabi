@@ -277,10 +277,10 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
 }
 
 function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quoteHref?: string }) {
-  const base = cx("rounded-[20px] text-[16px] leading-relaxed", isMine ? "rounded-br-md bg-brand text-white" : "rounded-bl-md bg-surface text-ink shadow-[var(--shadow-card)]");
+  const base = cx("rounded-[24px] text-[16px] leading-relaxed", isMine ? "rounded-br-md bg-brand text-white" : "rounded-bl-md bg-surface text-ink shadow-[var(--shadow-card)]");
   if (m.kind === "quote") {
     return (
-      <Link href={quoteHref ?? "#"} className="block w-72 rounded-2xl border border-line bg-surface p-5 text-ink shadow-[var(--shadow-card)] hover:border-ink/25">
+      <Link href={quoteHref ?? "#"} className="block w-72 rounded-[24px] border border-line bg-surface p-5 text-ink shadow-[var(--shadow-card)] hover:border-ink/25">
         <div className="text-[14px] text-muted">{m.quote_version && m.quote_version > 1 ? "見積が更新されました" : "見積が届きました"}</div>
         <div className="mt-2 text-[28px] font-medium leading-none tracking-tight">¥{m.quote_total?.toLocaleString("ja-JP")}</div>
         {m.quote_days ? <div className="mt-2 text-[14px] text-ink-2">工期：約{m.quote_days}日</div> : null}

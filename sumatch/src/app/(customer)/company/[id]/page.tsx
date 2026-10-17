@@ -50,15 +50,15 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
   const specialties = c.specialties.split(/[,、]\s*/).filter(Boolean).slice(0, 4);
 
   return (
-    <div className="mx-auto max-w-[1080px]">
+    <div className="mx-auto">
       <Link href={project ? `/matches?project=${project}` : "/"} className="-ml-2 mb-3 inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-[15px] text-muted hover:text-ink">
         <Icon name="chevron-left" size={18} />
         戻る
       </Link>
 
-      <div className="grid gap-x-12 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-x-12 lg:grid-cols-[minmax(0,1fr)_400px]">
         {/* 1. photo */}
-        <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft lg:aspect-[3/2]">
+        <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {hero && workImage(hero) && <img src={workImage(hero)!} alt={hero.title} className="size-full object-cover" />}
         </div>
@@ -84,7 +84,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
               </div>
             )}
             {own?.status === "matched" && (
-              <Link href={`/messages/${own.id}`} className="press mt-6 flex h-14 items-center justify-center rounded-2xl bg-brand font-medium text-white hover:bg-brand-2">
+              <Link href={`/messages/${own.id}`} className="press mt-6 flex h-14 items-center justify-center rounded-xl bg-brand font-medium text-white hover:bg-brand-2">
                 メッセージを開く
               </Link>
             )}
@@ -100,7 +100,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
               <div className="no-scrollbar -mx-5 mt-4 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 sm:mx-0 sm:scroll-px-0 sm:px-0 lg:grid lg:grid-cols-2 lg:gap-4">
                 {p.works.map((w) => (
                   <figure key={w.id} className="w-64 shrink-0 snap-start lg:w-auto">
-                    <div className="aspect-[4/3] overflow-hidden rounded-[20px] bg-soft">
+                    <div className="aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {workImage(w) && <img src={workImage(w)!} alt={w.title} className="size-full object-cover" />}
                     </div>
@@ -116,7 +116,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
 
           {/* 5–6. 得意な工事・価格帯 */}
           <section className="mt-12 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[20px] bg-surface p-5 shadow-[var(--shadow-card)]">
+            <div className="rounded-[24px] bg-surface p-5 shadow-[var(--shadow-card)]">
               <div className="text-[13px] text-muted">得意な工事</div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {specialties.map((t) => (
@@ -126,7 +126,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
                 ))}
               </div>
             </div>
-            <div className="rounded-[20px] bg-surface p-5 shadow-[var(--shadow-card)]">
+            <div className="rounded-[24px] bg-surface p-5 shadow-[var(--shadow-card)]">
               <div className="text-[13px] text-muted">価格帯</div>
               <div className="tnum mt-1.5 text-[26px] font-semibold leading-tight">{manRange(c.price_band_min, c.price_band_max)}</div>
             </div>
@@ -145,7 +145,7 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
             ) : (
               <ul className="mt-5 grid gap-3 lg:grid-cols-2">
                 {p.reviews.slice(0, 4).map((r) => (
-                  <li key={r.id} className="rounded-[20px] bg-surface p-5 shadow-[var(--shadow-card)]">
+                  <li key={r.id} className="rounded-[24px] bg-surface p-5 shadow-[var(--shadow-card)]">
                     <div className="flex items-baseline justify-between gap-3 text-[14px]">
                       <span className="font-semibold">★ {r.rating}</span>
                       <span className="text-[13px] text-muted">

@@ -32,7 +32,7 @@ export function CategoryPicker({ featured, more, withTabBar }: { featured: Picke
               aria-checked={on}
               onClick={() => setPicked(c.slug)}
               className={cx(
-                "lift group relative overflow-hidden rounded-[22px] border-2 bg-surface text-left shadow-[var(--shadow-card)]",
+                "lift group relative overflow-hidden rounded-[24px] border-2 bg-surface text-left shadow-[var(--shadow-card)]",
                 on ? "border-brand" : "border-transparent",
               )}
             >
@@ -68,7 +68,7 @@ export function CategoryPicker({ featured, more, withTabBar }: { featured: Picke
         )}
       </div>
       {/* stays in reach of the thumb while the cards scroll */}
-      <div className={cx("z-10 mt-6 lg:static lg:mt-8", picked && "sticky", withTabBar ? "bottom-[calc(74px+env(safe-area-inset-bottom))]" : "bottom-[calc(12px+env(safe-area-inset-bottom))]")}>
+      <div className={cx("z-10 mt-6 lg:static lg:mt-8", picked && "sticky", withTabBar ? "bottom-[calc(76px+env(safe-area-inset-bottom))]" : "bottom-[calc(12px+env(safe-area-inset-bottom))]")}>
         <Button size="lg" className="w-full" disabled={!picked} onClick={() => picked && router.push(`/diagnosis?category=${picked}`)}>
           次へ
         </Button>
