@@ -3,7 +3,7 @@ import { get } from "@/lib/db";
 import type { MatchContext } from "@/lib/access";
 import { messagesFor, type Conversation } from "@/lib/queries";
 import { CHAT_TEMPLATES } from "@/lib/constants";
-import { relative } from "@/lib/format";
+import { relative, responseSpeed } from "@/lib/format";
 import type { Category } from "@/lib/types";
 import { CompanyAvatar, UserAvatar } from "./brand";
 import { Chat } from "./chat";
@@ -23,7 +23,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
   const quoteHref = side === "customer" ? `/quotes?project=${ctx.project.id}` : `/business/quotes?match=${ctx.match.id}`;
   const title = side === "customer" ? ctx.company.name : side === "company" ? `${customer?.name ?? "お客"}様` : `${customer?.name}様 × ${ctx.company.name}`;
   const titleHref = side === "customer" ? `/company/${ctx.company.id}?project=${ctx.project.id}` : side === "company" ? `/business/leads/${ctx.project.id}` : undefined;
-  const sub = side === "company" ? `${ctx.project.city}・${cat?.name ?? ""}` : undefined;
+  const sub = side === "company" ? `${ctx.project.city}・${cat?.name ?? ""}` : `返信の目安 ${responseSpeed(ctx.company.avg_response_minutes)}`;
 
   return (
     <div className="fixed inset-x-0 bottom-0 top-16 z-20 flex bg-canvas md:static md:z-auto md:h-[calc(100dvh-10rem)] md:overflow-hidden md:rounded-2xl md:border md:border-line">
@@ -39,7 +39,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
                     <span className="shrink-0 text-[12px] text-faint">{relative(c.last_at)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[14px] text-muted">{c.last_kind === "quote" ? "見積もりが届きました" : c.last_kind === "image" ? "写真" : c.last_kind === "file" ? "ファイル" : c.last_message}</span>
+                    <span className="truncate text-[14px] text-muted">{c.last_kind === "quote" ? "見積が届きました" : c.last_kind === "image" ? "写真" : c.last_kind === "file" ? "ファイル" : c.last_message}</span>
                     {c.unread > 0 && <span className="size-2 shrink-0 rounded-full bg-brand" aria-label="未読あり" />}
                   </div>
                 </div>
@@ -54,17 +54,23 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
           <Link href={side === "admin" ? "/admin?tab=chats" : base} className="grid size-11 place-items-center rounded-lg text-ink-2 hover:bg-soft md:hidden" aria-label="一覧へ戻る">
             <Icon name="chevron-left" size={22} />
           </Link>
-          {titleHref ? (
-            <Link href={titleHref} className="min-w-0 flex-1 rounded-lg px-2 py-1.5 hover:bg-soft">
-              <div className="truncate text-[17px] font-medium">{title}</div>
-              <div className="truncate text-[13px] text-muted">{sub ?? "会社の情報を見る"}</div>
+          <div className="min-w-0 flex-1 px-2">
+            <div className="truncate text-[17px] font-medium">{title}</div>
+            {side !== "admin" && <div className="truncate text-[13px] text-muted">{sub}</div>}
+          </div>
+          {titleHref && side === "customer" && (
+            <Link href={titleHref} className="flex min-h-11 items-center rounded-xl px-3 text-[14px] text-brand hover:bg-soft">
+              会社詳細
             </Link>
-          ) : (
-            <div className="min-w-0 flex-1 px-2 text-[17px] font-medium">{title}</div>
+          )}
+          {titleHref && side === "company" && (
+            <Link href={titleHref} className="flex min-h-11 items-center rounded-xl px-3 text-[14px] text-ink-2 hover:bg-soft">
+              相談内容
+            </Link>
           )}
           {side === "company" && ["consulting", "quoting", "comparing"].includes(ctx.project.status) && (
-            <Link href={`/business/quotes/new?match=${ctx.match.id}`} className="flex min-h-11 items-center rounded-lg px-3 text-[14px] text-brand hover:bg-soft">
-              見積もりを作る
+            <Link href={`/business/quotes/new?match=${ctx.match.id}`} className="flex min-h-11 items-center rounded-xl px-3 text-[14px] text-brand hover:bg-soft">
+              見積を作る
             </Link>
           )}
         </div>
@@ -99,7 +105,7 @@ export function ConversationList({ conversations, side }: { conversations: Conve
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className={cx("truncate text-[15px]", c.unread ? "text-ink" : "text-muted")}>
-                  {c.last_kind === "quote" ? "見積もりが届きました" : c.last_kind === "image" ? "写真を送りました" : c.last_kind === "file" ? "ファイルを送りました" : c.last_message}
+                  {c.last_kind === "quote" ? "見積が届きました" : c.last_kind === "image" ? "写真を送りました" : c.last_kind === "file" ? "ファイルを送りました" : c.last_message}
                 </span>
                 {c.unread > 0 && <span className="shrink-0 text-[13px] font-medium text-brand">{c.unread}件</span>}
               </div>

@@ -6,8 +6,8 @@ import { fileUrl } from "@/lib/urls";
 export function LogoMark({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="1" y="1" width="14" height="14" rx="3" fill="#151515" />
-      <rect x="9" y="9" width="14" height="14" rx="3" fill="#244d3e" />
+      <rect x="1" y="1" width="14" height="14" rx="3" fill="#111111" />
+      <rect x="9" y="9" width="14" height="14" rx="3" fill="#1f5a46" />
     </svg>
   );
 }
@@ -39,11 +39,11 @@ export function CompanyAvatar({
   const initials = name.replace(/株式会社|有限会社|\s/g, "").slice(0, name.match(/^[A-Za-z]/) ? 2 : 1);
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt="" width={size} height={size} className={cx("shrink-0 rounded-lg object-cover", className)} style={{ width: size, height: size }} />;
+    return <img src={url} alt="" width={size} height={size} className={cx("shrink-0 rounded-xl object-cover", className)} style={{ width: size, height: size }} />;
   }
   return (
     <div
-      className={cx("grid shrink-0 place-items-center rounded-lg border border-line bg-surface font-medium text-ink", className)}
+      className={cx("grid shrink-0 place-items-center rounded-xl border border-line bg-surface font-medium text-ink", className)}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
       aria-hidden="true"
     >

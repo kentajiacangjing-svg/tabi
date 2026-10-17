@@ -21,6 +21,15 @@ export interface DeckLead {
 }
 
 /** Companies judge one consultation at a time, like the customer does. */
+function BigFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-b border-line p-6 odd:border-r [&:nth-child(n+3)]:border-b-0">
+      <dt className="text-[13px] text-muted">{label}</dt>
+      <dd className="jp mt-1 text-[22px] font-medium leading-snug">{value}</dd>
+    </div>
+  );
+}
+
 export function LeadDeck({ leads, blockedReason }: { leads: DeckLead[]; blockedReason?: string }) {
   const router = useRouter();
   const [queue, setQueue] = useState(leads);
@@ -59,38 +68,34 @@ export function LeadDeck({ leads, blockedReason }: { leads: DeckLead[]; blockedR
   }
 
   return (
-    <div className={cx("transition-[opacity,transform] duration-150", leaving && "translate-x-[-8%] opacity-0")}>
+    <div className={cx("mx-auto max-w-[540px] transition-[opacity,transform] duration-200", leaving && "translate-x-[-8%] opacity-0")}>
       <div className="mb-3 flex justify-between text-[14px] text-muted">
         <span>{leads.length - queue.length + 1} / {leads.length}件目</span>
-        <span>{current.received}</span>
+        <span>{current.received}に届きました</span>
       </div>
-      <article key={current.projectId} className="animate-fade-up">
-        {current.photo ? (
-          <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-soft">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={current.photo} alt="お客様の写真" className="size-full object-cover" />
-          </div>
-        ) : (
-          <div className="grid aspect-[4/3] place-items-center rounded-2xl border border-dashed border-line text-[15px] text-muted">写真はありません</div>
-        )}
-        {current.customerWants && <p className="mt-5 text-[15px] font-medium text-brand">お客様があなたの会社に相談したいと希望しています</p>}
-        <h2 className="mt-5 text-[34px] font-semibold leading-tight">{current.city}</h2>
-        <p className="mt-1 text-[20px]">{current.category}</p>
-        <dl className="mt-6 border-y border-line text-[16px]">
-          <div className="flex justify-between border-b border-line py-3.5"><dt className="text-muted">予算</dt><dd>{current.budget}</dd></div>
-          <div className="flex justify-between border-b border-line py-3.5"><dt className="text-muted">希望時期</dt><dd>{current.timing}</dd></div>
-          <div className="flex justify-between border-b border-line py-3.5"><dt className="text-muted">お住まい</dt><dd>{current.houseType}</dd></div>
-          <div className="flex justify-between py-3.5"><dt className="text-muted">写真</dt><dd>{current.photos}枚</dd></div>
+      <article key={current.projectId} className="animate-fade-up overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-pop)]">
+        {current.customerWants && <p className="bg-brand-soft px-6 py-3 text-[14px] font-medium text-brand">お客様が相談を希望しています</p>}
+        <dl className="grid grid-cols-2">
+          <BigFact label="場所" value={current.city} />
+          <BigFact label="工事内容" value={current.category} />
+          <BigFact label="予算" value={current.budget} />
+          <BigFact label="希望時期" value={current.timing} />
         </dl>
-        {current.details && <p className="mt-5 text-[16px] leading-relaxed text-ink-2">「{current.details}」</p>}
-        <Link href={`/business/leads/${current.projectId}`} className="mt-3 inline-flex min-h-11 items-center text-[15px] underline underline-offset-4">
-          写真と詳細を見る
-        </Link>
+        <div className="flex items-center gap-4 border-t border-line px-6 py-4">
+          {current.photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={current.photo} alt="お客様の写真" className="size-14 shrink-0 rounded-xl object-cover" />
+          )}
+          <p className="min-w-0 flex-1 truncate text-[14px] text-muted">{current.details ? `「${current.details}」` : current.photos ? `写真${current.photos}枚` : "詳細はメッセージで確認できます"}</p>
+          <Link href={`/business/leads/${current.projectId}`} className="flex min-h-11 shrink-0 items-center text-[15px] text-brand">
+            詳しく
+          </Link>
+        </div>
       </article>
 
       {(error || blockedReason) && <p className="mt-4 text-[14px] text-danger" role="alert">{error ?? blockedReason}</p>}
 
-      <div className="sticky bottom-[calc(60px+env(safe-area-inset-bottom))] -mx-5 mt-6 grid grid-cols-[1fr_1.6fr] gap-2 border-t border-line bg-canvas px-5 py-3 md:static md:mx-0 md:border-0 md:bg-transparent md:px-0">
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] mt-4 grid grid-cols-[1fr_1.6fr] gap-3 bg-canvas py-3 md:static">
         <Button variant="secondary" size="lg" disabled={pending} onClick={() => respond(false)}>
           見送る
         </Button>

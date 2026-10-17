@@ -258,7 +258,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
               type="button"
               onClick={() => doSend()}
               disabled={pending || (!text.trim() && !file)}
-              className="press mb-0.5 h-11 shrink-0 rounded-[10px] bg-brand px-4 text-[15px] font-medium text-white disabled:bg-line disabled:text-faint"
+              className="press mb-0.5 h-11 shrink-0 rounded-xl bg-brand px-4 text-[15px] font-medium text-white disabled:bg-line disabled:text-faint"
             >
               送信
             </button>
@@ -277,14 +277,14 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
 }
 
 function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quoteHref?: string }) {
-  const base = cx("rounded-xl text-[16px] leading-relaxed", isMine ? "rounded-br-sm bg-brand-soft text-ink" : "rounded-bl-sm border border-line bg-surface text-ink");
+  const base = cx("rounded-[20px] text-[16px] leading-relaxed", isMine ? "rounded-br-md bg-brand text-white" : "rounded-bl-md bg-surface text-ink shadow-[var(--shadow-card)]");
   if (m.kind === "quote") {
     return (
-      <Link href={quoteHref ?? "#"} className="block w-72 rounded-xl border border-ink/80 bg-surface px-5 py-4 text-ink hover:bg-soft">
-        <div className="text-[14px] text-muted">{m.quote_version && m.quote_version > 1 ? `見積もりが更新されました（第${m.quote_version}版）` : "見積もりが届きました"}</div>
-        <div className="mt-2 text-[26px] font-medium tracking-tight">¥{m.quote_total?.toLocaleString("ja-JP")}</div>
-        <div className="truncate text-[14px] text-ink-2">{m.quote_title}（税込）</div>
-        <div className="mt-3 text-[15px] font-medium text-brand">見積もりを見る</div>
+      <Link href={quoteHref ?? "#"} className="block w-72 rounded-2xl border border-line bg-surface p-5 text-ink shadow-[var(--shadow-card)] hover:border-ink/25">
+        <div className="text-[14px] text-muted">{m.quote_version && m.quote_version > 1 ? "見積が更新されました" : "見積が届きました"}</div>
+        <div className="mt-2 text-[28px] font-medium leading-none tracking-tight">¥{m.quote_total?.toLocaleString("ja-JP")}</div>
+        {m.quote_days ? <div className="mt-2 text-[14px] text-ink-2">工期：約{m.quote_days}日</div> : null}
+        <div className="mt-4 flex h-11 items-center justify-center rounded-xl bg-brand text-[15px] font-medium text-white">見積を見る</div>
       </Link>
     );
   }

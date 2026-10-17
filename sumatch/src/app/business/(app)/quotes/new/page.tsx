@@ -6,7 +6,7 @@ import { QuoteForm, type QuoteDefaults } from "@/components/quote-form";
 import { PageHeader, Notice } from "@/components/ui";
 import type { Category, Quote, QuoteItem } from "@/lib/types";
 
-export const metadata = { title: "見積もり作成" };
+export const metadata = { title: "見積作成" };
 export const dynamic = "force-dynamic";
 
 export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ match?: string }> }) {
@@ -43,10 +43,10 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
       <PageHeader
         back={{ href: `/business/messages/${ctx.match.id}`, label: "チャットへ戻る" }}
         eyebrow={`${customer?.name}様・${ctx.project.city}`}
-        title={prev ? `見積もりの改訂（第${prev.version + 1}版）` : "見積もり作成"}
+        title={prev ? `見積の改訂（第${prev.version + 1}版）` : "見積作成"}
         description="提出するとチャットに見積書カードが送られ、お客様の比較画面に反映されます。"
       />
-      {closed ? <Notice tone="warn">この案件は依頼先が決定済みのため、見積もりを提出できません。</Notice> : <QuoteForm matchId={ctx.match.id} defaults={defaults} revision={!!prev} />}
+      {closed ? <Notice tone="warn">この案件は依頼先が決定済みのため、見積を提出できません。</Notice> : <QuoteForm matchId={ctx.match.id} defaults={defaults} revision={!!prev} />}
     </div>
   );
 }

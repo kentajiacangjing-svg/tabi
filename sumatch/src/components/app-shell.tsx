@@ -20,19 +20,19 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
   let items: NavItem[] = [];
   if (mode === "customer" && user?.role === "customer") {
     items = [
-      { href: "/", label: "ホーム", icon: "home" },
-      { href: "/projects", label: "相談", icon: "doc", match: ["/projects", "/matches", "/quotes", "/match"] },
+      { href: "/", label: "ホーム", icon: "home", match: ["/", "/projects", "/quotes"] },
+      { href: "/matches", label: "探す", icon: "search", match: ["/matches", "/match", "/company"] },
       { href: "/messages", label: "メッセージ", icon: "chat", badge: unreadMsgs },
-      { href: "/saved", label: "保存", icon: "star" },
+      { href: "/saved", label: "保存", icon: "heart" },
       { href: "/account", label: "アカウント", icon: "user" },
     ];
   } else if (mode === "business") {
     items = [
-      { href: "/business/dashboard", label: "ホーム", icon: "home" },
-      { href: "/business/leads", label: "新しい相談", icon: "inbox" },
-      { href: "/business/active", label: "進行中", icon: "doc", match: ["/business/active", "/business/quotes", "/business/match"] },
+      { href: "/business/dashboard", label: "ホーム", icon: "home", match: ["/business/dashboard", "/business/analytics"] },
+      { href: "/business/leads", label: "相談", icon: "inbox" },
+      { href: "/business/active", label: "案件", icon: "doc", match: ["/business/active", "/business/quotes", "/business/match"] },
       { href: "/business/messages", label: "メッセージ", icon: "chat", badge: unreadMsgs },
-      { href: "/business/profile", label: "会社", icon: "building" },
+      { href: "/business/profile", label: "設定", icon: "settings" },
     ];
   }
 

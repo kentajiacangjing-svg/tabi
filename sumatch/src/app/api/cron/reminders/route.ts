@@ -1,4 +1,4 @@
-// 「見積もり期限が近づいています」リマインド。外部スケジューラから1日1回 POST する想定。
+// 「見積期限が近づいています」リマインド。外部スケジューラから1日1回 POST する想定。
 // curl -X POST -H "Authorization: Bearer $CRON_SECRET" $APP_URL/api/cron/reminders
 import { NextResponse } from "next/server";
 import { all, get } from "@/lib/db";
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const today = new Date().toISOString().slice(0, 10);
     const already = get("SELECT 1 FROM notifications WHERE kind = 'quote_due' AND link = ? AND substr(created_at,1,10) = ?", `/business/quotes/new?match=${r.id}`, today);
     if (already) continue;
-    notify(companyUserIds(r.company_id), "quote_due", "見積もり期限が近づいています", `${r.city}・${r.title}。お客様は他社と比較中です。`, `/business/quotes/new?match=${r.id}`);
+    notify(companyUserIds(r.company_id), "quote_due", "見積期限が近づいています", `${r.city}・${r.title}。お客様は他社と比較中です。`, `/business/quotes/new?match=${r.id}`);
     sent++;
   }
   return NextResponse.json({ ok: true, sent });

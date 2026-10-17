@@ -33,7 +33,7 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
   const next = !open
     ? null
     : quotes.length > 0
-      ? { label: "見積もりを比べる", href: `/quotes?project=${project.id}` }
+      ? { label: "見積を比べる", href: `/quotes?project=${project.id}` }
       : talking.some((t) => t.status === "matched")
         ? { label: "メッセージを開く", href: "/messages" }
         : { label: "会社を見る", href: `/matches?project=${project.id}` };
@@ -44,7 +44,7 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
         ← 相談
       </Link>
       <p className="text-[14px] text-muted">
-        {project.city}・{project.house_type}・{dateJa(project.created_at)}
+        {[project.city, project.house_type, dateJa(project.created_at)].filter(Boolean).join("・")}
       </p>
       <h1 className="mt-1 text-[30px] font-semibold">{project.title}</h1>
       <div className="mt-4">
@@ -109,7 +109,7 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
                 <li key={c.id}>
                   <Link href={c.status === "matched" ? `/messages/${c.id}` : `/company/${c.company.id}?project=${project.id}`} className="flex min-h-16 items-center justify-between gap-4 py-3">
                     <span className="text-[17px]">{c.company.name}</span>
-                    <span className="text-[14px] text-muted">{c.status === "matched" ? (q ? `見積もり ¥${q.total.toLocaleString("ja-JP")}` : "メッセージ中") : "返事を待っています"}</span>
+                    <span className="text-[14px] text-muted">{c.status === "matched" ? (q ? `見積 ¥${q.total.toLocaleString("ja-JP")}` : "メッセージ中") : "返事を待っています"}</span>
                   </Link>
                 </li>
               );

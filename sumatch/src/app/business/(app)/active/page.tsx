@@ -38,8 +38,8 @@ export default async function ActivePage() {
   );
   const open = (s: ProjectStatus) => ["consulting", "quoting", "comparing"].includes(s);
   const groups: { title: string; rows: ActiveRow[]; detail: (r: ActiveRow) => string }[] = [
-    { title: "メッセージ中", rows: rows.filter((r) => r.status === "matched" && open(r.project_status) && !r.quote_total), detail: () => "見積もりはまだです" },
-    { title: "見積もり提出済み", rows: rows.filter((r) => r.status === "matched" && open(r.project_status) && r.quote_total), detail: (r) => `¥${r.quote_total!.toLocaleString("ja-JP")}・お客様が比較中` },
+    { title: "メッセージ中", rows: rows.filter((r) => r.status === "matched" && open(r.project_status) && !r.quote_total), detail: () => "見積はまだです" },
+    { title: "見積提出済み", rows: rows.filter((r) => r.status === "matched" && open(r.project_status) && r.quote_total), detail: (r) => `¥${r.quote_total!.toLocaleString("ja-JP")}・お客様が比較中` },
     { title: "契約・工事", rows: rows.filter((r) => r.won), detail: (r) => PROJECT_STATUS[r.project_status].label },
     { title: "お客様の返事待ち", rows: rows.filter((r) => r.status !== "matched" && r.company_response === "yes" && open(r.project_status)), detail: () => "「対応したい」を送りました" },
   ];

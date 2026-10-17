@@ -78,7 +78,7 @@ export function notifyNewLeads(project: Project, matches: Match[]) {
       companyUserIds(m.company_id),
       "new_lead",
       "新しい案件があります",
-      `${project.city}・${cat?.name ?? ""}・${project.house_type}（マッチ度${m.score}%）`,
+      [project.city, cat?.name, project.house_type].filter(Boolean).join("・"),
       `/business/leads/${project.id}`,
     );
   }
@@ -117,7 +117,7 @@ function becomeMatched(match: Match, project: Project, company: Company) {
     sender_user_id: null,
     sender_side: "system",
     kind: "system",
-    body: "マッチが成立しました。ここから先のご相談・現地調査の日程調整・見積もりのやり取りは、すべてSUMATCH内で行えます。",
+    body: "マッチが成立しました。ここから先のご相談・現地調査の日程調整・見積のやり取りは、すべてSUMATCH内で行えます。",
     created_at: ts,
   });
   notify([project.customer_id], "match", "マッチしました", `${company.name}と相談を始められます。`, `/match/${match.id}`);
@@ -303,8 +303,8 @@ export function calcQuote(items: QuoteInput["items"], overhead: number, discount
 }
 
 export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput) {
-  if (ctx.side !== "company") throw new DomainError("見積もりは企業のみ提出できます。");
-  if (ctx.match.status !== "matched") throw new DomainError("マッチ成立後に見積もりを提出できます。");
+  if (ctx.side !== "company") throw new DomainError("見積は企業のみ提出できます。");
+  if (ctx.match.status !== "matched") throw new DomainError("マッチ成立後に見積を提出できます。");
   if (["contracted", "in_progress", "completed", "cancelled"].includes(ctx.project.status))
     throw new DomainError("この案件は既に契約先が決定しています。");
   return tx(() => {
@@ -346,12 +346,12 @@ export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput
     );
     postMessage(ctx, userId, { kind: "quote", body: prev ? "見積書を更新しました" : "見積書を提出しました", quoteId: id, fileId: input.pdf_file_id });
     refreshProjectStatus(ctx.project.id);
-    notify([ctx.project.customer_id], "quote", "見積もりが届きました", `${ctx.company.name}から見積もり（税込${Math.round(total / 10000)}万円）が届きました。`, `/quotes?project=${ctx.project.id}`);
+    notify([ctx.project.customer_id], "quote", "見積が届きました", `${ctx.company.name}から見積（税込${Math.round(total / 10000)}万円）が届きました。`, `/quotes?project=${ctx.project.id}`);
     return id;
   });
 }
 
-/** 相談中 → 見積もり中 → 比較中 is derived from the number of companies that submitted quotes. */
+/** 相談中 → 見積中 → 比較中 is derived from the number of companies that submitted quotes. */
 export function refreshProjectStatus(projectId: string) {
   const p = get<Project>("SELECT status FROM projects WHERE id = ?", projectId);
   if (!p || !["consulting", "quoting", "comparing"].includes(p.status)) return;

@@ -3,7 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { projectForCustomer } from "@/lib/access";
 import { candidatesForProject, projectsForCustomer, reasons } from "@/lib/queries";
 import { MAX_MATCHES_PER_PROJECT } from "@/lib/constants";
-import { cityOf } from "@/lib/format";
+import { manRange } from "@/lib/format";
+import { all as allQ } from "@/lib/db";
 import { CompanyDeck, type DeckCompany } from "@/components/company-deck";
 import { ButtonLink, EmptyState } from "@/components/ui";
 
@@ -37,27 +38,27 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       matchId: c.id,
       companyId: c.company.id,
       name: c.company.name,
-      city: cityOf(c.company.address),
-      category: c.category_name,
+      areas: allQ<{ city: string }>("SELECT a.city FROM company_areas ca JOIN service_areas a ON a.id = ca.area_id WHERE ca.company_id = ? ORDER BY a.sort", c.company.id)
+        .map((a) => a.city)
+        .join("・"),
+      priceBand: manRange(c.company.price_band_min, c.company.price_band_max),
+      specialties: c.company.specialties.split(/[,、]\s*/).slice(0, 3).join("・"),
       rating: c.company.rating_avg,
       reviews: c.company.review_count,
-      works: c.company.works_total,
-      tagline: c.company.tagline,
-      // Plain-language reasons; the numeric score stays internal.
-      reasons: reasons(c).map((r) => r.replace(/^対応地域（(.+)）$/, "$1に対応").replace("希望予算帯", "予算が合う").replace("希望時期対応可能", "希望の時期に対応")).slice(0, 3),
       photo: c.cover_image,
       photoCaption: c.cover_title,
+      verified: c.company.status === "approved",
       wantsYou: c.company_response === "yes",
     }));
 
   return (
-    <div className="mx-auto max-w-[640px]">
+    <div>
       {!project.area_id ? (
         <EmptyState title={`${project.city.trim()}は準備中のエリアです`}>対応できる会社が見つかり次第、お知らせします。</EmptyState>
       ) : (
         <>
           <h1 className="sr-only">あなたに合いそうな会社</h1>
-          <CompanyDeck projectId={project.id} deck={deck} canConsult={requested < MAX_MATCHES_PER_PROJECT} consultLeft={MAX_MATCHES_PER_PROJECT - requested} />
+          <CompanyDeck projectId={project.id} deck={deck} consultLeft={MAX_MATCHES_PER_PROJECT - requested} />
         </>
       )}
     </div>

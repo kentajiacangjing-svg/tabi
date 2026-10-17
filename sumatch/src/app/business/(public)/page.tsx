@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const points = [
   ["相談を1件ずつ見て、選ぶだけ", "地域・予算・時期・写真を見て「対応したい」か「見送る」。お客様も選んだ時だけ、メッセージが始まります。"],
   ["毎日開かなくていい", "新しい相談やお客様からのメッセージは、メールとブラウザ通知でお知らせします。"],
-  ["見積もりから契約まで、ここで", "見積もりはそのままお客様の比較画面へ。決まった後の契約内容もSUMATCHに残ります。"],
+  ["見積から契約まで、ここで", "見積はそのままお客様の比較画面へ。決まった後の契約内容もSUMATCHに残ります。"],
   ["順番はお金で買えません", "紹介の順番は地域・予算・実績・口コミとの合い具合だけで決まります。プランやWeb制作の利用は関係ありません。"],
 ];
 
@@ -25,7 +25,7 @@ export default function BusinessLanding() {
           条件の合うお客様と、<wbr />
           じっくり話せる。
         </h1>
-        <p className="mt-5 text-[17px] leading-relaxed text-ink-2">相見積もりの電話合戦ではなく、あなたの会社を選んだお客様とだけ相談が始まります。</p>
+        <p className="mt-5 text-[17px] leading-relaxed text-ink-2">相見積の電話合戦ではなく、あなたの会社を選んだお客様とだけ相談が始まります。</p>
         <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link href="/business/signup" className={buttonClass("primary", "lg")}>
             企業登録をはじめる

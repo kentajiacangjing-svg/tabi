@@ -1,38 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  /* SUMATCH palette — ivory 80% / ink 15% / forest green 5%. Coral only for "match" moments. */
-  --color-ink: #151515;
-  --color-ink-2: #3d3a35;
-  --color-muted: #77736c;
-  --color-faint: #a29d94;
-  --color-line: #e4e0d8;
-  --color-line-2: #eeebe4;
-  --color-soft: #efece5;
-  --color-canvas: #f7f5f0;
+  /* SUMATCH — clean off-white, near-black text, one deep green. Coral only for the match moment. */
+  --color-ink: #111111;
+  --color-ink-2: #3a3a38;
+  --color-muted: #6b6b6b;
+  --color-faint: #a3a3a0;
+  --color-line: #e8e8e5;
+  --color-line-2: #f0f0ed;
+  --color-soft: #f0f0ed;
+  --color-canvas: #f7f7f5;
   --color-surface: #ffffff;
-  --color-brand: #244d3e;
-  --color-brand-ink: #1a3a2e;
-  --color-brand-soft: #e6ece8;
+  --color-brand: #1f5a46;
+  --color-brand-ink: #174535;
+  --color-brand-soft: #ddebe4;
   --color-match: #e86a4a;
   --color-match-soft: #fbe9e3;
-  --color-ok: #2f6b4f;
-  --color-ok-soft: #e6efe9;
+  --color-ok: #1f5a46;
+  --color-ok-soft: #ddebe4;
   --color-warn: #8a5a12;
-  --color-warn-soft: #f5ecdc;
+  --color-warn-soft: #f6eedf;
   --color-danger: #a8402c;
-  --color-danger-soft: #f6e4df;
+  --color-danger-soft: #f7e6e1;
 
-  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Zen Kaku Gothic New", "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif;
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif;
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-3xl: 16px;
-  --shadow-card: 0 1px 2px rgb(21 21 21 / 0.04);
-  --shadow-pop: 0 12px 32px -12px rgb(21 21 21 / 0.18), 0 2px 6px rgb(21 21 21 / 0.05);
+  /* Cards 20px, buttons 16px, small controls 12px. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --shadow-card: 0 1px 2px rgb(17 17 17 / 0.04), 0 1px 1px rgb(17 17 17 / 0.02);
+  --shadow-pop: 0 16px 40px -16px rgb(17 17 17 / 0.16), 0 2px 6px rgb(17 17 17 / 0.04);
 }
 
 html {
@@ -81,9 +82,18 @@ button {
 }
 
 /* Japanese headings break only at <wbr> / punctuation, never mid-word. */
+/* Japanese line breaks at phrase boundaries (Chrome 119+); elsewhere fall back to normal breaking. */
 .jp {
-  word-break: keep-all;
   overflow-wrap: anywhere;
+}
+@supports (word-break: auto-phrase) {
+  body,
+  .jp {
+    word-break: auto-phrase;
+  }
+}
+body {
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -112,7 +122,7 @@ h3 {
 @keyframes match-in {
   0% {
     opacity: 0;
-    transform: scale(0.96);
+    transform: scale(0.9);
   }
   100% {
     opacity: 1;
@@ -120,7 +130,35 @@ h3 {
   }
 }
 .animate-match {
-  animation: match-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: match-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-match-late {
+  animation: match-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+}
+
+/* Page transition: a short fade on every navigation (see app/template.tsx).
+   Opacity only — a transform here would turn fixed tab bars and the chat screen into page-relative boxes. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+.page-in {
+  animation: page-in 0.2s ease-out backwards;
+}
+
+@keyframes zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-zoom {
+  animation: zoom-in 0.18s ease-out both;
 }
 
 .press {
@@ -132,7 +170,10 @@ h3 {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
-  .animate-match {
+  .animate-match,
+  .animate-match-late,
+  .animate-zoom,
+  .page-in {
     animation: none;
   }
   html {

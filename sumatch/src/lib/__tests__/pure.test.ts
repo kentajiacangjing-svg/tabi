@@ -18,7 +18,7 @@ describe("detectContactInfo", () => {
     expect(detectContactInfo(text)).toContain(flag);
   });
   it.each([
-    "外壁の見積もりは118万円です",
+    "外壁の見積は118万円です",
     "土曜日の10:00に伺います",
     "オンラインで打ち合わせも可能です",
     "2026年10月16日に着工予定です",

@@ -28,7 +28,7 @@ const TABS = [
   ["companies", "企業"],
   ["projects", "相談"],
   ["matches", "マッチ"],
-  ["quotes", "見積もり"],
+  ["quotes", "見積"],
   ["contracts", "契約"],
   ["analytics", "分析"],
 ] as const;
@@ -108,7 +108,7 @@ function OverviewTab() {
     ["企業", k.companies, `審査待ち ${k.pendingCompanies}社・目標10社`, "companies"],
     ["相談", k.projectsTotal, "", "projects"],
     ["マッチ", k.matchesTotal, "", "matches"],
-    ["見積もり", k.quotesTotal, "", "quotes"],
+    ["見積", k.quotesTotal, "", "quotes"],
     ["契約", k.contractsTotal, k.avgContract ? `平均 ${man(k.avgContract)}` : "", "contracts"],
   ];
   const alerts = [
@@ -155,7 +155,7 @@ function AnalyticsTab() {
     ["相談完了", k.completes],
     ["会社閲覧", k.companyViews],
     ["マッチ", k.matches],
-    ["見積もり", k.quotes],
+    ["見積", k.quotes],
     ["契約", k.contracts],
   ] as const;
   const max = Math.max(1, funnel[0][1]);

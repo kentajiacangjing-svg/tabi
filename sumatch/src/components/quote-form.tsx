@@ -160,7 +160,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
           <div className="text-lg font-semibold">{yen(total)}</div>
         </div>
         <Button size="lg" disabled={pending || total <= 0}>
-          {pending ? "提出中…" : revision ? "改訂版を提出" : "見積もりを提出"}
+          {pending ? "提出中…" : revision ? "改訂版を提出" : "見積を提出"}
         </Button>
       </div>
     </form>

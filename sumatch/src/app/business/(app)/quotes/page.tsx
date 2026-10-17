@@ -5,7 +5,7 @@ import { dateShort, man } from "@/lib/format";
 import { Badge, ButtonLink, EmptyState, PageHeader, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 
-export const metadata = { title: "見積もり" };
+export const metadata = { title: "見積" };
 export const dynamic = "force-dynamic";
 
 const STATUS = { submitted: ["提出済み", "brand"], superseded: ["旧版", "neutral"], accepted: ["採用", "ok"], declined: ["不採用", "neutral"] } as const;
@@ -27,22 +27,22 @@ export default async function BusinessQuotes({ searchParams }: { searchParams: P
   );
   return (
     <div className="mx-auto max-w-[760px]">
-      <PageHeader title="見積もり" description="提出した見積もりは、そのままお客様の比較画面に並びます。" />
+      <PageHeader title="見積" description="提出した見積は、そのままお客様の比較画面に並びます。" />
       {awaiting.length > 0 && !match && (
         <div className="mb-14">
-          <h2 className="text-[15px] text-muted">まだ見積もりを出していない相談</h2>
+          <h2 className="text-[15px] text-muted">まだ見積を出していない相談</h2>
           <ul className="mt-2 divide-y divide-line border-y border-line">
             {awaiting.map((a) => (
               <li key={a.id} className="flex min-h-16 items-center justify-between gap-3 py-3">
                 <span className="min-w-0 truncate text-[16px]">{a.customer}様・{a.city}・{a.title}</span>
-                <ButtonLink href={`/business/quotes/new?match=${a.id}`} size="sm">見積もりを作る</ButtonLink>
+                <ButtonLink href={`/business/quotes/new?match=${a.id}`} size="sm">見積を作る</ButtonLink>
               </li>
             ))}
           </ul>
         </div>
       )}
       {quotes.length === 0 ? (
-        <EmptyState title="提出した見積もりはまだありません" />
+        <EmptyState title="提出した見積はまだありません" />
       ) : (
         <div className="divide-y divide-line border-y border-line">
           {quotes.map((q) => (

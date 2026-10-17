@@ -23,7 +23,7 @@ export function SavedActions({ matchId, canConsult }: { matchId: string; canCons
           })
         }
       >
-        相談する
+        相談したい
       </Button>
       <button
         type="button"
@@ -58,7 +58,7 @@ export function ConsultButton({ matchId, disabledReason }: { matchId: string; di
           })
         }
       >
-        相談する
+        相談したい
       </Button>
       {(msg || disabledReason) && <p className="mt-2 text-center text-[14px] text-muted">{msg ?? disabledReason}</p>}
     </div>

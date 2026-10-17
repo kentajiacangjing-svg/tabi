@@ -23,12 +23,12 @@ function templateDraft(ctx: DraftContext) {
   const last = [...ctx.messages].reverse().find((m) => m.sender_side !== ctx.side && m.sender_side !== "system");
   if (ctx.side === "company") {
     if (!last) return `${ctx.customerName}様\n\nはじめまして、${ctx.companyName}です。${ctx.categoryName}のご相談ありがとうございます。お写真とご要望を拝見しました。現地調査のご希望日時を2〜3候補いただけますでしょうか。`;
-    if (/見積|金額|費用/.test(last.body)) return `${ctx.customerName}様\n\nご質問ありがとうございます。お見積もりの内容について、項目ごとにご説明いたします。追加費用が発生する可能性がある箇所は事前にお知らせしますので、ご不明点があればこちらでお気軽にお尋ねください。`;
+    if (/見積|金額|費用/.test(last.body)) return `${ctx.customerName}様\n\nご質問ありがとうございます。お見積の内容について、項目ごとにご説明いたします。追加費用が発生する可能性がある箇所は事前にお知らせしますので、ご不明点があればこちらでお気軽にお尋ねください。`;
     if (/日|曜|時/.test(last.body)) return `${ctx.customerName}様\n\nご連絡ありがとうございます。ご提示いただいた日時で調整いたします。確定しましたらこちらのチャットでお知らせします。`;
     return `${ctx.customerName}様\n\nご連絡ありがとうございます。内容を確認のうえ、改めてご回答いたします。引き続きよろしくお願いいたします。`;
   }
   if (!last) return `はじめまして。${ctx.categoryName}の件でご相談させてください。よろしくお願いします。`;
-  if (/見積/.test(last.body)) return `お見積もりありがとうございます。内容を確認しました。追加費用が発生する可能性がある項目があれば教えてください。`;
+  if (/見積/.test(last.body)) return `お見積ありがとうございます。内容を確認しました。追加費用が発生する可能性がある項目があれば教えてください。`;
   if (/調査|伺|日程|候補/.test(last.body)) return `ありがとうございます。候補日ですが、今週末の午前中か、平日の夕方以降でお願いできますでしょうか。`;
   return `ありがとうございます。確認しました。引き続きよろしくお願いします。`;
 }

@@ -31,7 +31,7 @@ export function AccountForm({ name, notifyEmail, notifyBrowser }: { name: string
         <legend className="mb-1.5 text-[13px] font-semibold text-ink-2">通知</legend>
         <label className="flex items-center gap-2.5 text-sm">
           <input type="checkbox" name="notify_email" defaultChecked={notifyEmail} className="size-4 accent-[var(--color-brand)]" />
-          メールで通知を受け取る（新着の見積もり・マッチ成立など）
+          メールで通知を受け取る（新着の見積・マッチ成立など）
         </label>
         <label className="flex items-center gap-2.5 text-sm">
           <input type="checkbox" name="notify_browser" defaultChecked={notifyBrowser} className="size-4 accent-[var(--color-brand)]" />

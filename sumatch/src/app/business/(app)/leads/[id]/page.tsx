@@ -53,7 +53,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       <div className="mt-8">
         <Row label="予算">{BUDGETS.find((b) => b.min === project.budget_min && b.max === project.budget_max)?.label ?? manRange(project.budget_min, project.budget_max)}</Row>
         <Row label="希望時期">{TIMINGS.find((t) => t.value === project.desired_timing)?.label ?? "—"}</Row>
-        <Row label="お住まい">{`${project.house_type}${project.building_age != null ? `・築${project.building_age}年` : ""}`}</Row>
+        {project.house_type && <Row label="お住まい">{`${project.house_type}${project.building_age != null ? `・築${project.building_age}年` : ""}`}</Row>}
         {project.concerns && <Row label="気になること">{project.concerns}</Row>}
         <Row label="状況">{PROJECT_STATUS[project.status].label}</Row>
       </div>

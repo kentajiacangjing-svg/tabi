@@ -1,4 +1,4 @@
-// 見積もり比較コメント。MVPではルールベース。
+// 見積比較コメント。MVPではルールベース。
 // 将来 LLM に置き換える場合も、この関数のシグネチャ（入力: 見積り配列 → 出力: 会社別コメント）を保つ。
 
 export interface CompareQuote {
@@ -31,7 +31,7 @@ export function compareQuotes(quotes: CompareQuote[]): CompareComment[] {
 
   for (const q of quotes) {
     if (q.total === minTotal && minTotal !== maxTotal) {
-      out.push({ companyId: q.companyId, tone: "good", text: `${q.companyName}は最も金額が低い見積もりです。` });
+      out.push({ companyId: q.companyId, tone: "good", text: `${q.companyName}は最も金額が低い見積です。` });
       if (q.total < avg * 0.85) {
         out.push({
           companyId: q.companyId,

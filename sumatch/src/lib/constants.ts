@@ -24,7 +24,7 @@ export const CONTACT_TIMES = ["平日 日中", "平日 夕方以降", "土日祝
 
 export const PROJECT_STATUS: Record<ProjectStatus, { label: string; step: number }> = {
   consulting: { label: "相談中", step: 0 },
-  quoting: { label: "見積もり中", step: 1 },
+  quoting: { label: "見積中", step: 1 },
   comparing: { label: "比較中", step: 2 },
   contracted: { label: "契約", step: 3 },
   in_progress: { label: "工事中", step: 4 },
@@ -60,14 +60,14 @@ export const REPORT_REASONS = [
 export const CHAT_TEMPLATES = {
   company: [
     "お問い合わせありがとうございます。担当の{name}です。現地調査のご希望日時を2〜3候補いただけますでしょうか。",
-    "お写真ありがとうございます。拝見した限りでは、{category}の一般的な工事で対応可能かと思います。正式なお見積もりは現地確認後にSUMATCH上でお送りします。",
-    "お見積もりをSUMATCH上で提出しました。ご不明点があればこちらのチャットでお気軽にご質問ください。",
+    "お写真ありがとうございます。拝見した限りでは、{category}の一般的な工事で対応可能かと思います。正式なお見積は現地確認後にSUMATCH上でお送りします。",
+    "お見積をSUMATCH上で提出しました。ご不明点があればこちらのチャットでお気軽にご質問ください。",
     "現地調査の日程が確定しました。当日はよろしくお願いいたします。",
   ],
   customer: [
     "はじめまして。よろしくお願いします。",
     "現地調査をお願いしたいです。候補日をいくつか教えてください。",
-    "お見積もりの内訳について、もう少し詳しく教えてください。",
+    "お見積の内訳について、もう少し詳しく教えてください。",
     "追加費用が発生する可能性はありますか？",
   ],
 } as const;

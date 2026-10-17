@@ -229,7 +229,7 @@ export function seed() {
 
     /* ---------- reviews (historical, posted after SUMATCH-managed jobs) ---------- */
     const reviewPool: [number, string, string, string][] = [
-      [5, "説明が丁寧で安心できました", "見積もりの内訳を一つずつ説明してくれて、追加費用が出る可能性も最初に教えてもらえました。", "藤沢市 40代"],
+      [5, "説明が丁寧で安心できました", "見積の内訳を一つずつ説明してくれて、追加費用が出る可能性も最初に教えてもらえました。", "藤沢市 40代"],
       [5, "職人さんの対応が気持ちよかった", "毎日の作業報告がSUMATCHのチャットに届くので、仕事中でも進み具合が分かりました。", "茅ヶ崎市 50代"],
       [4, "仕上がりに満足", "工期が1日延びましたが、事前に連絡があり問題ありませんでした。", "平塚市 60代"],
       [5, "比較して選んでよかった", "3社比較して、保証内容と説明の分かりやすさで決めました。", "藤沢市 30代"],
@@ -308,7 +308,7 @@ export function seed() {
       return id;
     };
 
-    // 1) 山田 太郎 — 比較中（3社から見積もり）
+    // 1) 山田 太郎 — 比較中（3社から見積）
     const pY = mkProject({
       customer: yamada, slug: "exterior-paint", city: "藤沢市", postal: "251-0047", house: "戸建て", age: 18, title: "外壁塗装の相談",
       concerns: ["色あせ", "チョーキング（白い粉）", "コケ・カビ"], details: "南面の色あせと、北面にコケが目立ってきました。前回の塗装から15年ほど経っています。できれば屋根も一緒に見てほしいです。",
@@ -324,7 +324,7 @@ export function seed() {
     setMatched(ySP, ago(7, 20), { customer_last_read_at: ago(0, 1), company_last_read_at: ago(0, 2) });
     setMatched(yFR, ago(7, 18), { customer_last_read_at: ago(1), company_last_read_at: ago(1) });
     setMatched(yHW, ago(7, 10), { customer_last_read_at: ago(2), company_last_read_at: ago(0, 5) });
-    const sys = "マッチが成立しました。ここから先のご相談・現地調査の日程調整・見積もりのやり取りは、すべてSUMATCH内で行えます。";
+    const sys = "マッチが成立しました。ここから先のご相談・現地調査の日程調整・見積のやり取りは、すべてSUMATCH内で行えます。";
     // 湘南ペイント
     msg(ySP.id, "system", null, sys, ago(7, 20));
     msg(ySP.id, "company", ownerId["shonan-paint"], "はじめまして、湘南ペイントの佐藤です。お写真ありがとうございます。北面のコケは高圧洗浄と防カビ下塗りでしっかり対応できます。現地調査のご希望日を2〜3候補いただけますか？", ago(7, 19));
@@ -335,7 +335,7 @@ export function seed() {
       title: "外壁塗装工事（シリコン塗料）",
       items: [["足場架設・解体", 180, "㎡", 900], ["高圧洗浄・バイオ洗浄", 150, "㎡", 300], ["下地補修（ひび割れ）", 1, "式", 45000], ["シーリング打ち替え", 120, "m", 1100], ["外壁塗装（下塗り+中塗り+上塗り）シリコン", 150, "㎡", 3200], ["付帯部塗装（雨樋・破風・軒天）", 1, "式", 98000], ["養生・清掃", 1, "式", 40000]],
       overhead: 80000, warranty: "外壁10年保証（自社）/ 1・3・5年目点検", years: 10, duration: "約14日（天候により前後）", days: 14, materials: "日本ペイント パーフェクトトップ（ラジカル制御形シリコン）",
-      payment: "着工時30%・完工時70%（銀行振込）", extra: "下地の腐食が見つかった場合のみ、事前にご相談のうえ別途お見積もり", notes: "屋根は大きな劣化がないため今回は含めていません。ご希望があれば屋根塗装（約38万円）も追加できます。",
+      payment: "着工時30%・完工時70%（銀行振込）", extra: "下地の腐食が見つかった場合のみ、事前にご相談のうえ別途お見積", notes: "屋根は大きな劣化がないため今回は含めていません。ご希望があれば屋根塗装（約38万円）も追加できます。",
     });
     msg(ySP.id, "customer", yamada, "ありがとうございます。屋根は今回は見送ろうと思います。保証は塗膜のはがれも対象になりますか？", ago(0, 3));
     // 藤沢リフォーム
@@ -426,8 +426,8 @@ export function seed() {
     /* ---------- notifications ---------- */
     const n = (uid: string, kind: string, title: string, body: string, link: string, at: string, read = false) =>
       insert("notifications", { id: newId("ntf"), user_id: uid, kind, title, body, link, created_at: at, read_at: read ? at : null });
-    n(yamada, "quote", "見積もりが届きました", "HOME WORKSから見積もり（税込145万円）が届きました。", `/quotes?project=${pY.id}`, ago(1, 5));
-    n(yamada, "quote", "見積もりが届きました", "藤沢リフォームから見積もり（税込132万円）が届きました。", `/quotes?project=${pY.id}`, ago(2, 4), true);
+    n(yamada, "quote", "見積が届きました", "HOME WORKSから見積（税込145万円）が届きました。", `/quotes?project=${pY.id}`, ago(1, 5));
+    n(yamada, "quote", "見積が届きました", "藤沢リフォームから見積（税込132万円）が届きました。", `/quotes?project=${pY.id}`, ago(2, 4), true);
     n(ownerId["shonan-paint"], "new_lead", "お客様があなたの会社と話したいと希望しています", "藤沢市・外壁＋屋根の塗り替え", `/business/leads/${pW.id}`, ago(0, 2));
     n(ownerId["shonan-paint"], "message", "お客様からメッセージがあります", "ありがとうございます。屋根は今回は見送ろうと…", `/business/messages/${ySP.id}`, ago(0, 3));
 

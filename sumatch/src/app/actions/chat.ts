@@ -50,7 +50,7 @@ export async function draftReplyAction(matchId: string) {
       customerName: customer?.name.split(" ")[0] ?? "お客",
       categoryName: cat?.name ?? "",
       city: ctx.project.city,
-      projectSummary: `${ctx.project.city}・${ctx.project.house_type}・${cat?.name ?? ""}。${ctx.project.concerns} ${ctx.project.details}`.slice(0, 600),
+      projectSummary: `${[ctx.project.city, ctx.project.house_type, cat?.name].filter(Boolean).join("・")}。${ctx.project.concerns} ${ctx.project.details}`.slice(0, 600),
       messages: messagesFor(ctx.match.id),
     });
     return draft;
@@ -75,7 +75,7 @@ const num = (msg: string) => z.coerce.number({ message: msg }).finite();
 
 const quoteSchema = z.object({
   match_id: z.string().min(1),
-  title: z.string().min(1, "見積もりの件名を入力してください。").max(120),
+  title: z.string().min(1, "見積の件名を入力してください。").max(120),
   items: z
     .array(
       z.object({

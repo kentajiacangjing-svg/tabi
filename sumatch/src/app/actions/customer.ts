@@ -35,7 +35,8 @@ const diagnosisSchema = z.object({
     .default(""),
   prefecture: z.string().min(1, "都道府県を選んでください。"),
   city: z.string().min(1, "市区町村を選んでください。"),
-  house_type: z.enum(HOUSE_TYPES, { message: "住宅タイプを選んでください。" }),
+  // Optional since the flow asks only what / budget / when / where; companies can ask in chat.
+  house_type: z.union([z.enum(HOUSE_TYPES), z.literal("")]).default(""),
   building_age: z.coerce.number().int().min(0).max(150).optional().or(z.literal("").transform(() => undefined)),
   concerns: z.string().max(400).default(""),
   details: z.string().max(2000).default(""),
@@ -181,7 +182,7 @@ export async function decideCompanyAction(fd: FormData) {
     const ctx = matchForUser(input.match_id, user);
     if (!ctx || ctx.side !== "customer") throw new ActionError("この操作は許可されていません。");
     if (input.quote_id && !get("SELECT 1 FROM quotes WHERE id = ? AND match_id = ?", input.quote_id, ctx.match.id))
-      throw new ActionError("見積もりが見つかりません。");
+      throw new ActionError("見積が見つかりません。");
     const [file] = formFiles(fd, "contract_file");
     const saved = file ? await saveUpload(file, { ownerUserId: user.id, scope: "match", scopeId: ctx.match.id, allow: ["pdf", "image"] }) : null;
     decideCompany(ctx, {

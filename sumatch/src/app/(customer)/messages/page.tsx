@@ -16,7 +16,7 @@ export default async function MessagesPage() {
         <ConversationList conversations={conversations} side="customer" />
       ) : (
         <EmptyState title="まだメッセージはありません" action={<ButtonLink href="/matches">会社を見る</ButtonLink>}>
-          「相談する」を押した会社が対応したいと答えると、ここで話せるようになります。
+          「相談したい」を押した会社が対応したいと答えると、ここで話せるようになります。
         </EmptyState>
       )}
     </div>

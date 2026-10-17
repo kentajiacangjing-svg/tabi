@@ -14,13 +14,13 @@ const base =
 const variants: Record<Variant, string> = {
   primary: "bg-brand text-white hover:bg-brand-ink",
   dark: "bg-ink text-white hover:bg-ink-2",
-  secondary: "bg-surface text-ink border border-line hover:border-ink/30",
+  secondary: "bg-surface text-ink border border-line shadow-[var(--shadow-card)] hover:border-ink/25",
   ghost: "text-ink-2 hover:bg-soft",
   danger: "bg-surface text-danger border border-danger/30 hover:bg-danger-soft",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-10 px-4 text-[14px] rounded-[10px]",
-  md: "h-12 px-5 text-[15px] rounded-[10px]",
+  sm: "h-10 px-4 text-[14px] rounded-xl",
+  md: "h-12 px-5 text-[15px] rounded-xl",
   lg: "h-14 px-7 text-[16px] rounded-xl",
 };
 
@@ -48,7 +48,7 @@ export function ButtonLink({
 
 /** A plain white surface. Use sparingly — whitespace and dividers come first. */
 export function Card({ className, ...rest }: ComponentProps<"div">) {
-  return <div className={cx("rounded-xl border border-line bg-surface", className)} {...rest} />;
+  return <div className={cx("rounded-2xl border border-line bg-surface shadow-[var(--shadow-card)]", className)} {...rest} />;
 }
 
 type Tone = "neutral" | "brand" | "ok" | "warn" | "danger" | "dark" | "match";
@@ -136,7 +136,7 @@ export function Stat({ label, value, sub, tone }: { label: string; value: ReactN
 }
 
 export const inputClass =
-  "block w-full rounded-[10px] border border-line bg-surface px-4 py-3 text-[16px] text-ink placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:bg-soft";
+  "block w-full rounded-xl border border-line bg-surface px-4 py-3 text-[16px] text-ink placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:bg-soft";
 
 /** `group` renders a div[role=group] instead of <label> — use it when the field contains buttons (chips). */
 export function Field({ label, hint, error, children, required, group }: { label: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; required?: boolean; group?: boolean }) {
@@ -180,7 +180,7 @@ export function Notice({ tone = "brand", icon, children, className }: { tone?: "
     neutral: "bg-soft text-ink-2",
   }[tone];
   return (
-    <div className={cx("flex gap-2.5 rounded-[10px] px-4 py-3 text-[14px] leading-relaxed", t, className)} role={tone === "danger" ? "alert" : undefined}>
+    <div className={cx("flex gap-2.5 rounded-xl px-4 py-3 text-[14px] leading-relaxed", t, className)} role={tone === "danger" ? "alert" : undefined}>
       {icon && <Icon name={icon} size={18} className="mt-0.5 shrink-0" />}
       <div className="min-w-0">{children}</div>
     </div>

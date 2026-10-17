@@ -15,7 +15,7 @@ export interface NavItem {
 
 function isActive(pathname: string, item: NavItem) {
   const prefixes = item.match ?? [item.href];
-  return prefixes.some((p) => (p === "/" ? pathname === "/" || pathname === "/diagnosis" : pathname === p || pathname.startsWith(p + "/")));
+  return prefixes.some((p) => (p === "/" ? pathname === "/" || pathname === "/diagnosis" : pathname === p || pathname.startsWith(p + "/") || (p === "/matches" && pathname.startsWith("/match/"))));
 }
 
 export function DesktopNav({ items }: { items: NavItem[] }) {
@@ -55,7 +55,7 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={cx("relative flex min-h-[60px] flex-col items-center justify-center gap-1 text-[11px]", active ? "text-ink" : "text-faint")}
+              className={cx("press relative flex min-h-[60px] flex-col items-center justify-center gap-1 text-[11px]", active ? "text-brand" : "text-faint")}
             >
               <span className="relative">
                 <Icon name={item.icon} size={22} strokeWidth={active ? 1.9 : 1.5} />

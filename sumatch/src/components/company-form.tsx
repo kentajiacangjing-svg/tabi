@@ -159,7 +159,7 @@ export function CompanyForm({
             {categories.map((c) => {
               const on = c.id in cats;
               return (
-                <div key={c.id} className={cx("flex items-center gap-3 rounded-[10px] border px-4 py-3", on ? "border-brand bg-brand-soft/40" : "border-line")}>
+                <div key={c.id} className={cx("flex items-center gap-3 rounded-xl border px-4 py-3", on ? "border-brand bg-brand-soft/40" : "border-line")}>
                   <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-sm font-medium">
                     <input
                       type="checkbox"
@@ -205,7 +205,7 @@ export function CompanyForm({
                   type="button"
                   key={a.id}
                   onClick={() => setAreaIds((x) => (on ? x.filter((y) => y !== a.id) : [...x, a.id]))}
-                  className={cx("min-h-11 rounded-[10px] border px-4 text-[15px]", on ? "border-brand bg-brand text-white" : "border-line bg-surface hover:border-ink/20")}
+                  className={cx("min-h-11 rounded-xl border px-4 text-[15px]", on ? "border-brand bg-brand text-white" : "border-line bg-surface hover:border-ink/20")}
                 >
                   {a.name}
                   {a.sub && <span className={cx("ml-1 text-[11px]", on ? "text-white/60" : "text-faint")}>{a.sub}</span>}
@@ -292,7 +292,7 @@ export function CompanyForm({
           <label className="flex items-start gap-2.5 text-sm">
             <input type="checkbox" name="agree" className="mt-0.5 size-4 accent-[var(--color-brand)]" required />
             <span>
-              利用規約に同意します。お客様とのやり取り・見積もり・契約はSUMATCH内で行い、成約時は成功報酬の対象となることを理解しました。
+              利用規約に同意します。お客様とのやり取り・見積・契約はSUMATCH内で行い、成約時は成功報酬の対象となることを理解しました。
             </span>
           </label>
         </Section>

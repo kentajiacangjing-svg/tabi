@@ -45,13 +45,13 @@ export default async function ProjectsPage() {
                     ? { text: "会社の返事を待っています", href: `/projects/${p.id}` }
                     : { text: "会社を見る", href: `/matches?project=${p.id}` }
                 : p.status === "quoting" || p.status === "comparing"
-                  ? { text: `見積もりを比べる（${p.quote_count}件）`, href: `/quotes?project=${p.id}` }
+                  ? { text: `見積を比べる（${p.quote_count}件）`, href: `/quotes?project=${p.id}` }
                   : { text: "契約と工事の状況を見る", href: `/projects/${p.id}` };
             return (
               <li key={p.id} className="py-7">
                 <Link href={`/projects/${p.id}`} className="block">
                   <div className="text-[14px] text-muted">
-                    {p.city}・{p.house_type}
+                    {[p.city, p.house_type].filter(Boolean).join("・")}
                   </div>
                   <div className="mt-1 text-[22px] font-medium">{p.title}</div>
                 </Link>

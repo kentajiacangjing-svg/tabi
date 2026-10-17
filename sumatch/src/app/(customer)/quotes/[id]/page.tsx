@@ -10,7 +10,7 @@ import { Row } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import type { Quote } from "@/lib/types";
 
-export const metadata = { title: "見積もり" };
+export const metadata = { title: "見積" };
 export const dynamic = "force-dynamic";
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +27,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     <div className="mx-auto max-w-[680px]">
       <Link href={`/quotes?project=${project.id}`} className="-ml-1 mb-4 inline-flex min-h-11 items-center gap-1 text-[15px] text-muted hover:text-ink">
         <Icon name="chevron-left" size={18} />
-        見積もりを比べる
+        見積を比べる
       </Link>
       <p className="text-[15px] text-muted">{q.company.name}</p>
       <h1 className="mt-1 text-[24px] font-medium">{q.title}</h1>
@@ -82,7 +82,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
       <div className="mt-14">
         {contract ? (
-          <p className="text-[15px] text-muted">{contract.quote_id === q.id ? "この見積もりで依頼先を決めました。" : "この相談は別の会社に決まりました。"}</p>
+          <p className="text-[15px] text-muted">{contract.quote_id === q.id ? "この見積で依頼先を決めました。" : "この相談は別の会社に決まりました。"}</p>
         ) : (
           <>
             <DecideButton matchId={q.match_id} quoteId={q.id} companyName={q.company.name} amount={q.total} />
