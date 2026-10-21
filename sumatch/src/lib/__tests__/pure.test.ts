@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectContactInfo } from "../contact-detect";
+import { blockedFlags, detectContactInfo } from "../contact-detect";
 import { scoreCompany } from "../matching";
 import { estimateRange } from "../estimate";
 import { compareQuotes } from "../quote-compare";
@@ -9,23 +9,54 @@ describe("detectContactInfo", () => {
     ["090-1234-5678に電話ください", "phone"],
     ["０９０ー１２３４ー５６７８", "phone"],
     ["09012345678", "phone"],
+    ["0 9 0 1 2 3 4 5 6 7 8 に", "phone"],
+    ["〇九〇一二三四五六七八へ", "phone"],
+    ["+81 90-1234-5678", "phone"],
+    ["0120-123-456 までどうぞ", "phone"],
     ["メールは taro@example.com です", "email"],
+    ["taro アット example ドット com", "email"],
+    ["ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ", "email"],
     ["LINEで連絡しましょう", "line"],
+    ["line交換しませんか", "line"],
     ["ラインID教えます", "line"],
+    ["らいんで連絡ください", "line"],
+    ["https://line.me/ti/p/abcdef", "contact_url"],
+    ["lin.ee/abc で追加してください", "contact_url"],
     ["QRコード送ります", "qr"],
     ["インスタのDMでどうぞ", "sns"],
+    ["@shonan_paint をフォローしてください", "sns"],
+    ["https://www.instagram.com/someone", "contact_url"],
+    ["wa.me/819012345678", "contact_url"],
+    ["カタログはこちら https://www.example-maker.co.jp/products/123", "url"],
   ])("flags %s", (text, flag) => {
     expect(detectContactInfo(text)).toContain(flag);
   });
   it.each([
     "外壁の見積は118万円です",
+    "見積総額は¥1,100,000（税込）です",
+    "1,180,000円から値引きして1,100,000円にできます",
     "土曜日の10:00に伺います",
+    "09:30〜17:00の間で作業します",
     "オンラインで打ち合わせも可能です",
     "2026年10月16日に着工予定です",
+    "2026/10/21 と 2026-11-04 の2日間です",
     "郵便番号は251-0047です",
     "ガイドラインに沿って施工します",
+    "屋根のラインがきれいに揃いました",
+    "最新のラインナップから選べます",
+    "インスタで施工事例を見て連絡しました",
+    "寸法は W1820×D910×H2400mm です",
+    "ひび割れ幅は0.3mm程度でした",
+    "便器は TOTO CES9898 を予定しています",
+    "保証は10年、工期は約14日です",
+    "第2期は 3-5 番の部屋を施工します",
   ])("does not flag %s", (text) => {
     expect(detectContactInfo(text)).toEqual([]);
+  });
+  it("blocks only contact channels; plain links and QR mentions are warnings", () => {
+    expect(blockedFlags(detectContactInfo("詳しくは https://www.example-maker.co.jp/catalog を見てください"))).toEqual([]);
+    expect(blockedFlags(detectContactInfo("QRコード決済も使えます"))).toEqual([]);
+    expect(blockedFlags(detectContactInfo("090-1234-5678"))).toEqual(["phone"]);
   });
 });
 

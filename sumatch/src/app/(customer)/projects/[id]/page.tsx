@@ -5,10 +5,11 @@ import { projectForCustomer } from "@/lib/access";
 import { get } from "@/lib/db";
 import { candidatesForProject, contractForProject, latestQuotesForProject, projectImages } from "@/lib/queries";
 import { BUDGETS, TIMINGS } from "@/lib/constants";
-import { dateJa, manRange, yen } from "@/lib/format";
+import { dateJa, manRange } from "@/lib/format";
 import { fileUrl } from "@/lib/urls";
 import { StatusStepper } from "@/components/status-stepper";
-import { AdvanceContractButton, CancelProjectButton, ReviewForm } from "@/components/project-actions";
+import { CancelProjectButton, ReviewForm } from "@/components/project-actions";
+import { ContractPanel } from "@/components/contract-panel";
 import { ButtonLink, Notice, Row } from "@/components/ui";
 import type { Category, Company, Review } from "@/lib/types";
 
@@ -50,39 +51,17 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
       <div className="mt-4">
         <StatusStepper status={project.status} />
       </div>
-      {decided && <Notice tone="ok" className="mt-6">依頼先を決めました。契約の内容はこのページにまとまっています。</Notice>}
+      {decided && <Notice tone="ok" className="mt-6">依頼先を決めました。まだ契約は成立していません。会社から契約条件が届いたら、このページで確認・同意できます。</Notice>}
       {next && (
         <ButtonLink href={next.href} size="lg" className="mt-8 w-full sm:w-auto">
           {next.label}
         </ButtonLink>
       )}
 
-      {contract && contractCompany && (
-        <section className="mt-14">
-          <h2 className="text-[20px] font-medium">契約</h2>
-          <div className="mt-3">
-            <Row label="会社">
-              <Link href={`/messages/${contract.match_id}`} className="underline underline-offset-4">
-                {contractCompany.name}
-              </Link>
-            </Row>
-            <Row label="契約予定金額">{yen(contract.amount)}</Row>
-            <Row label="契約日">{dateJa(contract.contract_date)}</Row>
-            <Row label="工事予定日">{dateJa(contract.start_date)}</Row>
-            {contract.end_date && <Row label="完了日">{dateJa(contract.end_date)}</Row>}
-            {contract.contract_file_id && (
-              <Row label="契約書">
-                <a href={fileUrl(contract.contract_file_id)!} target="_blank" rel="noopener" className="underline underline-offset-4">
-                  開く
-                </a>
-              </Row>
-            )}
-          </div>
-          <div className="mt-6">
-            {contract.status === "contracted" && <AdvanceContractButton contractId={contract.id} to="in_progress" label="工事が始まった" />}
-            {contract.status === "in_progress" && <AdvanceContractButton contractId={contract.id} to="completed" label="工事が終わった" variant="primary" />}
-          </div>
-        </section>
+      {contract && contract.status !== "cancelled" && (
+        <div className="mt-14">
+          <ContractPanel contract={contract} viewer="customer" />
+        </div>
       )}
 
       {contract?.status === "completed" && contractCompany && (

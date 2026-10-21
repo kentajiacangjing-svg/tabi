@@ -28,7 +28,8 @@ export default async function BusinessHome() {
     `SELECT COUNT(*) n FROM matches m JOIN projects p ON p.id = m.project_id
       WHERE m.company_id = ? AND m.status = 'matched' AND p.status IN ('consulting','quoting','comparing') AND NOT EXISTS (SELECT 1 FROM quotes q WHERE q.match_id = m.id)`,
   );
-  const contracts = n("SELECT COUNT(*) n FROM contracts WHERE company_id = ? AND status IN ('contracted','in_progress')");
+  // Chosen, but the terms still need the company's input or both agreements.
+  const termsTodo = n("SELECT COUNT(*) n FROM contracts WHERE company_id = ? AND status = 'contracted' AND stage != 'agreed'");
   const limit = matchLimitFor(c);
   const blocked = monthlyMatchUsage(c.id) >= limit ? `今月のマッチ上限（${limit}件）に達しています。` : undefined;
 
@@ -36,7 +37,7 @@ export default async function BusinessHome() {
     { label: "新しい相談", value: fresh.length, href: "/business/leads", strong: fresh.length > 0 },
     { label: "返信待ち", value: awaitingReply, href: "/business/messages", strong: awaitingReply > 0 },
     { label: "見積作成", value: toQuote, href: "/business/quotes", strong: toQuote > 0 },
-    { label: "契約", value: contracts, href: "/business/active", strong: false },
+    { label: "契約条件", value: termsTodo, href: "/business/active", strong: termsTodo > 0 },
   ];
 
   const leads = fresh.map((l) => {

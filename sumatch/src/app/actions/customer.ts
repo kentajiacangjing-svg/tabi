@@ -168,31 +168,18 @@ export async function withdrawRequestAction(matchId: string) {
 
 const decideSchema = z.object({
   match_id: z.string().min(1),
-  quote_id: z.string().optional().default(""),
-  amount: z.coerce.number({ message: "契約予定金額を入力してください。" }).int().min(1, "契約予定金額を入力してください。").max(1_000_000_000),
-  contract_date: z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/).default(""),
-  start_date: z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/).default(""),
-  notes: z.string().max(1000).default(""),
+  quote_id: z.string().min(1, "見積を選んでください。"),
 });
 
+/** 依頼先決定. The amount, dates and terms are not taken from the request — see decideCompany / lib/contract.ts. */
 export async function decideCompanyAction(fd: FormData) {
   return handle(async () => {
     const user = await actionUser(["customer"]);
     const input = decideSchema.parse(formObject(fd));
     const ctx = matchForUser(input.match_id, user);
     if (!ctx || ctx.side !== "customer") throw new ActionError("この操作は許可されていません。");
-    if (input.quote_id && !get("SELECT 1 FROM quotes WHERE id = ? AND match_id = ?", input.quote_id, ctx.match.id))
-      throw new ActionError("見積が見つかりません。");
-    const [file] = formFiles(fd, "contract_file");
-    const saved = file ? await saveUpload(file, { ownerUserId: user.id, scope: "match", scopeId: ctx.match.id, allow: ["pdf", "image"] }) : null;
-    decideCompany(ctx, {
-      quoteId: input.quote_id || null,
-      amount: input.amount,
-      contractDate: input.contract_date || null,
-      startDate: input.start_date || null,
-      contractFileId: saved?.id ?? null,
-      notes: input.notes,
-    });
+    if (!get("SELECT 1 FROM quotes WHERE id = ? AND match_id = ?", input.quote_id, ctx.match.id)) throw new ActionError("見積が見つかりません。");
+    decideCompany(ctx, { quoteId: input.quote_id }, user.id);
     revalidatePath("/projects");
     return { projectId: ctx.project.id };
   });

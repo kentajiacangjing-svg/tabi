@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransitio
 import Link from "next/link";
 import { draftReplyAction, markReadAction, sendMessageAction } from "@/app/actions/chat";
 import { reportAction } from "@/app/actions/customer";
-import { CONTACT_FLAG_LABEL, CONTACT_WARNING, detectContactInfo, type ContactFlag } from "@/lib/contact-detect";
+import { CONTACT_BLOCK_MESSAGE, CONTACT_FLAG_LABEL, CONTACT_WARNING, blockedFlags, detectContactInfo, type ContactFlag } from "@/lib/contact-detect";
 import { REPORT_REASONS } from "@/lib/constants";
 import { timeHM } from "@/lib/format";
 import type { ChatMessage } from "@/lib/queries";
@@ -21,6 +21,8 @@ export interface ChatProps {
   quoteHref?: string;
   readOnly?: boolean;
   readOnlyReason?: string;
+  /** Before both sides agree the contract terms, contact details can't be sent (the server refuses them too). */
+  contactLocked?: boolean;
 }
 
 function dayLabel(iso: string) {
@@ -32,12 +34,13 @@ function dayLabel(iso: string) {
   return `${d.getMonth() + 1}月${d.getDate()}日（${"日月火水木金土"[d.getDay()]}）`;
 }
 
-export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason }: ChatProps) {
+export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason, contactLocked = true }: ChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [otherReadAt, setOtherReadAt] = useState(initialOtherReadAt);
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [warn, setWarn] = useState<ContactFlag[] | null>(null);
+  const [warn, setWarn] = useState<{ flags: ContactFlag[]; blocked: boolean } | null>(null);
+  const [reportReason, setReportReason] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [drafting, setDrafting] = useState(false);
@@ -99,9 +102,12 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
     setError(null);
     const body = text.trim();
     if (!body && !file) return;
-    if (!skipCheck && body) {
+    if (body) {
       const flags = detectContactInfo(body);
-      if (flags.length) return setWarn(flags);
+      const blocked = contactLocked ? blockedFlags(flags) : [];
+      // Contact details before agreement: no way to push it through — fix the text (it stays in the box).
+      if (blocked.length) return setWarn({ flags: blocked, blocked: true });
+      if (!skipCheck && flags.length) return setWarn({ flags, blocked: false });
     }
     setWarn(null);
     const fd = new FormData();
@@ -189,19 +195,35 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
       ) : (
         <div className="border-t border-line bg-canvas px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-3 sm:px-4">
           {warn && (
-            <div className="mb-3 rounded-xl bg-warn-soft p-4 text-[14px] text-warn" role="alert">
+            <div className={cx("mb-3 rounded-xl p-4 text-[14px]", warn.blocked ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn")} role="alert">
               <div className="flex gap-2 font-semibold">
                 <Icon name="alert" size={17} className="shrink-0" />
-                {warn.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}が含まれているようです
+                {warn.blocked ? "この内容は送信できません" : `${warn.flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}が含まれているようです`}
               </div>
-              <p className="mt-1 leading-relaxed text-ink-2">{CONTACT_WARNING}</p>
-              <div className="mt-3 flex gap-2">
+              <p className="mt-1 leading-relaxed text-ink-2">
+                {warn.blocked ? `${CONTACT_BLOCK_MESSAGE}（${warn.flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}）` : CONTACT_WARNING}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" type="button" onClick={() => setWarn(null)}>
                   修正する
                 </Button>
-                <Button size="sm" variant="ghost" type="button" onClick={() => doSend(true)}>
-                  このまま送信
-                </Button>
+                {warn.blocked ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => {
+                      setReportReason("連絡先の誤判定（送信できない）");
+                      setReporting(true);
+                    }}
+                  >
+                    誤判定を運営に知らせる
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" type="button" onClick={() => doSend(true)}>
+                    このまま送信
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -280,7 +302,16 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
           </div>
         </div>
       )}
-      {reporting && <ReportDialog matchId={matchId} onClose={() => setReporting(false)} />}
+      {reporting && (
+        <ReportDialog
+          matchId={matchId}
+          defaultReason={reportReason}
+          onClose={() => {
+            setReporting(false);
+            setReportReason(undefined);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -327,7 +358,7 @@ function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quo
   return <div className={cx(base, "whitespace-pre-wrap break-words px-4 py-2.5")}>{m.body}</div>;
 }
 
-function ReportDialog({ matchId, onClose }: { matchId: string; onClose: () => void }) {
+function ReportDialog({ matchId, onClose, defaultReason }: { matchId: string; onClose: () => void; defaultReason?: string }) {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -356,7 +387,7 @@ function ReportDialog({ matchId, onClose }: { matchId: string; onClose: () => vo
             <div className="font-semibold">運営に通報する</div>
             <input type="hidden" name="target_type" value="match" />
             <input type="hidden" name="target_id" value={matchId} />
-            <Select name="reason" defaultValue="">
+            <Select name="reason" defaultValue={defaultReason ?? ""}>
               <option value="" disabled>
                 理由を選んでください
               </option>

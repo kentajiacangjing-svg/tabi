@@ -9,6 +9,7 @@ import { CompanyAvatar, UserAvatar } from "./brand";
 import { Chat } from "./chat";
 import { Icon } from "./icons";
 import { cx } from "./ui";
+import { contactsUnlocked, contractForMatch } from "@/lib/contract";
 
 /** Conversation screen: the other party's name on top, the conversation, the composer. Nothing else. */
 export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext; viewerName: string; conversations: Conversation[] }) {
@@ -24,6 +25,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
   const title = side === "customer" ? ctx.company.name : side === "company" ? `${customer?.name ?? "お客"}様` : `${customer?.name}様 × ${ctx.company.name}`;
   const titleHref = side === "customer" ? `/company/${ctx.company.id}?project=${ctx.project.id}` : side === "company" ? `/business/leads/${ctx.project.id}` : undefined;
   const cover = get<{ src: string }>("SELECT COALESCE(image_url, '/api/files/' || file_id) AS src FROM company_works WHERE company_id = ? ORDER BY created_at, rowid LIMIT 1", ctx.company.id)?.src;
+  const contract = contractForMatch(ctx.match.id);
   const sub = side === "company" ? `${ctx.project.city}・${cat?.name ?? ""}` : `返信の目安 ${responseSpeed(ctx.company.avg_response_minutes)}`;
 
   return (
@@ -70,7 +72,12 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
               相談内容
             </Link>
           )}
-          {side === "company" && ["consulting", "quoting", "comparing"].includes(ctx.project.status) && (
+          {contract && side !== "admin" && (
+            <Link href={side === "company" ? `/business/contract/${contract.id}` : `/projects/${ctx.project.id}#contract`} className="flex min-h-11 items-center rounded-xl px-3 text-[14px] text-brand hover:bg-soft">
+              契約条件
+            </Link>
+          )}
+          {side === "company" && !contract && ["consulting", "quoting", "comparing"].includes(ctx.project.status) && (
             <Link href={`/business/quotes/new?match=${ctx.match.id}`} className="flex min-h-11 items-center rounded-xl px-3 text-[14px] text-brand hover:bg-soft">
               見積を作る
             </Link>
@@ -84,6 +91,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
           initialOtherReadAt={otherReadAt}
           templates={templates}
           quoteHref={quoteHref}
+          contactLocked={!contactsUnlocked(ctx.match.id)}
           readOnly={side === "admin" || ctx.match.status !== "matched"}
           readOnlyReason={side === "admin" ? "運営は閲覧のみです。" : "このチャットは終了しています。"}
         />

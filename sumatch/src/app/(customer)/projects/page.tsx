@@ -53,7 +53,7 @@ export default async function ProjectsPage() {
                     : { text: "会社を見る", href: `/matches?project=${p.id}` }
                 : p.status === "quoting" || p.status === "comparing"
                   ? { text: `見積を比べる（${p.quote_count}件）`, href: `/quotes?project=${p.id}` }
-                  : { text: "契約と工事の状況を見る", href: `/projects/${p.id}` };
+                  : { text: "契約条件と工事の状況を見る", href: `/projects/${p.id}` };
             const slug = get<{ slug: string }>("SELECT slug FROM categories WHERE id = ?", p.category_id)?.slug;
             return (
               <li key={p.id} className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)]">

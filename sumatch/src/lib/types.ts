@@ -211,6 +211,32 @@ export interface Contract {
   notes: string;
   created_at: string;
   updated_at: string;
+  /** selected = 依頼先決定 / terms = 契約条件の確認中 / agreed = 双方の合意確認済み */
+  stage: ContractStage;
+  terms_json: string;
+  terms_hash: string;
+  customer_agreed_at: string | null;
+  customer_agreed_by: string | null;
+  company_agreed_at: string | null;
+  company_agreed_by: string | null;
+  agreed_at: string | null;
+}
+
+export type ContractStage = "selected" | "terms" | "agreed";
+
+/** What both sides confirm before the work starts. Every field is required; amount comes from the quote. */
+export interface ContractTerms {
+  quote_id: string;
+  quote_version: number;
+  amount: number; // 税込
+  scope: string; // 工事範囲
+  start_date: string; // 工事開始予定日 YYYY-MM-DD
+  duration: string; // 工期
+  payment_terms: string; // 支払条件
+  materials: string; // 材料・仕様
+  extra_work: string; // 追加工事が必要になった時の対応
+  warranty: string; // 保証
+  cancellation: string; // キャンセル条件
 }
 
 export interface Review {

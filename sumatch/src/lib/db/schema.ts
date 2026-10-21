@@ -275,6 +275,35 @@ CREATE TABLE IF NOT EXISTS contracts (
   updated_at TEXT NOT NULL
 );
 
+-- Who agreed to what, when. Append-only; each row's hash covers the previous row's hash, so editing or
+-- deleting history breaks the chain (see verifyContractHistory).
+CREATE TABLE IF NOT EXISTS contract_events (
+  id TEXT PRIMARY KEY,
+  contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  seq INTEGER NOT NULL,
+  actor_side TEXT NOT NULL CHECK (actor_side IN ('customer','company','system')),
+  actor_user_id TEXT,
+  action TEXT NOT NULL,
+  terms_hash TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  prev_hash TEXT NOT NULL DEFAULT '',
+  hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (contract_id, seq)
+);
+
+-- A send refused because it contained contact details before the terms were agreed.
+-- Only the kind of detail is kept — never the message text.
+CREATE TABLE IF NOT EXISTS contact_blocks (
+  id TEXT PRIMARY KEY,
+  match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  sender_user_id TEXT,
+  sender_side TEXT NOT NULL,
+  flags TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'message',
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -350,4 +379,14 @@ export const MIGRATIONS: { table: string; column: string; ddl: string }[] = [
   { table: "matches", column: "customer_passed", ddl: "INTEGER NOT NULL DEFAULT 0" },
   { table: "matches", column: "customer_match_seen_at", ddl: "TEXT" },
   { table: "matches", column: "company_match_seen_at", ddl: "TEXT" },
+  // 依頼先決定 → 契約条件の確認 → 双方合意. Rows created before this column existed start at 'selected':
+  // nothing is shown as agreed unless both sides actually agreed.
+  { table: "contracts", column: "stage", ddl: "TEXT NOT NULL DEFAULT 'selected'" },
+  { table: "contracts", column: "terms_json", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "contracts", column: "terms_hash", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "contracts", column: "customer_agreed_at", ddl: "TEXT" },
+  { table: "contracts", column: "customer_agreed_by", ddl: "TEXT" },
+  { table: "contracts", column: "company_agreed_at", ddl: "TEXT" },
+  { table: "contracts", column: "company_agreed_by", ddl: "TEXT" },
+  { table: "contracts", column: "agreed_at", ddl: "TEXT" },
 ];

@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 import { ActionError } from "./auth";
-import { DomainError } from "./services";
+import { DomainError } from "./errors";
 import { UploadError } from "./files";
 
 export type ActionResult<T extends object = object> = ({ ok: true } & T) | { ok: false; error: string; fieldErrors?: Record<string, string> };

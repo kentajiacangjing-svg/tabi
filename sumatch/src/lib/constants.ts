@@ -26,7 +26,7 @@ export const PROJECT_STATUS: Record<ProjectStatus, { label: string; step: number
   consulting: { label: "相談中", step: 0 },
   quoting: { label: "見積中", step: 1 },
   comparing: { label: "比較中", step: 2 },
-  contracted: { label: "契約", step: 3 },
+  contracted: { label: "依頼先決定", step: 3 },
   in_progress: { label: "工事中", step: 4 },
   completed: { label: "完了", step: 5 },
   cancelled: { label: "キャンセル", step: -1 },
@@ -54,6 +54,7 @@ export const REPORT_REASONS = [
   "不適切な言動",
   "しつこい営業",
   "虚偽の情報",
+  "連絡先の誤判定（送信できない）",
   "その他",
 ] as const;
 

@@ -17,7 +17,9 @@ import {
 } from "@/app/actions/admin";
 import { ActionButton, ActionForm } from "@/components/action-button";
 import { Badge, SectionTitle, Stat, cx, inputClass } from "@/components/ui";
-import type { Company, Plan, ProjectStatus } from "@/lib/types";
+import type { Company, Contract, Plan, ProjectStatus } from "@/lib/types";
+import { STAGE_LABEL } from "@/lib/contract-terms";
+import { effectiveStage } from "@/lib/contract";
 
 export const metadata = { title: "管理画面" };
 export const dynamic = "force-dynamic";
@@ -29,7 +31,7 @@ const TABS = [
   ["projects", "相談"],
   ["matches", "マッチ"],
   ["quotes", "見積"],
-  ["contracts", "契約"],
+  ["contracts", "依頼先・合意"],
   ["analytics", "分析"],
 ] as const;
 const MORE = [
@@ -109,12 +111,13 @@ function OverviewTab() {
     ["相談", k.projectsTotal, "", "projects"],
     ["マッチ", k.matchesTotal, "", "matches"],
     ["見積", k.quotesTotal, "", "quotes"],
-    ["契約", k.contractsTotal, k.avgContract ? `平均 ${man(k.avgContract)}` : "", "contracts"],
+    ["双方合意", k.contractsTotal, `依頼先決定 ${k.decidedTotal}件${k.avgContract ? `・平均 ${man(k.avgContract)}` : ""}`, "contracts"],
   ];
   const alerts = [
     [k.pendingCompanies, "社の企業が審査を待っています", "companies"],
     [k.openReports, "件の通報が未対応です", "reports"],
-    [k.flaggedMessages, "件の連絡先共有が検知されました（30日）", "chats"],
+    [k.flaggedMessages, "件のURL・QRコードの共有がありました（30日）", "chats"],
+    [k.contactBlocks, "件の連絡先の送信を止めました（30日）", "chats"],
   ] as const;
   return (
     <div>
@@ -131,7 +134,7 @@ function OverviewTab() {
           {alerts
             .filter(([n]) => n > 0)
             .map(([n, text, href]) => (
-              <li key={href}>
+              <li key={text}>
                 <Link href={`/admin?tab=${href}`} className="flex min-h-14 items-center justify-between py-3 text-[16px] hover:text-brand">
                   <span>
                     {n}
@@ -156,7 +159,8 @@ function AnalyticsTab() {
     ["会社閲覧", k.companyViews],
     ["マッチ", k.matches],
     ["見積", k.quotes],
-    ["契約", k.contracts],
+    ["依頼先決定", k.decided],
+    ["双方合意", k.contracts],
   ] as const;
   const max = Math.max(1, funnel[0][1]);
   const dmax = Math.max(1, ...k.daily.map((d) => d.n));
@@ -180,7 +184,7 @@ function AnalyticsTab() {
           ))}
         </ol>
         <p className="mt-6 text-[15px] text-ink-2">
-          訪問から契約まで {k.visits ? `${((k.contracts / k.visits) * 100).toFixed(2)}%` : "—"}・平均成約額 {k.avgContract ? man(k.avgContract) : "—"}・企業継続率 {k.retention == null ? "—" : pct(k.retention)}
+          訪問から双方合意まで {k.visits ? `${((k.contracts / k.visits) * 100).toFixed(2)}%` : "—"}・平均成約額 {k.avgContract ? man(k.avgContract) : "—"}・企業継続率 {k.retention == null ? "—" : pct(k.retention)}
         </p>
       </section>
       <section>
@@ -340,6 +344,11 @@ function ChatsTab() {
        JOIN projects p ON p.id = m.project_id JOIN users cu ON cu.id = p.customer_id
       WHERE g.contact_flags != '' ORDER BY g.created_at DESC LIMIT 200`,
   );
+  // Blocked attempts keep no text — only who, where and what kind of detail.
+  const blocks = all<{ id: string; match_id: string; sender_side: string; flags: string; source: string; created_at: string; company: string; customer: string }>(
+    `SELECT b.*, c.name AS company, cu.name AS customer FROM contact_blocks b JOIN matches m ON m.id = b.match_id JOIN companies c ON c.id = m.company_id
+       JOIN projects p ON p.id = m.project_id JOIN users cu ON cu.id = p.customer_id ORDER BY b.created_at DESC LIMIT 200`,
+  );
   const convs = all<{ id: string; company: string; customer: string; city: string; n: number; last: string | null }>(
     `SELECT m.id, c.name AS company, u.name AS customer, p.city, (SELECT COUNT(*) FROM messages g WHERE g.match_id = m.id) AS n, m.last_message_at AS last
        FROM matches m JOIN companies c ON c.id = m.company_id JOIN projects p ON p.id = m.project_id JOIN users u ON u.id = p.customer_id
@@ -348,7 +357,25 @@ function ChatsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <SectionTitle>連絡先共有が検知されたメッセージ</SectionTitle>
+        <SectionTitle>送信を止めた連絡先（本文は保存していません）</SectionTitle>
+        {blocks.length === 0 ? (
+          <p className="text-sm text-muted">ありません。</p>
+        ) : (
+          <Table head={["日時", "会話", "送信者", "種類", "場所"]}>
+            {blocks.map((b) => (
+              <tr key={b.id}>
+                <td>{relative(b.created_at)}</td>
+                <td><Link href={`/admin/chats/${b.match_id}`} className="text-brand hover:underline">{b.customer} × {b.company}</Link></td>
+                <td>{b.sender_side === "customer" ? "お客様" : "企業"}</td>
+                <td><Badge tone="danger">{b.flags.split(",").map((x) => CONTACT_FLAG_LABEL[x as ContactFlag] ?? x).join("・")}</Badge></td>
+                <td>{{ message: "チャット", quote: "見積", terms: "契約条件" }[b.source] ?? b.source}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </div>
+      <div>
+        <SectionTitle>URL・QRコードを含むメッセージ（送信済み）</SectionTitle>
         {flagged.length === 0 ? (
           <p className="text-sm text-muted">検知はありません。</p>
         ) : (
@@ -407,13 +434,14 @@ function QuotesTab() {
 }
 
 function ContractsTab() {
-  const rows = all<{ id: string; amount: number; status: string; contract_date: string | null; start_date: string | null; success_fee_rate: number; company: string; customer: string; title: string }>(
+  const rows = all<{ id: string; amount: number; status: string; stage: string; contract_date: string | null; start_date: string | null; success_fee_rate: number; company: string; customer: string; title: string }>(
     `SELECT ct.*, c.name AS company, u.name AS customer, p.title FROM contracts ct JOIN companies c ON c.id = ct.company_id
        JOIN projects p ON p.id = ct.project_id JOIN users u ON u.id = p.customer_id ORDER BY ct.created_at DESC`,
   );
-  const st = { contracted: "契約", in_progress: "工事中", completed: "完了", cancelled: "キャンセル" } as Record<string, string>;
+  const st = { in_progress: "工事中", completed: "完了", cancelled: "キャンセル" } as Record<string, string>;
+  const label = (c: { status: string; stage: string }) => st[c.status] ?? STAGE_LABEL[effectiveStage(c as Pick<Contract, "stage" | "status">)];
   return (
-    <Table head={["お客様 / 案件", "企業", "契約金額", "成功報酬", "契約日", "工事予定日", "状態"]}>
+    <Table head={["お客様 / 案件", "企業", "金額（見積）", "成功報酬（合意後）", "合意日", "工事予定日", "状態"]}>
       {rows.map((c) => (
         <tr key={c.id}>
           <td>{c.customer}<div className="text-[11px] text-muted">{c.title}</div></td>
@@ -422,7 +450,7 @@ function ContractsTab() {
           <td className="tabular-nums">{yen(c.amount * c.success_fee_rate)}<span className="text-[11px] text-muted">（{Math.round(c.success_fee_rate * 1000) / 10}%）</span></td>
           <td>{c.contract_date ?? "—"}</td>
           <td>{c.start_date ?? "—"}</td>
-          <td><Badge tone={c.status === "completed" ? "ok" : "brand"}>{st[c.status]}</Badge></td>
+          <td><Badge tone={c.status === "completed" ? "ok" : "brand"}>{label(c)}</Badge></td>
         </tr>
       ))}
     </Table>

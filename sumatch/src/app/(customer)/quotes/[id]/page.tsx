@@ -1,24 +1,32 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { projectForCustomer } from "@/lib/access";
 import { get } from "@/lib/db";
 import { contractForProject, quoteWithItems } from "@/lib/queries";
+import { latestQuoteForMatch } from "@/lib/contract";
 import { dateJa, yen } from "@/lib/format";
 import { DecideButton } from "@/components/decide-dialog";
-import { Row } from "@/components/ui";
+import { Notice, Row } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import type { Quote } from "@/lib/types";
 
 export const metadata = { title: "見積" };
 export const dynamic = "force-dynamic";
 
-export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function QuoteDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ old?: string }> }) {
   const { id } = await params;
+  const { old } = await searchParams;
   const user = await requireUser(["customer"], `/quotes/${id}`);
   const raw = get<Quote>("SELECT * FROM quotes WHERE id = ?", id);
   const project = raw ? projectForCustomer(raw.project_id, user) : null;
-  if (!raw || !project || raw.status === "superseded") notFound();
+  if (!raw || !project) notFound();
+  // An old version is never shown as decidable: send the customer to the version the company stands behind now.
+  const latest = latestQuoteForMatch(raw.match_id);
+  if (raw.status === "superseded" || (latest && latest.id !== raw.id)) {
+    if (latest) redirect(`/quotes/${latest.id}?old=${raw.version}`);
+    notFound();
+  }
   const q = quoteWithItems(raw);
   const contract = contractForProject(project.id);
   const staff = q.created_by ? get<{ name: string }>("SELECT name FROM users WHERE id = ?", q.created_by)?.name : undefined;
@@ -29,10 +37,11 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         <Icon name="chevron-left" size={18} />
         見積を比べる
       </Link>
+      {old && <Notice className="mb-6">この見積は更新されました。最新の第{q.version}版を表示しています（以前の版：第{old}版）。</Notice>}
       <p className="text-[15px] text-muted">{q.company.name}</p>
       <h1 className="mt-1 text-[24px] font-medium">{q.title}</h1>
       <div className="mt-6 text-[44px] font-medium leading-none tracking-tight">¥{q.total.toLocaleString("ja-JP")}</div>
-      <div className="mt-1 text-[14px] text-muted">税込{q.version > 1 ? `・第${q.version}版` : ""}</div>
+      <div className="mt-1 text-[14px] text-muted">税込・第{q.version}版{q.version > 1 ? "（最新）" : ""}</div>
 
       <div className="mt-10">
         <Row label="保証">{q.warranty || "—"}</Row>
@@ -82,10 +91,10 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
       <div className="mt-14">
         {contract ? (
-          <p className="text-[15px] text-muted">{contract.quote_id === q.id ? "この見積で依頼先を決めました。" : "この相談は別の会社に決まりました。"}</p>
+          <p className="text-[15px] text-muted">{contract.quote_id === q.id ? "この見積で依頼先を決めました。契約条件は相談ページで確認できます。" : "この相談は別の会社に決まりました。"}</p>
         ) : (
           <>
-            <DecideButton matchId={q.match_id} quoteId={q.id} companyName={q.company.name} amount={q.total} />
+            <DecideButton matchId={q.match_id} quoteId={q.id} companyName={q.company.name} amount={q.total} version={q.version} />
             <Link href={`/messages/${q.match_id}`} className="mt-3 flex min-h-11 items-center justify-center text-[15px] text-muted hover:text-ink">
               わからない点をメッセージで聞く
             </Link>

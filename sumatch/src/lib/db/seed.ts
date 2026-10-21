@@ -6,7 +6,8 @@ import { all, get, insert, newId, run, tx, update, STORAGE_DIR } from "./index";
 import { hashPassword } from "../password";
 import { calcQuote, generateCandidates, recalcCompanyRating } from "../services";
 import { estimateRange } from "../estimate";
-import type { Category, Match, Project } from "../types";
+import { seedAgreedContract } from "../contract";
+import type { Category, Contract, Match, Project, Quote } from "../types";
 
 export const DEMO_PASSWORD = "sumatch123";
 
@@ -383,7 +384,9 @@ export function seed() {
     }, "declined");
     const ctS = newId("ct");
     insert("contracts", { id: ctS, project_id: pS.id, company_id: companyId["fujisawa-reform"], match_id: sFR.id, quote_id: qS, amount: 1280000, contract_date: ago(25).slice(0, 10), start_date: ago(2).slice(0, 10), status: "in_progress", success_fee_rate: 0.03, created_at: ago(25), updated_at: ago(2) });
-    msg(sFR.id, "system", null, "お客様が藤沢リフォームに決定しました。契約予定金額: 1,280,000円", ago(25));
+    seedAgreedContract(get<Contract>("SELECT * FROM contracts WHERE id = ?", ctS)!, get<Quote>("SELECT * FROM quotes WHERE id = ?", qS)!, ago(2).slice(0, 10), { selected: ago(25), terms: ago(24), agreed: ago(23) }, { customer: suzuki, company: ownerId["fujisawa-reform"] });
+    msg(sFR.id, "system", null, "お客様が依頼先として藤沢リフォームを選びました（見積 第1版・税込1,280,000円）。契約条件はこれから確認します。", ago(25));
+    msg(sFR.id, "system", null, "お客様と施工会社の双方が、契約条件に合意したことを確認しました。工事請負契約書は施工会社から受け取ってください。", ago(23));
     msg(sFR.id, "system", null, "藤沢リフォームがステータスを「工事中」に更新しました。", ago(2));
     msg(sFR.id, "company", ownerId["fujisawa-reform"], "本日、既存浴室の解体が完了しました。明日ユニットバスの組立に入ります。", ago(1));
     update("matches", sHW.id, { status: "matched" });
@@ -403,7 +406,9 @@ export function seed() {
       title: "屋根部分葺き替え・棟取り直し", items: [["瓦部分葺き替え", 20, "㎡", 18000], ["棟取り直し", 14, "m", 12000], ["防水シート", 20, "㎡", 2500], ["足場", 1, "式", 120000]],
       overhead: 50000, warranty: "葺き替え部10年保証", years: 10, duration: "約6日", days: 6, materials: "防災瓦", payment: "完工時一括", extra: "野地板の腐食が見つかった場合は別途", notes: "",
     }, "accepted");
-    insert("contracts", { id: newId("ct"), project_id: pT.id, company_id: companyId["chigasaki-roof"], match_id: tCR.id, quote_id: qT, amount: 860000, contract_date: ago(58).slice(0, 10), start_date: ago(45).slice(0, 10), end_date: ago(38).slice(0, 10), status: "completed", success_fee_rate: 0.05, created_at: ago(58), updated_at: ago(38) });
+    const ctT = newId("ct");
+    insert("contracts", { id: ctT, project_id: pT.id, company_id: companyId["chigasaki-roof"], match_id: tCR.id, quote_id: qT, amount: 860000, contract_date: ago(58).slice(0, 10), start_date: ago(45).slice(0, 10), end_date: ago(38).slice(0, 10), status: "completed", success_fee_rate: 0.05, created_at: ago(58), updated_at: ago(38) });
+    seedAgreedContract(get<Contract>("SELECT * FROM contracts WHERE id = ?", ctT)!, get<Quote>("SELECT * FROM quotes WHERE id = ?", qT)!, ago(45).slice(0, 10), { selected: ago(58), terms: ago(58), agreed: ago(57) }, { customer: takahashi, company: ownerId["chigasaki-roof"] });
     msg(tCR.id, "system", null, "茅ヶ崎ルーフ工業がステータスを「完了」に更新しました。", ago(38));
     insert("reviews", { id: newId("rv"), company_id: companyId["chigasaki-roof"], project_id: pT.id, customer_id: takahashi, rating: 5, title: "雨漏りがぴたりと止まりました", body: "ドローンの写真で状態を説明してもらえて納得して依頼できました。", author_label: "平塚市 60代", created_at: ago(36) });
     recalcCompanyRating(companyId["chigasaki-roof"]);

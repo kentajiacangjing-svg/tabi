@@ -5,10 +5,12 @@ import { notify, companyUserIds } from "./notify";
 import { publish } from "./realtime";
 import { MAX_MATCHES_PER_PROJECT, PROJECT_STATUS, TAX_RATE } from "./constants";
 import { detectContactInfo } from "./contact-detect";
+import { appendContractEvent, assertNoContactInfo, contractForMatch, effectiveStage, latestQuoteForMatch, onQuoteRevised } from "./contract";
 import type { Category, Company, Contract, Match, Plan, Project, ProjectStatus, Quote } from "./types";
 import type { MatchContext } from "./access";
 
-export class DomainError extends Error {}
+import { DomainError } from "./errors";
+export { DomainError };
 
 export function trackEvent(kind: string, userId?: string | null, sessionKey?: string | null, meta = "") {
   insert("events", { kind, user_id: userId ?? null, session_key: sessionKey ?? null, meta, created_at: now() });
@@ -238,7 +240,10 @@ export function postMessage(
 ) {
   if (ctx.side === "admin") throw new DomainError("運営はメッセージを送信できません。");
   if (ctx.match.status !== "matched") throw new DomainError("マッチ成立後にメッセージを送れます。");
-  const flags = input.kind === "text" ? detectContactInfo(input.body) : [];
+  // Before both sides agree the contract terms, contact details are refused here (not just warned in the
+  // browser), so a modified client or a direct request can't get them through.
+  if (input.kind !== "quote") assertNoContactInfo(ctx, senderUserId, [input.body], "message");
+  const flags = input.kind === "quote" ? [] : detectContactInfo(input.body);
   const ts = now();
   const id = newId("msg");
   insert("messages", {
@@ -305,11 +310,15 @@ export function calcQuote(items: QuoteInput["items"], overhead: number, discount
 export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput) {
   if (ctx.side !== "company") throw new DomainError("見積は企業のみ提出できます。");
   if (ctx.match.status !== "matched") throw new DomainError("マッチ成立後に見積を提出できます。");
-  if (["contracted", "in_progress", "completed", "cancelled"].includes(ctx.project.status))
-    throw new DomainError("この案件は既に契約先が決定しています。");
+  // After the customer chose a company, only that company may still revise — and only until both sides
+  // have agreed the terms. A revision sends both back to confirm.
+  const chosen = contractForMatch(ctx.match.id);
+  if (chosen ? effectiveStage(chosen) === "agreed" : ["contracted", "in_progress", "completed", "cancelled"].includes(ctx.project.status))
+    throw new DomainError(chosen ? "双方の合意が確認済みのため、見積は変更できません。" : "この案件は既に依頼先が決定しています。");
+  assertNoContactInfo(ctx, userId, [input.title, input.warranty, input.duration, input.materials, input.payment_terms, input.extra_costs, input.notes, ...input.items.map((i) => i.name)], "quote");
   return tx(() => {
     const prev = get<Quote>(
-      "SELECT * FROM quotes WHERE match_id = ? AND status = 'submitted' ORDER BY version DESC LIMIT 1",
+      "SELECT * FROM quotes WHERE match_id = ? AND status IN ('submitted','accepted') ORDER BY version DESC LIMIT 1",
       ctx.match.id,
     );
     if (prev) update("quotes", prev.id, { status: "superseded" });
@@ -322,7 +331,7 @@ export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput
       company_id: ctx.company.id,
       created_by: userId,
       version: (prev?.version ?? 0) + 1,
-      status: "submitted",
+      status: chosen ? "accepted" : "submitted",
       title: input.title,
       subtotal,
       overhead: input.overhead,
@@ -344,9 +353,14 @@ export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput
     lines.forEach((l, i) =>
       insert("quote_items", { id: newId("qi"), quote_id: id, name: l.name, quantity: l.quantity, unit: l.unit, unit_price: l.unit_price, amount: l.amount, sort: i }),
     );
-    postMessage(ctx, userId, { kind: "quote", body: prev ? "見積書を更新しました" : "見積書を提出しました", quoteId: id, fileId: input.pdf_file_id });
+    postMessage(ctx, userId, { kind: "quote", body: prev ? `見積書を更新しました（第${(prev.version ?? 0) + 1}版）` : "見積書を提出しました", quoteId: id, fileId: input.pdf_file_id });
     refreshProjectStatus(ctx.project.id);
-    notify([ctx.project.customer_id], "quote", "見積が届きました", `${ctx.company.name}から見積（税込${Math.round(total / 10000)}万円）が届きました。`, `/quotes?project=${ctx.project.id}`);
+    if (chosen) {
+      onQuoteRevised(chosen, get<Quote>("SELECT * FROM quotes WHERE id = ?", id)!, userId);
+      notify([ctx.project.customer_id], "quote", "見積が改訂されました", `${ctx.company.name}の見積が税込${total.toLocaleString("ja-JP")}円に改訂されました。契約条件をもう一度確認してください。`, `/projects/${ctx.project.id}`);
+    } else {
+      notify([ctx.project.customer_id], "quote", "見積が届きました", `${ctx.company.name}から見積（税込${Math.round(total / 10000)}万円）が届きました。`, `/quotes?project=${ctx.project.id}`);
+    }
     return id;
   });
 }
@@ -364,14 +378,26 @@ export function refreshProjectStatus(projectId: string) {
 /* Contract                                                            */
 /* ------------------------------------------------------------------ */
 
-export function decideCompany(
-  ctx: MatchContext,
-  input: { quoteId: string | null; amount: number; contractDate: string | null; startDate: string | null; contractFileId: string | null; notes: string },
-) {
-  if (ctx.side !== "customer") throw new DomainError("会社の決定はお客様のみ行えます。");
+/**
+ * The customer chooses which company to ask (依頼先決定). This is NOT a contract: the terms are written by the
+ * company and agreed by both sides afterwards (see lib/contract.ts). The quote must be the company's latest
+ * version and the amount is always taken from it, never from the request. Repeating the same choice is a
+ * no-op, so a double tap or a retried request can't create two records.
+ */
+export function decideCompany(ctx: MatchContext, input: { quoteId: string }, userId: string) {
+  if (ctx.side !== "customer") throw new DomainError("依頼先の決定はお客様のみ行えます。");
   if (ctx.match.status !== "matched") throw new DomainError("マッチ済みの会社のみ選べます。");
-  if (get("SELECT 1 FROM contracts WHERE project_id = ?", ctx.project.id)) throw new DomainError("この案件は既に会社が決定しています。");
+  const existing = get<Contract>("SELECT * FROM contracts WHERE project_id = ?", ctx.project.id);
+  if (existing) {
+    if (existing.match_id === ctx.match.id && existing.quote_id === input.quoteId) return existing.id;
+    throw new DomainError("この相談は既に依頼先が決まっています。");
+  }
+  const latest = latestQuoteForMatch(ctx.match.id);
+  if (!latest) throw new DomainError("見積が届いてから依頼先を決められます。");
+  if (latest.id !== input.quoteId) throw new DomainError("この見積は更新されています。最新の見積を確認してから決めてください。");
+  if (latest.valid_until && latest.valid_until < now().slice(0, 10)) throw new DomainError("この見積は有効期限を過ぎています。会社に再提出を依頼してください。");
   const plan = ctx.company.plan_id ? get<Plan>("SELECT * FROM plans WHERE id = ?", ctx.company.plan_id) : undefined;
+  const amount = latest.total;
   return tx(() => {
     const id = newId("ct");
     const ts = now();
@@ -380,33 +406,32 @@ export function decideCompany(
       project_id: ctx.project.id,
       company_id: ctx.company.id,
       match_id: ctx.match.id,
-      quote_id: input.quoteId,
-      amount: input.amount,
-      contract_date: input.contractDate,
-      start_date: input.startDate,
-      contract_file_id: input.contractFileId,
+      quote_id: latest.id,
+      amount,
+      contract_date: null,
+      start_date: null,
+      contract_file_id: null,
       status: "contracted",
+      stage: "selected",
       success_fee_rate: plan?.success_fee_rate ?? 0.03,
-      notes: input.notes,
+      notes: "",
       created_at: ts,
       updated_at: ts,
     });
-    if (input.contractFileId) update("files", input.contractFileId, { scope: "contract", scope_id: id });
-    if (input.quoteId) {
-      update("quotes", input.quoteId, { status: "accepted" });
-      run("UPDATE quotes SET status = 'declined' WHERE project_id = ? AND status = 'submitted' AND id != ?", ctx.project.id, input.quoteId);
-    }
+    appendContractEvent(id, "customer", userId, "selected", "", `${latest.id} v${latest.version} ${amount}`);
+    update("quotes", latest.id, { status: "accepted" });
+    run("UPDATE quotes SET status = 'declined' WHERE project_id = ? AND status = 'submitted' AND id != ?", ctx.project.id, latest.id);
     update("projects", ctx.project.id, { status: "contracted", updated_at: ts });
     insert("messages", {
       id: newId("msg"),
       match_id: ctx.match.id,
       sender_side: "system",
       kind: "system",
-      body: `お客様が${ctx.company.name}に決定しました。契約予定金額: ${input.amount.toLocaleString("ja-JP")}円`,
+      body: `お客様が依頼先として${ctx.company.name}を選びました（見積 第${latest.version}版・税込${amount.toLocaleString("ja-JP")}円）。契約条件はこれから確認します。`,
       created_at: ts,
     });
     run("UPDATE matches SET last_message_at = ? WHERE id = ?", ts, ctx.match.id);
-    notify(companyUserIds(ctx.company.id), "contract", "お客様があなたの会社に決定しました", `${ctx.project.city}・${ctx.project.title}`, `/business/messages/${ctx.match.id}`);
+    notify(companyUserIds(ctx.company.id), "contract", "依頼先に選ばれました", `${ctx.project.city}・${ctx.project.title}。契約条件を入力してください。`, `/business/contract/${id}`);
     // Politely close the other conversations.
     const others = all<Match>("SELECT * FROM matches WHERE project_id = ? AND id != ? AND status = 'matched'", ctx.project.id, ctx.match.id);
     for (const o of others) {
@@ -429,8 +454,10 @@ export function decideCompany(
 export function advanceContract(contract: Contract, to: "in_progress" | "completed", actorLabel: string) {
   const order = ["contracted", "in_progress", "completed"];
   if (order.indexOf(to) <= order.indexOf(contract.status)) throw new DomainError("ステータスを戻すことはできません。");
+  if (effectiveStage(contract) !== "agreed") throw new DomainError("契約条件への双方の合意が確認できてから、工事を開始できます。");
   const ts = now();
   update("contracts", contract.id, { status: to, updated_at: ts, ...(to === "completed" ? { end_date: ts.slice(0, 10) } : {}) });
+  appendContractEvent(contract.id, "system", null, to === "in_progress" ? "work_started" : "work_completed", contract.terms_hash, actorLabel);
   update("projects", contract.project_id, { status: to, updated_at: ts });
   insert("messages", {
     id: newId("msg"),

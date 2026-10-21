@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireBusiness } from "@/lib/auth";
 import { all } from "@/lib/db";
 import { PROJECT_STATUS } from "@/lib/constants";
+import { STAGE_LABEL } from "@/lib/contract-terms";
+import { effectiveStage } from "@/lib/contract";
+import type { ContractStage } from "@/lib/types";
 import { relative } from "@/lib/format";
 import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 import type { ProjectStatus } from "@/lib/types";
@@ -21,7 +24,15 @@ interface ActiveRow {
   project_status: ProjectStatus;
   quote_total: number | null;
   last_at: string | null;
-  won: number;
+  contract_id: string | null;
+  contract_stage: ContractStage | null;
+  contract_status: string | null;
+}
+
+function stageText(r: ActiveRow) {
+  if (r.contract_status === "in_progress" || r.contract_status === "completed") return PROJECT_STATUS[r.project_status].label;
+  const stage = effectiveStage({ stage: r.contract_stage ?? "selected", status: (r.contract_status ?? "contracted") as "contracted" });
+  return stage === "selected" ? "契約条件を入力してください" : STAGE_LABEL[stage];
 }
 
 export default async function ActivePage() {
@@ -30,8 +41,9 @@ export default async function ActivePage() {
     `SELECT m.id AS match_id, p.id AS project_id, p.city, c.name AS category, u.name AS customer, m.status, m.company_response, m.customer_interest,
             p.status AS project_status, m.last_message_at AS last_at,
             (SELECT total FROM quotes q WHERE q.match_id = m.id AND q.status != 'superseded' ORDER BY version DESC LIMIT 1) AS quote_total,
-            EXISTS (SELECT 1 FROM contracts ct WHERE ct.match_id = m.id) AS won
+            ct.id AS contract_id, ct.stage AS contract_stage, ct.status AS contract_status
        FROM matches m JOIN projects p ON p.id = m.project_id JOIN categories c ON c.id = p.category_id JOIN users u ON u.id = p.customer_id
+            LEFT JOIN contracts ct ON ct.match_id = m.id AND ct.status != 'cancelled'
       WHERE m.company_id = ? AND (m.status = 'matched' OR m.company_response != 'none')
       ORDER BY COALESCE(m.last_message_at, m.company_response_at) DESC`,
     membership.company.id,
@@ -40,7 +52,7 @@ export default async function ActivePage() {
   const groups: { title: string; rows: ActiveRow[]; detail: (r: ActiveRow) => string }[] = [
     { title: "メッセージ中", rows: rows.filter((r) => r.status === "matched" && open(r.project_status) && !r.quote_total), detail: () => "見積はまだです" },
     { title: "見積提出済み", rows: rows.filter((r) => r.status === "matched" && open(r.project_status) && r.quote_total), detail: (r) => `¥${r.quote_total!.toLocaleString("ja-JP")}・お客様が比較中` },
-    { title: "契約・工事", rows: rows.filter((r) => r.won), detail: (r) => PROJECT_STATUS[r.project_status].label },
+    { title: "依頼先に選ばれた案件", rows: rows.filter((r) => r.contract_id), detail: (r) => stageText(r) },
     { title: "お客様の返事待ち", rows: rows.filter((r) => r.status !== "matched" && r.company_response === "yes" && open(r.project_status)), detail: () => "「対応したい」を送りました" },
   ];
   const hasAny = groups.some((g) => g.rows.length);
@@ -61,7 +73,7 @@ export default async function ActivePage() {
               <ul className="mt-2 divide-y divide-line border-y border-line">
                 {g.rows.map((r) => (
                   <li key={r.match_id}>
-                    <Link href={r.status === "matched" ? `/business/messages/${r.match_id}` : `/business/leads/${r.project_id}`} className="flex min-h-[72px] items-center justify-between gap-4 py-3">
+                    <Link href={r.contract_id ? `/business/contract/${r.contract_id}` : r.status === "matched" ? `/business/messages/${r.match_id}` : `/business/leads/${r.project_id}`} className="flex min-h-[72px] items-center justify-between gap-4 py-3">
                       <span className="min-w-0">
                         <span className="block truncate text-[17px] font-medium">
                           {r.status === "matched" ? `${r.customer}様` : r.city}・{r.category}
