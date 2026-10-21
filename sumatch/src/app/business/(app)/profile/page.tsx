@@ -1,11 +1,11 @@
 import { mailIsDelivered } from "@/lib/mailer";
 import Link from "next/link";
 import { requireBusiness } from "@/lib/auth";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { activeAreas, activeCategories, companyProfile, workImage } from "@/lib/queries";
 import { CompanyForm } from "@/components/company-form";
 import { MembersEditor, PlanPicker, WebInterestButton, WorksEditor } from "@/components/business-settings";
-import { AccountForm, PasswordForm } from "@/components/account-forms";
+import { AccountForm, DeletionRequestForm, PasswordForm } from "@/components/account-forms";
 import { PageHeader, SectionTitle } from "@/components/ui";
 import type { Plan } from "@/lib/types";
 
@@ -52,12 +52,16 @@ export default async function BusinessProfilePage() {
         </section>
         <section className="border-t border-line pt-10">
           <SectionTitle>通知設定（{user.name}）</SectionTitle>
-          <p className="mb-6 text-[15px] text-muted">新しい相談とメッセージは、メールとブラウザ通知でお知らせします。LINE公式アカウント・LINE WORKSでの通知も準備中です（会話はSUMATCHの中で行います）。</p>
+          <p className="mb-6 text-[15px] text-muted">新しい相談とメッセージは、アプリ内のお知らせとブラウザ通知でお知らせします。メール・LINEでの通知は準備中です（会話はSUMATCHの中で行います）。</p>
           <AccountForm name={user.name} notifyEmail={!!user.notify_email} notifyBrowser={!!user.notify_browser} mailActive={mailIsDelivered()} />
         </section>
         <section className="border-t border-line pt-10">
           <SectionTitle>パスワード</SectionTitle>
           <PasswordForm />
+        </section>
+        <section className="border-t border-line pt-10">
+          <SectionTitle>退会</SectionTitle>
+          <DeletionRequestForm pending={!!get("SELECT 1 FROM account_deletion_requests WHERE user_id = ? AND status = 'requested'", user.id)} />
         </section>
         <section className="border-t border-line pt-10">
           <div className="text-[20px] font-semibold">{c.website_url ? "自社サイトをもっと活かしませんか？" : "自社サイトがなくても大丈夫です"}</div>

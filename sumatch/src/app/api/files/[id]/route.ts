@@ -27,7 +27,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       "Content-Type": file.mime,
       "Content-Length": String(data.length),
       "Content-Disposition": `${download ? "attachment" : "inline"}; filename*=UTF-8''${name}`,
-      "Cache-Control": file.scope === "public" ? "public, max-age=86400" : "private, max-age=3600",
+      // Private files are never stored by the browser or a shared cache: access is re-checked on every request,
+      // so a revoked or expired permission takes effect at once.
+      "Cache-Control": file.scope === "public" ? "public, max-age=86400" : "private, no-store",
       "X-Content-Type-Options": "nosniff",
       // Uploaded content is never allowed to run scripts.
       "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",

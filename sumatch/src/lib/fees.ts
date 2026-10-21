@@ -1,21 +1,31 @@
-// 成功報酬の内部台帳 — PROVISIONAL. Rates, the base amount, billing timing, cancellation/refund and unpaid
-// handling are business decisions that have not been made. Nothing here charges, invoices or contacts anyone.
+// 成功報酬の内部台帳 — 試算 (estimate) only. Rates, the base amount, billing timing, cancellation/refund and
+// unpaid handling are business decisions that have not been made. Nothing here charges, invoices or contacts anyone.
 //
-// 仮仕様 (rule_version "draft-1"):
+// 仮仕様 (rule_version "draft-2"):
 //   • 成果 = SUMATCH's 契約成立 (agreed terms + registered contract document confirmed by both).
-//   • Base = the contract amount (= the agreed quote's 税込 total). Rate = the plan's rate when the company was
-//     chosen (contracts.success_fee_rate). Fee = round(base × rate).
+//   • Base = the contract amount 税抜 (quote total − tax) by default; the operator can switch to 税込 in settings
+//     (fee_base). Rate = the plan's rate when the company was chosen (contracts.success_fee_rate, editable plans).
+//     Fee = base × rate, rounded by fee_rounding (floor by default). Each record keeps the rule it was made with;
+//     changing a setting affects only records made afterwards.
 //   • A record starts as 要確認 (pending_review). The operator moves it by hand:
 //     pending_review → confirmed → invoiced → paid, or → void (対象外) from any state but paid.
 import { all, get, insert, newId, now, tx, update } from "./db";
 import { DomainError } from "./errors";
+import { getSetting } from "./queries";
 import type { Contract } from "./types";
 
-export const FEE_RULE_VERSION = "draft-1";
+export const FEE_RULE_VERSION = "draft-2";
+export type FeeBase = "excl_tax" | "incl_tax";
+export type FeeRounding = "floor" | "round" | "ceil";
+export const feeBase = (): FeeBase => (getSetting("fee_base", "excl_tax") === "incl_tax" ? "incl_tax" : "excl_tax");
+export const feeRounding = (): FeeRounding => {
+  const r = getSetting("fee_rounding", "floor");
+  return r === "round" || r === "ceil" ? r : "floor";
+};
 export type FeeStatus = "pending_review" | "confirmed" | "invoiced" | "paid" | "void";
 export const FEE_STATUS_LABEL: Record<FeeStatus, string> = {
-  pending_review: "要確認",
-  confirmed: "確認済み（請求前）",
+  pending_review: "要確認（試算）",
+  confirmed: "確認済み（試算・請求前）",
   invoiced: "請求済み（手動記録）",
   paid: "入金確認（手動記録）",
   void: "対象外",
@@ -38,17 +48,25 @@ export interface FeeRecord {
   fee_amount: number;
   status: FeeStatus;
   rule_version: string;
+  base_kind: FeeBase;
+  tax_amount: number;
+  rounding: FeeRounding;
   note: string;
   created_at: string;
   updated_at: string;
 }
 
 /** Called when a contract reaches 契約成立 (inside that transaction). Idempotent: one record per contract. */
-export function recordFeeForContract(c: Pick<Contract, "id" | "company_id" | "amount" | "success_fee_rate">, at = now()) {
+export function recordFeeForContract(c: Pick<Contract, "id" | "company_id" | "amount" | "success_fee_rate" | "quote_id">, at = now()) {
   if (get("SELECT 1 FROM fee_records WHERE contract_id = ?", c.id)) return;
+  const tax = (c.quote_id ? get<{ tax: number }>("SELECT tax FROM quotes WHERE id = ?", c.quote_id)?.tax : 0) ?? 0;
+  const kind = feeBase();
+  const rounding = feeRounding();
+  const base = kind === "excl_tax" ? c.amount - tax : c.amount;
   insert("fee_records", {
-    id: newId("fee"), contract_id: c.id, company_id: c.company_id, base_amount: c.amount, rate: c.success_fee_rate,
-    fee_amount: Math.round(c.amount * c.success_fee_rate), status: "pending_review", rule_version: FEE_RULE_VERSION, note: "", created_at: at, updated_at: at,
+    id: newId("fee"), contract_id: c.id, company_id: c.company_id, base_amount: base, base_kind: kind, tax_amount: tax, rounding,
+    rate: c.success_fee_rate, fee_amount: Math[rounding](base * c.success_fee_rate), status: "pending_review", rule_version: FEE_RULE_VERSION,
+    note: "", created_at: at, updated_at: at,
   });
 }
 

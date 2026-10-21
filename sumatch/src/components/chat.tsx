@@ -6,7 +6,7 @@ import Link from "next/link";
 import { draftReplyAction, markReadAction, sendMessageAction } from "@/app/actions/chat";
 import { reportAction } from "@/app/actions/customer";
 import { CONTACT_BLOCK_MESSAGE, CONTACT_FLAG_LABEL, CONTACT_WARNING, blockedFlags, detectContactInfo, type ContactFlag } from "@/lib/contact-detect";
-import { REPORT_REASONS } from "@/lib/constants";
+import { MAX_UPLOAD_BYTES, REPORT_REASONS } from "@/lib/constants";
 import { timeHM } from "@/lib/format";
 import type { ChatMessage } from "@/lib/queries";
 import { Icon } from "./icons";
@@ -275,7 +275,22 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
           <div className="flex items-end gap-2">
             <label className="mb-0.5 grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-ink-2 hover:bg-soft focus-within:outline focus-within:outline-2 focus-within:outline-brand" aria-label="写真を添付">
               <Icon name="image" size={22} />
-              <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="sr-only"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  e.target.value = "";
+                  // Same limit as the server (MAX_UPLOAD_BYTES): say so at once instead of after a long upload.
+                  if (f && f.size > MAX_UPLOAD_BYTES) {
+                    setFile(null);
+                    return setError("ファイルサイズは10MBまでです。写真を小さくしてから送ってください。");
+                  }
+                  setError(null);
+                  setFile(f);
+                }}
+              />
             </label>
             <Textarea
               ref={taRef}

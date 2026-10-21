@@ -15,7 +15,7 @@ import { publish } from "./realtime";
 import type { MatchContext } from "./access";
 import type { SiteVisit } from "./types";
 
-/** How long after the visit the company can still read the address (provisional; see docs/release-checklist.md). */
+/** How long after the visit the company can still read the address (provisional; see docs/launch-checklist.md). */
 export const VISIT_ADDRESS_DAYS = 7;
 const MAX_SLOTS = 3;
 

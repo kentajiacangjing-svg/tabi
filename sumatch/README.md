@@ -106,7 +106,7 @@ npm run build && npm run test:e2e   # ブラウザで通しのフロー（相談
 4. 契約書の登録（施工会社）→ 双方が同じ契約書（ファイルのハッシュ）を確認 → 「契約成立（SUMATCHの要件を確認済み）」
 5. 契約成立後、契約ページの「連絡先」欄で連絡先を交換（閲覧は記録）。チャットでは契約前後とも連絡先を送れません
 
-詳しくは次のドキュメントを参照してください：[現状一覧](docs/status-inventory.md)、[法務チェックリスト](docs/legal-review-checklist.md)、[個人情報の棚卸し](docs/privacy-inventory.md)、[通知の仕様](docs/notifications.md)、[データ運用手順](docs/data-operations.md)、[簡易発注書の設計](docs/simple-order-design.md)、[実機テスト手順](docs/device-test-procedure.md)、[本番公開前チェックリスト](docs/release-checklist.md)。
+詳しくは次のドキュメントを参照してください：[現状一覧](docs/status-inventory.md)、[法務チェックリスト](docs/legal-review-checklist.md)、[個人情報の棚卸し](docs/privacy-inventory.md)、[通知の仕様](docs/notifications.md)、[データ運用手順](docs/data-operations.md)、[簡易発注書の設計](docs/simple-order-design.md)、[実機テスト手順](docs/device-test-procedure.md)、[本番公開前チェックリスト](docs/launch-checklist.md)、[公開準備状況](docs/release-readiness.md)、[限定テスト運用手順](docs/limited-beta-runbook.md)、[成功報酬の状態遷移](docs/fee-state-machine.md)。
 
 現地調査：契約前でも、会社が候補日を送り、お客様が日時を選んで同意した時だけ、訪問先の住所をその会社に開示します（暗号化して保存、訪問日の7日後に消去）。
 

@@ -163,7 +163,11 @@ export async function upsertPlanAction(fd: FormData) {
 export async function updateSettingAction(fd: FormData) {
   return handle(async () => {
     await admin();
-    const o = z.object({ key: z.enum(["default_trial_days", "success_fee_note"]), value: z.string().max(200) }).parse(formObject(fd));
+    const o = z
+      .object({ key: z.enum(["default_trial_days", "success_fee_note", "fee_base", "fee_rounding"]), value: z.string().max(200) })
+      .refine((x) => x.key !== "fee_base" || ["excl_tax", "incl_tax"].includes(x.value), "税抜か税込を選んでください。")
+      .refine((x) => x.key !== "fee_rounding" || ["floor", "round", "ceil"].includes(x.value), "端数処理を選んでください。")
+      .parse(formObject(fd));
     run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", o.key, o.value);
     return done();
   });
@@ -183,6 +187,18 @@ export async function setFeeStatusAction(feeId: string, fd: FormData) {
     const user = await admin();
     const o = formObject(fd);
     setFeeStatus(feeId, (o.status ?? "") as FeeStatus, user.id, o.note ?? "");
+    return done();
+  });
+}
+
+/** 退会申請を対応済みにする（データの削除・匿名化は手順書に沿って別途、承認のうえで行う）。 */
+export async function handleDeletionRequestAction(requestId: string, fd: FormData) {
+  return handle(async () => {
+    const user = await admin();
+    const note = String(fd.get("note") ?? "").trim().slice(0, 300);
+    if (!note) throw new ActionError("対応内容を記録してください。");
+    const r = run("UPDATE account_deletion_requests SET status = 'handled', note = ?, handled_by = ?, handled_at = ? WHERE id = ? AND status = 'requested'", note, user.id, now(), requestId);
+    if (!r.changes) throw new ActionError("この申請は対応済みか取り下げ済みです。");
     return done();
   });
 }

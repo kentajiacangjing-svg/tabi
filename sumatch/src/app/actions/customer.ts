@@ -1,10 +1,11 @@
 "use server";
 
+import { clientIp, hitRateLimit } from "@/lib/rate-limit";
 import { CONTACT_FLAG_LABEL, PUBLIC_TEXT_BLOCK_MESSAGE, blockedInPublicText } from "@/lib/contact-detect";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { get, insert, newId, now, update } from "@/lib/db";
+import { cookies, headers } from "next/headers";
+import { get, insert, newId, now, run, update } from "@/lib/db";
 import { ActionError, actionUser, getCurrentUser } from "@/lib/auth";
 import { createCustomer } from "@/lib/accounts";
 import { formFiles, formObject, handle } from "@/lib/action";
@@ -24,7 +25,7 @@ import {
   DomainError,
 } from "@/lib/services";
 import { matchForUser, projectForCustomer } from "@/lib/access";
-import { notify, companyUserIds } from "@/lib/notify";
+import { notify, companyUserIds, adminUserIds } from "@/lib/notify";
 import type { Area, Category, Contract, Project } from "@/lib/types";
 
 
@@ -67,6 +68,7 @@ export async function submitDiagnosisAction(fd: FormData) {
     let user = await getCurrentUser();
     if (user && user.role !== "customer") throw new ActionError("企業・運営アカウントでは相談を作成できません。一般ユーザーとしてログインしてください。");
     if (!user) {
+      hitRateLimit(`signup:ip:${clientIp(await headers())}`, 20, 60 * 60);
       const acct = z
         .object({
           name: z.string().min(1, "お名前（ニックネーム可）を入力してください。"),
@@ -273,6 +275,7 @@ export async function updateAccountAction(fd: FormData) {
 export async function changePasswordAction(fd: FormData) {
   return handle(async () => {
     const user = await actionUser();
+    hitRateLimit(`password:user:${user.id}`, 10, 15 * 60);
     const { current, next } = z
       .object({ current: z.string().min(1, "現在のパスワードを入力してください。"), next: z.string().min(8, "新しいパスワードは8文字以上にしてください。").max(100) })
       .parse(formObject(fd));
@@ -304,11 +307,34 @@ const reportSchema = z.object({
 export async function reportAction(fd: FormData) {
   return handle(async () => {
     const user = await actionUser();
+    hitRateLimit(`report:user:${user.id}`, 30, 60 * 60);
     const input = reportSchema.parse(formObject(fd));
     if (input.target_type === "match" && !matchForUser(input.target_id, user)) throw new ActionError("対象が見つかりません。");
     insert("reports", { id: newId("rp"), reporter_user_id: user.id, ...input, created_at: now() });
     const { adminUserIds } = await import("@/lib/notify");
     notify(adminUserIds(), "system", "通報がありました", input.reason, "/admin?tab=reports");
+    return {};
+  });
+}
+
+/** 退会の申請（お客様・施工会社とも）。受け付けて運営に知らせる。アカウントとデータはこの時点では変更しない。 */
+export async function requestAccountDeletionAction(fd: FormData) {
+  return handle(async () => {
+    const user = await actionUser(["customer", "business"]);
+    hitRateLimit(`deletion:user:${user.id}`, 5, 60 * 60);
+    if (get("SELECT 1 FROM account_deletion_requests WHERE user_id = ? AND status = 'requested'", user.id)) return { already: true };
+    const reason = String(fd.get("reason") ?? "").trim().slice(0, 500);
+    insert("account_deletion_requests", { id: newId("del"), user_id: user.id, reason, status: "requested", created_at: now() });
+    notify(adminUserIds(), "system", "退会の申請がありました", "管理画面の「退会申請」で確認してください。", "/admin?tab=deletions");
+    return { already: false };
+  });
+}
+
+/** 退会申請を取り下げる。 */
+export async function withdrawAccountDeletionAction() {
+  return handle(async () => {
+    const user = await actionUser(["customer", "business"]);
+    run("UPDATE account_deletion_requests SET status = 'withdrawn' WHERE user_id = ? AND status = 'requested'", user.id);
     return {};
   });
 }

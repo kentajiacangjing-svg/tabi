@@ -384,7 +384,7 @@ export function confirmContractDocument(ctx: MatchContext, userId: string, shown
 /* ---------------- contact form (only after 契約成立) ---------------- */
 
 /**
- * Provisional rule (see docs/release-checklist.md): contacts are shown from 契約成立 until this many days after
+ * Provisional rule (see docs/launch-checklist.md): contacts are shown from 契約成立 until this many days after
  * the work is marked completed, then erased. A cancelled contract shows none. Either side can withdraw its own.
  */
 export const CONTACT_DAYS_AFTER_COMPLETION = 90;

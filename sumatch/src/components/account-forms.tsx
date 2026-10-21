@@ -2,7 +2,7 @@
 
 import { soft } from "@/lib/soft";
 import { useEffect, useState, useTransition } from "react";
-import { changePasswordAction, markNotificationsReadAction, updateAccountAction } from "@/app/actions/customer";
+import { changePasswordAction, markNotificationsReadAction, requestAccountDeletionAction, updateAccountAction, withdrawAccountDeletionAction } from "@/app/actions/customer";
 import { Button, Field, Input, Notice } from "./ui";
 
 export function AccountForm({ name, notifyEmail, notifyBrowser, mailActive }: { name: string; notifyEmail: boolean; notifyBrowser: boolean; mailActive: boolean }) {
@@ -82,5 +82,59 @@ export function MarkAllRead() {
     <Button variant="secondary" size="sm" disabled={pending} onClick={() => start(async () => void (await soft(markNotificationsReadAction())))}>
       すべて既読にする
     </Button>
+  );
+}
+
+/** 退会の申請。申請を受け付けるだけで、アカウントとデータは運営が確認してから扱う。 */
+export function DeletionRequestForm({ pending: requested }: { pending: boolean }) {
+  const [state, setState] = useState<"idle" | "sent" | "withdrawn">(requested ? "sent" : "idle");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, start] = useTransition();
+  if (state === "sent")
+    return (
+      <div className="space-y-3">
+        <Notice tone="neutral">退会の申請を受け付けています。運営が確認し、アプリ内のお知らせでご連絡します。</Notice>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() =>
+            start(async () => {
+              const r = await soft(withdrawAccountDeletionAction());
+              if (!r.ok) return setError(r.error);
+              setState("withdrawn");
+            })
+          }
+        >
+          申請を取り下げる
+        </Button>
+        {error && <Notice tone="danger">{error}</Notice>}
+      </div>
+    );
+  return (
+    <form
+      className="space-y-3"
+      action={(fd) =>
+        start(async () => {
+          setError(null);
+          if (!confirm("退会を申請しますか？進行中の相談や契約がある場合は、運営から確認のご連絡をします。")) return;
+          const r = await soft(requestAccountDeletionAction(fd));
+          if (!r.ok) return setError(r.error);
+          setState("sent");
+        })
+      }
+    >
+      {state === "withdrawn" && <Notice tone="ok">申請を取り下げました。</Notice>}
+      <p className="text-[14px] leading-relaxed text-muted">
+        申請後、運営が内容を確認して手続きします。契約・取引の記録など、法令や紛争対応のために一定期間保管が必要な情報は、保管期間の定めに従って扱います（保管期間は現在確認中です）。
+      </p>
+      <Field label="理由（任意）">
+        <Input name="reason" maxLength={500} />
+      </Field>
+      {error && <Notice tone="danger">{error}</Notice>}
+      <Button type="submit" variant="secondary" disabled={busy}>
+        {busy ? "送信中…" : "退会を申請する"}
+      </Button>
+    </form>
   );
 }

@@ -22,12 +22,38 @@ describe("fee ledger and review lists", async () => {
     expect(established.length).toBe(2);
     for (const c of established) {
       const f = db.get<import("../fees").FeeRecord>("SELECT * FROM fee_records WHERE contract_id = ?", c.id)!;
-      expect(f).toMatchObject({ base_amount: c.amount, rate: c.success_fee_rate, fee_amount: Math.round(c.amount * c.success_fee_rate), status: "pending_review", rule_version: "draft-1" });
+      // 暫定方針: 税抜の契約金額 × プランの料率、1円未満切り捨て。試算として記録。
+      const tax = db.get<{ tax: number }>("SELECT tax FROM quotes WHERE id = ?", c.quote_id)!.tax;
+      expect(tax).toBeGreaterThan(0);
+      expect(f).toMatchObject({
+        base_amount: c.amount - tax, base_kind: "excl_tax", tax_amount: tax, rounding: "floor", rate: c.success_fee_rate,
+        fee_amount: Math.floor((c.amount - tax) * c.success_fee_rate), status: "pending_review", rule_version: "draft-2",
+      });
       fees.recordFeeForContract(c); // a second call changes nothing
     }
     expect(db.get<{ n: number }>("SELECT COUNT(*) n FROM fee_records")!.n).toBe(2);
     // Chosen-but-not-established contracts have none.
     expect(db.get<{ n: number }>("SELECT COUNT(*) n FROM fee_records f JOIN contracts c ON c.id = f.contract_id WHERE c.stage != 'contracted'")!.n).toBe(0);
+  });
+
+  it("the base (税抜/税込) and rounding are settings; changing them affects only new records", () => {
+    const c = db.get<Contract>("SELECT * FROM contracts WHERE stage = 'contracted' LIMIT 1")!;
+    const before = db.get<{ base_amount: number }>("SELECT base_amount FROM fee_records WHERE contract_id = ?", c.id)!.base_amount;
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('fee_base', 'incl_tax'), ('fee_rounding', 'ceil')");
+    expect(fees.feeBase()).toBe("incl_tax");
+    fees.recordFeeForContract(c);
+    expect(db.get<{ base_amount: number }>("SELECT base_amount FROM fee_records WHERE contract_id = ?", c.id)!.base_amount).toBe(before);
+    // A new record (simulated by removing this one) follows the new settings.
+    const keep = db.get<Record<string, string | number | null>>("SELECT * FROM fee_records WHERE contract_id = ?", c.id)!;
+    db.run("DELETE FROM fee_records WHERE contract_id = ?", c.id);
+    fees.recordFeeForContract(c);
+    expect(db.get<{ base_amount: number; fee_amount: number }>("SELECT base_amount, fee_amount FROM fee_records WHERE contract_id = ?", c.id)).toEqual({
+      base_amount: c.amount,
+      fee_amount: Math.ceil(c.amount * c.success_fee_rate),
+    });
+    db.run("DELETE FROM fee_records WHERE contract_id = ?", c.id);
+    db.insert("fee_records", keep);
+    db.run("DELETE FROM settings WHERE key IN ('fee_base','fee_rounding')");
   });
 
   it("only allowed status changes, with a reason for 対象外 / 差戻し, each one logged", () => {

@@ -1,7 +1,8 @@
 import { mailIsDelivered } from "@/lib/mailer";
 import { requireUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
-import { AccountForm, PasswordForm } from "@/components/account-forms";
+import { AccountForm, DeletionRequestForm, PasswordForm } from "@/components/account-forms";
+import { get } from "@/lib/db";
 import { Button, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "アカウント" };
@@ -26,6 +27,10 @@ export default async function AccountPage() {
           <p className="mt-3 text-[15px] leading-relaxed text-muted">
             お名前、市区町村、相談の内容、写真だけです。メールアドレスや電話番号が会社に伝わることはありません。
           </p>
+        </section>
+        <section className="border-t border-line pt-10">
+          <h2 className="mb-5 text-[20px] font-medium">退会</h2>
+          <DeletionRequestForm pending={!!get("SELECT 1 FROM account_deletion_requests WHERE user_id = ? AND status = 'requested'", user.id)} />
         </section>
         <form action={logoutAction} className="border-t border-line pt-10">
           <Button variant="secondary" size="lg" className="w-full">

@@ -101,4 +101,14 @@ describe("save / pass", async () => {
     )!;
     expect(q).toEqual({ total: 1180000, version: 1 });
   });
+
+  it("a company that declines a request does not get a conversation", () => {
+    const ito = db.get<{ id: string }>("SELECT id FROM users WHERE email = 'ito@demo.sumatch.jp'")!;
+    const project = db.get<{ id: string }>("SELECT id FROM projects WHERE customer_id = ?", ito.id)!;
+    const cand = db.get<M>("SELECT * FROM matches WHERE project_id = ? AND status = 'candidate' ORDER BY score LIMIT 1", project.id)!;
+    services.customerRequest(cand.id, ito.id);
+    const after = services.companyRespond(project.id, cand.company_id, false);
+    expect(after.status).not.toBe("matched");
+    expect(db.get<{ n: number }>("SELECT COUNT(*) n FROM messages WHERE match_id = ?", cand.id)!.n).toBe(0);
+  });
 });

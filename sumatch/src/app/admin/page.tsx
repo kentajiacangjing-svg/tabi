@@ -2,7 +2,7 @@ import Link from "next/link";
 import { all, parseJson } from "@/lib/db";
 import { kpis } from "@/lib/kpi";
 import { mailTransportName } from "@/lib/mailer";
-import { FEE_RULE_VERSION, FEE_STATUS_LABEL, allowedFeeTransitions, feeLedger, reviewQueues } from "@/lib/fees";
+import { FEE_RULE_VERSION, FEE_STATUS_LABEL, allowedFeeTransitions, feeBase, feeLedger, feeRounding, reviewQueues } from "@/lib/fees";
 import { allAreas, allCategories, getSetting } from "@/lib/queries";
 import { PROJECT_STATUS } from "@/lib/constants";
 import { dateShort, man, pct, relative, yen } from "@/lib/format";
@@ -10,6 +10,7 @@ import { CONTACT_FLAG_LABEL, type ContactFlag } from "@/lib/contact-detect";
 import {
   resolveReportAction,
   setFeeStatusAction,
+  handleDeletionRequestAction,
   setCompanyBillingAction,
   setCompanyStatusAction,
   setUserStatusAction,
@@ -38,7 +39,9 @@ const TABS = [
   ["analytics", "分析"],
 ] as const;
 const MORE = [
-  ["fees", "成功報酬・要確認"],
+  ["fees", "成功報酬（試算）・要確認"],
+  ["deletions", "退会申請"],
+  ["audit", "監査ログ"],
   ["chats", "チャット確認"],
   ["reports", "通報"],
   ["categories", "カテゴリ"],
@@ -83,6 +86,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {tab === "plans" && <PlansTab />}
       {tab === "outbox" && <OutboxTab />}
       {tab === "fees" && <FeesTab />}
+      {tab === "deletions" && <DeletionsTab />}
+      {tab === "audit" && <AuditTab />}
     </div>
   );
 }
@@ -625,15 +630,41 @@ function FeesTab() {
   return (
     <div className="space-y-10">
       <section>
-        <SectionTitle>成功報酬の記録（仮仕様 {FEE_RULE_VERSION}）</SectionTitle>
+        <SectionTitle>成功報酬の試算（仮仕様 {FEE_RULE_VERSION}・請求はしていません）</SectionTitle>
         <p className="mb-3 text-[13px] leading-relaxed text-muted">
-          契約成立（契約書の双方確認）ごとに1件、要確認として記録します。料率・計算基準・請求時期・キャンセル時の扱いは未決定の仮仕様です。ここでは請求・決済を行いません。状態は運営が手動で記録します。
-          要確認 {yen(total("pending_review"))}・確認済み {yen(total("confirmed"))}・請求済み {yen(total("invoiced"))}・入金確認 {yen(total("paid"))}
+          契約成立（契約書の双方確認）ごとに1件、試算として記録します。料率・計算の基準・請求時期・キャンセル時の扱いは未決定です。ここでは請求・決済を行いません。状態は運営が手動で記録します。
+          要確認 {yen(total("pending_review"))}・確認済み {yen(total("confirmed"))}・請求済み（手動記録） {yen(total("invoiced"))}・入金確認（手動記録） {yen(total("paid"))}
         </p>
+        <div className="mb-4 flex flex-wrap gap-3">
+          <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-xl border border-line bg-surface p-3">
+            <input type="hidden" name="key" value="fee_base" />
+            <label className="text-[13px]">
+              計算の基準
+              <select name="value" defaultValue={feeBase()} className={cx(inputClass, "mt-1 w-auto py-1.5 text-[13px]")}>
+                <option value="excl_tax">税抜の契約金額（暫定方針）</option>
+                <option value="incl_tax">税込の契約金額</option>
+              </select>
+            </label>
+            <button className="min-h-9 rounded-lg border border-line px-3 text-[13px] hover:bg-soft">保存</button>
+          </ActionForm>
+          <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-xl border border-line bg-surface p-3">
+            <input type="hidden" name="key" value="fee_rounding" />
+            <label className="text-[13px]">
+              1円未満の端数
+              <select name="value" defaultValue={feeRounding()} className={cx(inputClass, "mt-1 w-auto py-1.5 text-[13px]")}>
+                <option value="floor">切り捨て</option>
+                <option value="round">四捨五入</option>
+                <option value="ceil">切り上げ</option>
+              </select>
+            </label>
+            <button className="min-h-9 rounded-lg border border-line px-3 text-[13px] hover:bg-soft">保存</button>
+          </ActionForm>
+          <p className="self-end text-[12px] text-muted">設定の変更は、これから記録される試算だけに使われます。料率はプラン（料金プランのタブ）で設定します。</p>
+        </div>
         {fees.length === 0 ? (
           <p className="text-sm text-muted">まだ記録はありません。</p>
         ) : (
-          <Table head={["契約成立", "企業 / 案件", "基準額", "料率", "報酬（仮）", "状態", "変更"]}>
+          <Table head={["契約成立", "企業 / 案件", "基準額", "料率", "報酬（試算）", "状態", "変更"]}>
             {fees.map((f) => (
               <tr key={f.id}>
                 <td>{f.established_at ? dateShort(f.established_at) : "—"}</td>
@@ -641,7 +672,10 @@ function FeesTab() {
                   {f.company}
                   <div className="text-[12px] text-muted">{f.project}</div>
                 </td>
-                <td className="tabular-nums">{yen(f.base_amount)}</td>
+                <td className="tabular-nums">
+                  {yen(f.base_amount)}
+                  <div className="text-[12px] text-muted">{f.base_kind === "excl_tax" ? "税抜" : "税込"}・{{ floor: "切り捨て", round: "四捨五入", ceil: "切り上げ" }[f.rounding] ?? f.rounding}</div>
+                </td>
                 <td className="tabular-nums">{Math.round(f.rate * 1000) / 10}%</td>
                 <td className="tabular-nums font-semibold">{yen(f.fee_amount)}</td>
                 <td>
@@ -723,6 +757,130 @@ function FeesTab() {
                 <td className="tabular-nums">{r.blocks}</td>
                 <td>{relative(r.last_block)}</td>
                 <td>{relative(r.last_message)}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function DeletionsTab() {
+  const rows = all<{ id: string; reason: string; status: string; note: string; created_at: string; handled_at: string | null; name: string; role: string; open_projects: number; open_contracts: number }>(
+    `SELECT d.*, u.name, u.role,
+            (SELECT COUNT(*) FROM projects p WHERE p.customer_id = u.id AND p.status NOT IN ('completed','cancelled')) AS open_projects,
+            (SELECT COUNT(*) FROM contracts c JOIN projects p ON p.id = c.project_id WHERE p.customer_id = u.id AND c.status IN ('contracted','in_progress')) AS open_contracts
+       FROM account_deletion_requests d JOIN users u ON u.id = d.user_id ORDER BY (d.status = 'requested') DESC, d.created_at DESC`,
+  );
+  return (
+    <div>
+      <p className="mb-3 text-[13px] leading-relaxed text-muted">
+        退会の申請です。アカウントやデータはここでは変更しません。手順（進行中の相談・契約の確認、保管が必要な記録の扱い、削除・匿名化）は docs/data-operations.md に沿って、承認のうえで行い、結果を記録してください。保存期間は法務確認中です。
+      </p>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted">申請はありません。</p>
+      ) : (
+        <Table head={["申請日時", "利用者", "進行中", "理由", "状態", "対応"]}>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <td>{relative(r.created_at)}</td>
+              <td>
+                {r.name}
+                <div className="text-[12px] text-muted">{r.role === "business" ? "施工会社" : "お客様"}</div>
+              </td>
+              <td className="text-[12px]">相談 {r.open_projects}・契約 {r.open_contracts}</td>
+              <td className="max-w-xs text-[12px]">{r.reason || "—"}</td>
+              <td>{{ requested: "未対応", handled: "対応済み", withdrawn: "取り下げ" }[r.status] ?? r.status}</td>
+              <td>
+                {r.status === "requested" ? (
+                  <ActionForm action={handleDeletionRequestAction.bind(null, r.id)} className="flex flex-wrap items-center gap-1.5">
+                    <input name="note" placeholder="対応内容（必須）" className={cx(inputClass, "w-48 py-1.5 text-[13px]")} />
+                    <button className="min-h-9 rounded-lg border border-line px-3 text-[13px] hover:bg-soft">対応済みにする</button>
+                  </ActionForm>
+                ) : (
+                  <span className="text-[12px] text-muted">{r.note}</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </div>
+  );
+}
+
+/** Read-only. Who looked at private data — operators, and companies opening addresses / contact details. */
+function AuditTab() {
+  const adminViews = all<{ id: string; target_type: string; target_id: string; created_at: string; admin: string | null }>(
+    "SELECT l.*, u.name AS admin FROM admin_access_log l LEFT JOIN users u ON u.id = l.admin_user_id ORDER BY l.created_at DESC LIMIT 200",
+  );
+  const contactViews = all<{ contract_id: string; viewer_side: string; n: number; last: string }>(
+    "SELECT contract_id, viewer_side, COUNT(*) n, MAX(created_at) last FROM contact_access_log GROUP BY contract_id, viewer_side ORDER BY last DESC LIMIT 100",
+  );
+  const addressViews = all<{ visit_id: string; n: number; last: string }>(
+    "SELECT visit_id, COUNT(*) n, MAX(created_at) last FROM site_visit_events WHERE action = 'address_viewed' GROUP BY visit_id ORDER BY last DESC LIMIT 100",
+  );
+  const feeChanges = all<{ fee_id: string; from_status: string; to_status: string; note: string; created_at: string; admin: string | null }>(
+    "SELECT e.*, u.name AS admin FROM fee_events e LEFT JOIN users u ON u.id = e.actor_user_id ORDER BY e.created_at DESC LIMIT 100",
+  );
+  return (
+    <div className="space-y-10">
+      <p className="text-[13px] text-muted">閲覧のみです。記録の内容（住所・連絡先・本文）はここには表示しません。</p>
+      <section>
+        <SectionTitle>運営による閲覧（チャット・非公開ファイル）</SectionTitle>
+        {adminViews.length === 0 ? <p className="text-sm text-muted">記録はありません。</p> : (
+          <Table head={["日時", "運営", "対象", "ID"]}>
+            {adminViews.map((r) => (
+              <tr key={r.id}>
+                <td>{relative(r.created_at)}</td>
+                <td>{r.admin ?? "—"}</td>
+                <td>{r.target_type === "chat" ? "チャット" : "ファイル"}</td>
+                <td className="font-mono text-[12px]">{r.target_id}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
+      <section>
+        <SectionTitle>契約後の連絡先の表示（契約ごと）</SectionTitle>
+        {contactViews.length === 0 ? <p className="text-sm text-muted">記録はありません。</p> : (
+          <Table head={["契約ID", "表示した側", "回数", "最後"]}>
+            {contactViews.map((r) => (
+              <tr key={r.contract_id + r.viewer_side}>
+                <td className="font-mono text-[12px]">{r.contract_id}</td>
+                <td>{r.viewer_side === "customer" ? "お客様" : "施工会社"}</td>
+                <td className="tabular-nums">{r.n}</td>
+                <td>{relative(r.last)}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
+      <section>
+        <SectionTitle>現地調査の住所の表示（施工会社）</SectionTitle>
+        {addressViews.length === 0 ? <p className="text-sm text-muted">記録はありません。</p> : (
+          <Table head={["訪問ID", "回数", "最後"]}>
+            {addressViews.map((r) => (
+              <tr key={r.visit_id}>
+                <td className="font-mono text-[12px]">{r.visit_id}</td>
+                <td className="tabular-nums">{r.n}</td>
+                <td>{relative(r.last)}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
+      <section>
+        <SectionTitle>成功報酬（試算）の状態変更</SectionTitle>
+        {feeChanges.length === 0 ? <p className="text-sm text-muted">記録はありません。</p> : (
+          <Table head={["日時", "運営", "変更", "メモ"]}>
+            {feeChanges.map((r) => (
+              <tr key={r.fee_id + r.created_at}>
+                <td>{relative(r.created_at)}</td>
+                <td>{r.admin ?? "—"}</td>
+                <td>{FEE_STATUS_LABEL[r.from_status as keyof typeof FEE_STATUS_LABEL]} → {FEE_STATUS_LABEL[r.to_status as keyof typeof FEE_STATUS_LABEL]}</td>
+                <td className="text-[12px]">{r.note || "—"}</td>
               </tr>
             ))}
           </Table>

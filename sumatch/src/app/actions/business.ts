@@ -1,5 +1,7 @@
 "use server";
 
+import { headers } from "next/headers";
+import { clientIp, hitRateLimit } from "@/lib/rate-limit";
 import { CONTACT_FLAG_LABEL, PUBLIC_TEXT_BLOCK_MESSAGE, blockedInPublicText } from "@/lib/contact-detect";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -88,6 +90,7 @@ export async function businessSignupAction(fd: FormData) {
     const current = await getCurrentUser();
     if (current) throw new ActionError("ログイン中です。企業登録には一度ログアウトしてください。");
     const input = signupSchema.parse(formObject(fd));
+    hitRateLimit(`business-signup:ip:${clientIp(await headers())}`, 10, 60 * 60);
     assertPublicText([input.tagline, input.description, input.specialties, input.warranty, input.qualifications, input.business_hours]);
     const loginEmail = input.login_email.toLowerCase();
     if (get("SELECT 1 FROM users WHERE email = ?", loginEmail)) throw new ActionError("このログイン用メールアドレスは既に登録されています。");

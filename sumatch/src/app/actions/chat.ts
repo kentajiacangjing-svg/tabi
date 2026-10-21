@@ -1,5 +1,6 @@
 "use server";
 
+import { hitRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { get } from "@/lib/db";
@@ -15,6 +16,7 @@ import type { Category } from "@/lib/types";
 export async function sendMessageAction(fd: FormData) {
   return handle(async () => {
     const user = await actionUser(["customer", "business"]);
+    hitRateLimit(`message:user:${user.id}`, 60, 60);
     const o = formObject(fd);
     const ctx = matchForUser(o.match_id ?? "", user);
     if (!ctx) throw new ActionError("チャットが見つかりません。");

@@ -388,6 +388,26 @@ CREATE TABLE IF NOT EXISTS fee_events (
   created_at TEXT NOT NULL
 );
 
+-- Attempt counters for sign-in, sign-up and other abuse-prone actions (lib/rate-limit.ts). Shared by every
+-- server process because it lives in the database.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  window_end TEXT NOT NULL
+);
+
+-- 退会申請. Recorded only; the operator handles each one by hand (retention periods are a legal decision).
+CREATE TABLE IF NOT EXISTS account_deletion_requests (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  reason TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested','handled','withdrawn')),
+  note TEXT NOT NULL DEFAULT '',
+  handled_by TEXT,
+  handled_at TEXT,
+  created_at TEXT NOT NULL
+);
+
 -- Operator (admin) access to private data: which chat or file, when. For audits of the operator itself.
 CREATE TABLE IF NOT EXISTS admin_access_log (
   id TEXT PRIMARY KEY,
@@ -507,6 +527,10 @@ export const MIGRATIONS: { table: string; column: string; ddl: string; backfill?
   },
   // Notification email delivery: queued → sending → sent | failed (retried) | suppressed. No mail leaves the
   // app unless a transport is configured (lib/mailer.ts); there is no real transport yet.
+  // 成功報酬の試算: which base was used (税抜 / 税込) and the tax, so a record can be re-checked later.
+  { table: "fee_records", column: "base_kind", ddl: "TEXT NOT NULL DEFAULT 'incl_tax'" },
+  { table: "fee_records", column: "tax_amount", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "fee_records", column: "rounding", ddl: "TEXT NOT NULL DEFAULT 'round'" },
   { table: "email_outbox", column: "user_id", ddl: "TEXT" },
   { table: "email_outbox", column: "kind", ddl: "TEXT NOT NULL DEFAULT ''" },
   { table: "email_outbox", column: "dedupe_key", ddl: "TEXT" },

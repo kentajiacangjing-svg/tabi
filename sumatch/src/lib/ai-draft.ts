@@ -1,7 +1,25 @@
-// チャットの「AI返信下書き」。ANTHROPIC_API_KEY があれば Claude で下書き、なければテンプレートで下書きする。
-// 下書きは入力欄に入るだけで、送信は必ず本人が行う。
+// チャットの「返信の下書き」。下書きは入力欄に入るだけで、送信は必ず本人が行う。
+// 既定はテンプレートによる下書き。Claude による下書きは、運営が AI_DRAFT_ENABLED=true を明示的に設定し、
+// かつ認証情報（ANTHROPIC_API_KEY など）がある時だけ使う。キーが置かれているだけでは有効にならない。
+// 外部APIに送る前に、名前・電話番号・メールアドレス・URL を伏せる（redactForAi）。
 import Anthropic from "@anthropic-ai/sdk";
+import { normalizeForDetection } from "./contact-detect";
 import type { ChatMessage } from "./queries";
+
+/** True only when the operator turned the AI draft on explicitly. */
+export const aiDraftEnabled = () => process.env.AI_DRAFT_ENABLED === "true" && !!process.env.ANTHROPIC_API_KEY;
+
+/** Replace personal names and anything contact-like before text leaves for the external API. */
+export function redactForAi(text: string, names: string[]): string {
+  let t = normalizeForDetection(text);
+  for (const n of names.filter((x) => x && x.trim().length >= 2)) {
+    for (const part of [n, ...n.split(/\s+/).filter((p) => p.length >= 2)]) t = t.split(part).join("〔氏名〕");
+  }
+  return t
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "〔メール〕")
+    .replace(/https?:\/\/\S+/gi, "〔URL〕")
+    .replace(/(?<!\d)(?:\+?81[-\s]?|0)\d{1,4}[-\s()]?\d{1,4}[-\s)]?\d{3,4}(?!\d)/g, "〔電話番号〕");
+}
 
 export interface DraftContext {
   side: "customer" | "company";
@@ -34,18 +52,20 @@ function templateDraft(ctx: DraftContext) {
 }
 
 export async function draftReply(ctx: DraftContext): Promise<{ text: string; source: "ai" | "template" }> {
-  if (!process.env.ANTHROPIC_API_KEY) return { text: templateDraft(ctx), source: "template" };
+  if (!aiDraftEnabled()) return { text: templateDraft(ctx), source: "template" };
+  // The customer's name is not needed to write a reply; the company name is public.
+  const redact = (s: string) => redactForAi(s, [ctx.customerName]);
   try {
     const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
     const transcript = ctx.messages
       .slice(-20)
       .map((m) => {
-        const who = m.sender_side === "system" ? "システム" : m.sender_side === "customer" ? `お客様（${ctx.customerName}）` : `会社（${ctx.companyName}）`;
-        const body = m.kind === "quote" ? `［見積書 ${m.quote_total?.toLocaleString("ja-JP")}円］` : m.kind === "text" || m.kind === "system" ? m.body : "［ファイル］";
+        const who = m.sender_side === "system" ? "システム" : m.sender_side === "customer" ? "お客様" : `会社（${ctx.companyName}）`;
+        const body = m.kind === "quote" ? `［見積書 ${m.quote_total?.toLocaleString("ja-JP")}円］` : m.kind === "text" || m.kind === "system" ? redact(m.body) : "［ファイル］";
         return `${who}: ${body}`;
       })
       .join("\n");
-    const writer = ctx.side === "company" ? `会社（${ctx.companyName}）の担当者` : `お客様（${ctx.customerName}）`;
+    const writer = ctx.side === "company" ? `会社（${ctx.companyName}）の担当者` : "お客様";
     const response = await client.beta.messages.create({
       model: process.env.ANTHROPIC_MODEL || "claude-opus-5-5",
       max_tokens: 2000,
@@ -56,7 +76,7 @@ export async function draftReply(ctx: DraftContext): Promise<{ text: string; sou
       messages: [
         {
           role: "user",
-          content: `案件: ${ctx.projectSummary}\n\nこれまでのやり取り:\n${transcript || "（まだメッセージはありません）"}\n\n${writer}として、次に送る返信の下書きを書いてください。`,
+          content: `案件: ${redact(ctx.projectSummary)}\n\nこれまでのやり取り:\n${transcript || "（まだメッセージはありません）"}\n\n${writer}として、次に送る返信の下書きを書いてください。`,
         },
       ],
     });
@@ -67,7 +87,8 @@ export async function draftReply(ctx: DraftContext): Promise<{ text: string; sou
       .trim();
     return text ? { text, source: "ai" } : { text: templateDraft(ctx), source: "template" };
   } catch (e) {
-    console.error("[ai-draft]", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : e);
+    // Status and message only — never the request (it holds the conversation).
+    console.error("[ai-draft]", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : e instanceof Error ? e.name : "error");
     return { text: templateDraft(ctx), source: "template" };
   }
 }
