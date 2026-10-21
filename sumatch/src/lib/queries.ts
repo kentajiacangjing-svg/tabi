@@ -137,6 +137,7 @@ export interface ChatMessage {
   quote_total: number | null;
   quote_title: string | null;
   quote_version: number | null;
+  quote_status: string | null;
   quote_days: number | null;
   contact_flags: string;
   created_at: string;
@@ -145,7 +146,7 @@ export interface ChatMessage {
 export function messagesFor(matchId: string) {
   return all<ChatMessage>(
     `SELECT g.id, g.sender_side, u.name AS sender_name, g.kind, g.body, g.file_id, f.mime AS file_mime, f.original_name AS file_name,
-            g.quote_id, q.total AS quote_total, q.title AS quote_title, q.version AS quote_version, q.duration_days AS quote_days, g.contact_flags, g.created_at
+            g.quote_id, q.total AS quote_total, q.title AS quote_title, q.version AS quote_version, q.status AS quote_status, q.duration_days AS quote_days, g.contact_flags, g.created_at
        FROM messages g
        LEFT JOIN users u ON u.id = g.sender_user_id
        LEFT JOIN files f ON f.id = g.file_id

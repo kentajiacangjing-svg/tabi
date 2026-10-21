@@ -226,3 +226,21 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
     </div>
   );
 }
+
+/** 「サンプル」 label on demo photos and reviews. Rendered everywhere, shown only in demo mode (see globals.css). */
+export function SampleTag({ label = "サンプル写真", className }: { label?: string; className?: string }) {
+  return (
+    <span className={cx("sample-tag pointer-events-none items-center rounded-full bg-ink/75 px-2.5 py-1 text-[12px] font-medium leading-none text-white", className ?? "absolute left-3 top-3 z-[1]")}>
+      {label}
+    </span>
+  );
+}
+
+/** Photos that illustrate a kind of work rather than show a company's job. Shown in every mode. */
+export function ImageTag({ className }: { className?: string }) {
+  return (
+    <span className={cx("pointer-events-none absolute bottom-3 right-3 z-[1] rounded-full bg-ink/60 px-2.5 py-1 text-[12px] leading-none text-white", className)}>
+      イメージ写真
+    </span>
+  );
+}

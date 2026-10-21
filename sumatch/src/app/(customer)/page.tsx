@@ -3,7 +3,7 @@ import { activeAreas, activeCategories, projectsForCustomer, workImage } from "@
 import { all, get } from "@/lib/db";
 import { HERO_PHOTO } from "@/lib/visuals";
 import { Icon } from "@/components/icons";
-import { Kicker } from "@/components/ui";
+import { ImageTag, Kicker, SampleTag } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { CategoryPicker } from "@/components/category-picker";
 import { Track } from "@/components/track";
@@ -47,9 +47,10 @@ export default async function Home() {
       {/* 1. The question, next to a photo of a finished room (photo only on wide screens) */}
       <section className="grid items-start gap-10 pb-16 pt-2 sm:pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,500px)] lg:gap-14 lg:pb-24">
         <div className="relative hidden lg:sticky lg:top-24 lg:block">
-          <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] bg-soft shadow-[var(--shadow-pop)]">
+            <ImageTag />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HERO_PHOTO} alt="施工事例：リビングの内装リノベーション" className="size-full object-cover" />
+            <img src={HERO_PHOTO} alt="リビングの内装リフォームのイメージ" className="size-full object-cover" />
           </div>
           <div className="absolute -bottom-6 left-6 right-16 rounded-2xl bg-surface/95 p-5 shadow-[var(--shadow-lift)] backdrop-blur">
             <div className="flex items-baseline gap-6">
@@ -95,7 +96,8 @@ export default async function Home() {
           <div className="no-scrollbar mx-auto mt-7 flex max-w-[1320px] snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:scroll-px-10 sm:px-10 lg:px-12 lg:grid lg:grid-cols-4 lg:overflow-visible lg:[&>*:nth-child(n+5)]:hidden">
             {works.map((w) => (
               <figure key={w.id} className="w-[72vw] max-w-[300px] shrink-0 snap-start lg:w-auto lg:max-w-none">
-                <div className="aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
+                  <SampleTag />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={workImage(w) ?? ""} alt={w.title} className="size-full object-cover" loading="lazy" />
                 </div>
@@ -131,9 +133,10 @@ export default async function Home() {
 
       {/* 4. Trust, beside a facade */}
       <section className="grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-2 lg:gap-16">
-        <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/seed/exterior-2.jpg" alt="施工事例：玄関まわりの外壁塗装" className="size-full object-cover" loading="lazy" />
+          <img src="/seed/exterior-2.jpg" alt="外壁塗装のイメージ" className="size-full object-cover" loading="lazy" />
+          <ImageTag />
         </div>
         <div>
           <Kicker className="mb-2">条件に合う会社だけ</Kicker>

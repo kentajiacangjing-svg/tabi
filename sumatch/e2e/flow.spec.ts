@@ -32,7 +32,7 @@ async function freshCustomerAtDeck(browser: Browser): Promise<Page> {
   return page;
 }
 
-test("customer → company → chat → quote → compare → decide", async ({ page, browser }) => {
+test("customer → company → chat → quote → revise → compare → decide → terms → both agree", async ({ page, browser }) => {
   const email = `e2e-${Date.now()}@example.com`;
 
   // 1. Top: one question, pick a category, 次へ
@@ -84,16 +84,27 @@ test("customer → company → chat → quote → compare → decide", async ({ 
   await biz.getByRole("link", { name: "メッセージを送る" }).click();
   await biz.waitForURL(/\/business\/messages\//);
 
-  // contact-info warning
+  // contact details are refused before agreement: no "send anyway", the text stays for editing
   await biz.getByLabel("メッセージ").fill("詳しくは 090-1234-5678 までお電話ください");
   await biz.getByRole("button", { name: "送信", exact: true }).click();
-  await expect(biz.getByText(/電話番号が含まれているようです/)).toBeVisible();
+  await expect(biz.getByText("この内容は送信できません")).toBeVisible();
+  await expect(biz.getByText(/契約手続き前の外部連絡先の共有はできません/)).toBeVisible();
+  await expect(biz.getByRole("button", { name: "このまま送信" })).toHaveCount(0);
+  await expect(biz.getByRole("button", { name: "誤判定を運営に知らせる" })).toBeVisible();
   await biz.getByRole("button", { name: "修正する" }).click();
-  await biz.getByLabel("メッセージ").fill("ご相談ありがとうございます。現地調査の候補日を教えてください。");
+  await expect(biz.getByLabel("メッセージ")).toHaveValue(/090-1234-5678/);
+  await expect(biz.getByRole("log").getByText("090-1234-5678")).toHaveCount(0);
+  // full-width letters and an address spelled out with アット / ドット are caught too
+  await biz.getByLabel("メッセージ").fill("ｍａｉｌ：taro アット example ドット com");
+  await biz.getByRole("button", { name: "送信", exact: true }).click();
+  await expect(biz.getByText("この内容は送信できません")).toBeVisible();
+  await biz.getByRole("button", { name: "修正する" }).click();
+  // an ordinary message with an amount, a date and a size goes through
+  await biz.getByLabel("メッセージ").fill("ご相談ありがとうございます。現地調査の候補日を教えてください。12/3 9:30〜、外壁約150㎡・概算120万円の想定です。");
   await biz.getByRole("button", { name: "送信", exact: true }).click();
   await expect(biz.locator("section").getByText("現地調査の候補日を教えてください。", { exact: false }).last()).toBeVisible();
 
-  // 5. Company submits a quote
+  // 5. Company submits a quote, then revises it
   await biz.getByRole("link", { name: "見積を作る" }).click();
   await biz.getByLabel("工事項目").first().fill("外壁塗装一式");
   await biz.getByLabel("単価").first().fill("1000000");
@@ -102,27 +113,84 @@ test("customer → company → chat → quote → compare → decide", async ({ 
   await biz.getByRole("button", { name: "見積を提出" }).click();
   await biz.waitForURL(/\/business\/messages\//);
   await expect(biz.locator("section").getByText("¥1,100,000").first()).toBeVisible();
+  const chatUrl = biz.url();
+  await biz.getByRole("link", { name: "見積を作る" }).click();
+  await expect(biz.getByRole("heading", { name: /見積の改訂（第2版）/ })).toBeVisible();
+  await biz.getByLabel("単価").first().fill("1200000");
+  await biz.getByRole("button", { name: "改訂版を提出" }).click();
+  await biz.waitForURL(/\/business\/messages\//);
+  await expect(biz.locator("section").getByText("¥1,320,000").first()).toBeVisible();
+  await expect(biz.locator("section").getByText("第2版").first()).toBeVisible();
   // business home and case list reflect it
   await biz.goto("/business/dashboard");
   await expect(biz.getByRole("heading", { name: "今日やること" })).toBeVisible();
   await biz.goto("/business/active");
   await expect(biz.getByText("テスト 花子").first()).toBeVisible();
 
-  // 6. Customer: notification → match moment, chat, compare, decide
+  // 6. Customer: notification → match moment, chat, compare (latest version only), decide
   await page.goto("/projects");
   await page.getByRole("link", { name: /湘南ペイントと相談を始められます/ }).click();
   await expect(page.getByRole("heading", { name: "マッチしました" })).toBeVisible();
   await page.getByRole("link", { name: "メッセージを送る" }).click();
   await expect(page.locator("section").getByText("現地調査の候補日を教えてください。", { exact: false }).last()).toBeVisible();
+  await expect(page.getByText("この版は更新されています。最新の版を確認してください。")).toBeVisible();
   await page.goto(projectUrl.replace("/matches?project=", "/quotes?project="));
   await expect(page.getByRole("heading", { name: "見積を比べる" })).toBeVisible();
-  await expect(page.getByText("¥1,100,000").first()).toBeVisible();
+  await expect(page.getByText("¥1,320,000").first()).toBeVisible();
+  await expect(page.getByText("¥1,100,000")).toHaveCount(0);
+  const table = page.getByRole("region", { name: "見積の比較表" });
+  await expect(table).toBeVisible();
+  await expect(table.getByText("未提示").first()).toBeVisible();
   await page.getByRole("link", { name: "見積を見る" }).first().click();
-  await page.getByRole("button", { name: "この会社に決める" }).click();
-  await page.getByRole("button", { name: "決定する" }).click();
+  await expect(page.getByText("税込・第2版（最新）")).toBeVisible();
+  await page.getByRole("button", { name: "この会社に依頼先を決める" }).click();
+  await expect(page.getByText("この時点では契約は成立しません。")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("¥1,320,000")).toBeVisible();
+  // a double tap records one decision
+  await page.getByRole("button", { name: "依頼先に決める" }).dblclick();
   await page.waitForURL(/\/projects\/.+decided=1/);
-  await expect(page.getByRole("heading", { name: "契約" })).toBeVisible();
-  await expect(page.getByText("1,100,000円")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "依頼先と契約条件" })).toBeVisible();
+  await expect(page.getByText("依頼先決定（契約条件はこれから）")).toBeVisible();
+  await expect(page.getByText(/契約条件（工事範囲・日程・支払条件・保証など）を準備しています/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "工事が始まった" })).toHaveCount(0);
+  await expect(page.getByText("¥1,320,000").or(page.getByText("1,320,000円")).first()).toBeVisible();
+
+  // 7. Company: fills the terms (all required), agrees; customer agrees → 双方の合意確認済み
+  await biz.goto("/business/active");
+  await biz.getByRole("link", { name: /テスト 花子様/ }).first().click();
+  await biz.waitForURL(/\/business\/contract\//);
+  // another company cannot open this contract
+  const other = await demoLogin(browser, "藤沢リフォーム");
+  expect((await other.goto(biz.url()))?.status()).toBe(404);
+  await expect(biz.getByText("依頼先決定（契約条件はこれから）")).toBeVisible();
+  await biz.getByLabel(/工事範囲/).fill("外壁全面の塗装（足場・洗浄・付帯部を含む）");
+  await biz.getByLabel(/工事開始予定日/).fill("2026-12-01");
+  await biz.getByLabel(/^工期/).fill("着工から約14日");
+  await biz.getByLabel(/材料・仕様/).fill("シリコン塗料 3回塗り");
+  await biz.getByLabel(/支払条件/).fill("完工後に一括で振込");
+  await biz.getByLabel(/追加工事が必要になった時/).fill("事前に見積を出し、承認後に着手");
+  await biz.getByLabel(/^保証/).fill("外壁10年");
+  await biz.getByLabel(/キャンセル条件/).fill("");
+  await biz.getByRole("button", { name: "この条件をお客様に送る" }).click();
+  // the browser keeps an empty required field from being sent; nothing changes
+  await expect(biz.getByText("契約条件を保存し、お客様にお知らせしました。")).toHaveCount(0);
+  await biz.getByLabel(/キャンセル条件/).fill("着工前は無償");
+  await biz.getByRole("button", { name: "この条件をお客様に送る" }).click();
+  await expect(biz.getByText("契約条件の確認中")).toBeVisible();
+  await biz.getByLabel("上の契約条件をすべて確認しました。").check();
+  await biz.getByRole("button", { name: "この条件に同意する" }).click();
+  await expect(biz.getByText(/あなたは同意済みです/)).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText("契約条件の確認中")).toBeVisible();
+  await expect(page.getByText("外壁全面の塗装（足場・洗浄・付帯部を含む）")).toBeVisible();
+  await page.getByLabel("上の契約条件をすべて確認しました。").check();
+  await page.getByRole("button", { name: "この条件に同意する" }).click();
+  await expect(page.getByText(/双方の合意を確認しました/)).toBeVisible();
+  await expect(page.getByText("双方の合意確認済み").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "工事が始まった" })).toBeVisible();
+  await biz.goto(chatUrl);
+  await expect(biz.locator("section").getByText("双方が、契約条件に合意したことを確認しました", { exact: false })).toBeVisible();
 
   // 7. Admin: funnel and the new contract
   const admin = await demoLogin(browser, "SUMATCH運営");
@@ -130,6 +198,10 @@ test("customer → company → chat → quote → compare → decide", async ({ 
   await expect(admin.getByText("会社閲覧")).toBeVisible();
   await admin.goto("/admin?tab=contracts");
   await expect(admin.getByText("テスト 花子")).toBeVisible();
+  await expect(admin.getByText("双方の合意確認済み").first()).toBeVisible();
+  await admin.goto("/admin?tab=chats");
+  await expect(admin.getByText("送信を止めた連絡先（本文は保存していません）")).toBeVisible();
+  await expect(admin.getByText("090-1234-5678")).toHaveCount(0);
 });
 
 test("saved companies can be consulted later", async ({ browser }) => {
@@ -248,4 +320,33 @@ test("a very long message wraps inside its bubble", async ({ browser }) => {
   const vw = biz.viewportSize()!.width;
   const b = await bubble.boundingBox();
   expect(b!.x + b!.width).toBeLessThanOrEqual(vw);
+});
+
+test("comparison table on a phone: every quote side by side, the page itself does not scroll sideways", async ({ browser }) => {
+  const yamada = await demoLogin(browser, "山田 太郎");
+  await yamada.goto("/quotes");
+  await expect(yamada.getByRole("heading", { name: "見積を比べる" })).toBeVisible();
+  const table = yamada.getByRole("region", { name: "見積の比較表" });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole("columnheader")).toHaveCount(4);
+  for (const row of ["税込総額", "内訳", "施工範囲", "材料", "工期・開始予定", "保証", "有効期限", "追加費用の条件", "会社情報"]) {
+    await expect(table.getByRole("rowheader", { name: row })).toBeVisible();
+  }
+  const { inner, outer } = await table.evaluate((el) => ({ inner: el.scrollWidth, outer: el.clientWidth }));
+  expect(inner).toBeGreaterThan(outer);
+  const page = await yamada.evaluate(() => ({ w: document.documentElement.scrollWidth, vw: window.innerWidth }));
+  expect(page.w).toBeLessThanOrEqual(page.vw);
+  // the item column stays visible after scrolling the companies
+  await table.scrollIntoViewIfNeeded();
+  await table.evaluate((el) => el.scrollTo({ left: 400 }));
+  const head = table.getByRole("rowheader", { name: "税込総額" });
+  const [h, t] = [await head.boundingBox(), await table.boundingBox()];
+  expect(Math.abs(h!.x - t!.x)).toBeLessThan(2);
+});
+
+test("demo mode labels sample photos and reviews", async ({ browser }) => {
+  const yamada = await demoLogin(browser, "山田 太郎");
+  await yamada.goto("/quotes");
+  await expect(yamada.getByText("デモ", { exact: true }).first()).toBeVisible();
+  await expect(yamada.getByText("サンプル写真").first()).toBeVisible();
 });

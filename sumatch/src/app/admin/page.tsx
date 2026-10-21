@@ -225,7 +225,7 @@ function CompaniesTab() {
         <tr key={c.id}>
           <td>
             <Link href={`/company/${c.id}`} className="font-semibold hover:underline">{c.name}</Link>
-            <div className="text-[11px] text-muted">{c.address}・担当者{c.members}名・登録 {dateShort(c.created_at)}</div>
+            <div className="text-[12px] text-muted">{c.address}・担当者{c.members}名・登録 {dateShort(c.created_at)}</div>
             {c.web_interest ? <Badge tone="brand" className="mt-1">Web相談希望</Badge> : null}
           </td>
           <td><Badge tone={tone[c.status]}>{label[c.status]}</Badge></td>
@@ -267,7 +267,7 @@ function UsersTab() {
     <Table head={["名前", "メール", "種別", "相談数", "登録", "最終ログイン", "状態"]}>
       {rows.map((u) => (
         <tr key={u.id}>
-          <td className="font-semibold">{u.name}{u.company && <div className="text-[11px] font-normal text-muted">{u.company}</div>}</td>
+          <td className="font-semibold">{u.name}{u.company && <div className="text-[12px] font-normal text-muted">{u.company}</div>}</td>
           <td>{u.email}</td>
           <td>{role[u.role]}</td>
           <td className="tabular-nums">{u.projects || "—"}</td>
@@ -324,9 +324,9 @@ function MatchesTab() {
     <Table head={["案件", "企業", "マッチ度", "お客様の希望", "企業の回答", "状態", "成立日"]}>
       {rows.map((m) => (
         <tr key={m.id}>
-          <td>{m.customer}・{m.city}<div className="text-[11px] text-muted">{m.title}</div></td>
+          <td>{m.customer}・{m.city}<div className="text-[12px] text-muted">{m.title}</div></td>
           <td>{m.company}</td>
-          <td className="tabular-nums">{m.score}%<div className="text-[11px] text-muted">{parseJson<string[]>(m.reasons, []).slice(1).join("・")}</div></td>
+          <td className="tabular-nums">{m.score}%<div className="text-[12px] text-muted">{parseJson<string[]>(m.reasons, []).slice(1).join("・")}</div></td>
           <td>{m.customer_interest ? "話したい" : "—"}</td>
           <td>{resp[m.company_response]}</td>
           <td>{m.status === "matched" ? <Badge tone="ok">成立</Badge> : m.status === "closed" ? <Badge>終了</Badge> : <Badge tone="brand">候補</Badge>}</td>
@@ -444,10 +444,10 @@ function ContractsTab() {
     <Table head={["お客様 / 案件", "企業", "金額（見積）", "成功報酬（合意後）", "合意日", "工事予定日", "状態"]}>
       {rows.map((c) => (
         <tr key={c.id}>
-          <td>{c.customer}<div className="text-[11px] text-muted">{c.title}</div></td>
+          <td>{c.customer}<div className="text-[12px] text-muted">{c.title}</div></td>
           <td>{c.company}</td>
           <td className="tabular-nums font-semibold">{yen(c.amount)}</td>
-          <td className="tabular-nums">{yen(c.amount * c.success_fee_rate)}<span className="text-[11px] text-muted">（{Math.round(c.success_fee_rate * 1000) / 10}%）</span></td>
+          <td className="tabular-nums">{yen(c.amount * c.success_fee_rate)}<span className="text-[12px] text-muted">（{Math.round(c.success_fee_rate * 1000) / 10}%）</span></td>
           <td>{c.contract_date ?? "—"}</td>
           <td>{c.start_date ?? "—"}</td>
           <td><Badge tone={c.status === "completed" ? "ok" : "brand"}>{label(c)}</Badge></td>
@@ -485,11 +485,11 @@ function CategoriesTab() {
   const form = (c?: (typeof rows)[number]) => (
     <ActionForm key={c?.id ?? "new"} action={upsertCategoryAction} className="grid items-end gap-2 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,2fr)_auto]">
       <input type="hidden" name="id" value={c?.id ?? ""} />
-      <label className="text-[11px] text-muted">名前<input name="name" defaultValue={c?.name} className={small} required /></label>
-      <label className="text-[11px] text-muted">スラッグ<input name="slug" defaultValue={c?.slug} className={small} required /></label>
-      <label className="text-[11px] text-muted">相場下限（円）<input name="price_min" type="number" defaultValue={c?.price_min ?? 0} className={small} /></label>
-      <label className="text-[11px] text-muted">相場上限（円）<input name="price_max" type="number" defaultValue={c?.price_max ?? 0} className={small} /></label>
-      <label className="text-[11px] text-muted">お悩みの選択肢（読点区切り）<input name="concerns" defaultValue={parseJson<string[]>(c?.concerns, []).join("、")} className={small} /></label>
+      <label className="text-[12px] text-muted">名前<input name="name" defaultValue={c?.name} className={small} required /></label>
+      <label className="text-[12px] text-muted">スラッグ<input name="slug" defaultValue={c?.slug} className={small} required /></label>
+      <label className="text-[12px] text-muted">相場下限（円）<input name="price_min" type="number" defaultValue={c?.price_min ?? 0} className={small} /></label>
+      <label className="text-[12px] text-muted">相場上限（円）<input name="price_max" type="number" defaultValue={c?.price_max ?? 0} className={small} /></label>
+      <label className="text-[12px] text-muted">お悩みの選択肢（読点区切り）<input name="concerns" defaultValue={parseJson<string[]>(c?.concerns, []).join("、")} className={small} /></label>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-1 text-[12px]"><input type="checkbox" name="active" defaultChecked={c ? !!c.active : true} />公開</label>
         <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">{c ? "保存" : "追加"}</button>
@@ -497,8 +497,8 @@ function CategoriesTab() {
       <input type="hidden" name="group_name" value={c?.group_name ?? "住まい"} />
       <input type="hidden" name="icon" value={c?.icon ?? "home"} />
       <input type="hidden" name="sort" value={c?.sort ?? rows.length} />
-      <label className="text-[11px] text-muted sm:col-span-2">説明<input name="description" defaultValue={c?.description} className={small} /></label>
-      <label className="text-[11px] text-muted sm:col-span-3">相場の注記<input name="price_note" defaultValue={c?.price_note} className={small} /></label>
+      <label className="text-[12px] text-muted sm:col-span-2">説明<input name="description" defaultValue={c?.description} className={small} /></label>
+      <label className="text-[12px] text-muted sm:col-span-3">相場の注記<input name="price_note" defaultValue={c?.price_note} className={small} /></label>
     </ActionForm>
   );
   return (
@@ -517,10 +517,10 @@ function AreasTab() {
     <ActionForm key={a?.id ?? "new"} action={upsertAreaAction} className="grid items-end gap-2 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
       <input type="hidden" name="id" value={a?.id ?? ""} />
       <input type="hidden" name="sort" value={a?.sort ?? rows.length} />
-      <label className="text-[11px] text-muted">都道府県<input name="prefecture" defaultValue={a?.prefecture ?? "神奈川県"} className={small} required /></label>
-      <label className="text-[11px] text-muted">市区町村<input name="city" defaultValue={a?.city} className={small} required /></label>
-      <label className="text-[11px] text-muted">地域名<input name="region" defaultValue={a?.region} className={small} /></label>
-      <label className="text-[11px] text-muted">郵便番号の先頭3桁<input name="postal_prefixes" defaultValue={a?.postal_prefixes} placeholder="251,252" className={small} /></label>
+      <label className="text-[12px] text-muted">都道府県<input name="prefecture" defaultValue={a?.prefecture ?? "神奈川県"} className={small} required /></label>
+      <label className="text-[12px] text-muted">市区町村<input name="city" defaultValue={a?.city} className={small} required /></label>
+      <label className="text-[12px] text-muted">地域名<input name="region" defaultValue={a?.region} className={small} /></label>
+      <label className="text-[12px] text-muted">郵便番号の先頭3桁<input name="postal_prefixes" defaultValue={a?.postal_prefixes} placeholder="251,252" className={small} /></label>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-1 text-[12px]"><input type="checkbox" name="active" defaultChecked={a ? !!a.active : true} />対応中</label>
         <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">{a ? "保存" : "追加"}</button>
@@ -542,12 +542,12 @@ function PlansTab() {
     <ActionForm key={p?.id ?? "new"} action={upsertPlanAction} className="grid items-end gap-2 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_1.6fr_auto]">
       <input type="hidden" name="id" value={p?.id ?? ""} />
       <input type="hidden" name="sort" value={p?.sort ?? rows.length} />
-      <label className="text-[11px] text-muted">コード<input name="code" defaultValue={p?.code} className={small} required /></label>
-      <label className="text-[11px] text-muted">表示名<input name="name" defaultValue={p?.name} className={small} required /></label>
-      <label className="text-[11px] text-muted">月額（円）<input name="monthly_price" type="number" defaultValue={p?.monthly_price} className={small} required /></label>
-      <label className="text-[11px] text-muted">月間マッチ上限<input name="match_limit" type="number" defaultValue={p?.match_limit} className={small} required /></label>
-      <label className="text-[11px] text-muted">成功報酬（%）<input name="success_fee_percent" type="number" step="0.1" defaultValue={p ? Math.round(p.success_fee_rate * 1000) / 10 : 3} className={small} required /></label>
-      <label className="text-[11px] text-muted">説明<input name="description" defaultValue={p?.description} className={small} /></label>
+      <label className="text-[12px] text-muted">コード<input name="code" defaultValue={p?.code} className={small} required /></label>
+      <label className="text-[12px] text-muted">表示名<input name="name" defaultValue={p?.name} className={small} required /></label>
+      <label className="text-[12px] text-muted">月額（円）<input name="monthly_price" type="number" defaultValue={p?.monthly_price} className={small} required /></label>
+      <label className="text-[12px] text-muted">月間マッチ上限<input name="match_limit" type="number" defaultValue={p?.match_limit} className={small} required /></label>
+      <label className="text-[12px] text-muted">成功報酬（%）<input name="success_fee_percent" type="number" step="0.1" defaultValue={p ? Math.round(p.success_fee_rate * 1000) / 10 : 3} className={small} required /></label>
+      <label className="text-[12px] text-muted">説明<input name="description" defaultValue={p?.description} className={small} /></label>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-1 text-[12px]"><input type="checkbox" name="active" defaultChecked={p ? !!p.active : true} />公開</label>
         <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">{p ? "保存" : "追加"}</button>
@@ -563,12 +563,12 @@ function PlansTab() {
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
         <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-xl border border-line bg-surface p-4">
           <input type="hidden" name="key" value="default_trial_days" />
-          <label className="flex-1 text-[11px] text-muted">新規企業の無料期間（日）<input name="value" type="number" defaultValue={getSetting("default_trial_days", "60")} className={small} /></label>
+          <label className="flex-1 text-[12px] text-muted">新規企業の無料期間（日）<input name="value" type="number" defaultValue={getSetting("default_trial_days", "60")} className={small} /></label>
           <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">保存</button>
         </ActionForm>
         <ActionForm action={updateSettingAction} className="flex items-end gap-2 rounded-xl border border-line bg-surface p-4">
           <input type="hidden" name="key" value="success_fee_note" />
-          <label className="flex-1 text-[11px] text-muted">成功報酬の注記<input name="value" defaultValue={getSetting("success_fee_note")} className={small} /></label>
+          <label className="flex-1 text-[12px] text-muted">成功報酬の注記<input name="value" defaultValue={getSetting("success_fee_note")} className={small} /></label>
           <button className="min-h-10 rounded-lg bg-brand px-4 text-[13px] font-medium text-white">保存</button>
         </ActionForm>
       </div>

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { markCompanyAction, requestMatchAction, trackCompanyViewAction } from "@/app/actions/customer";
 import { Icon } from "./icons";
-import { Kicker, cx } from "./ui";
+import { Kicker, SampleTag, cx } from "./ui";
 
 export interface DeckCompany {
   matchId: string;
@@ -209,10 +209,13 @@ export function CompanyDeck({
           aria-label={`${current.name}`}
         >
           <div className="relative aspect-[4/3] bg-soft lg:aspect-[16/10]">
-            {current.photo && (
+            {current.photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={current.photo} alt={current.photoCaption ? `施工事例：${current.photoCaption}` : `${current.name}の施工写真`} className="size-full object-cover" draggable={false} />
+            ) : (
+              <span className="grid size-full place-items-center text-[14px] text-muted">施工写真はまだありません</span>
             )}
+            {current.photo && <SampleTag className="absolute right-4 top-4" />}
             <div className="scrim-b pointer-events-none absolute inset-0" />
             {current.photoCaption && <span className="absolute bottom-4 left-5 right-5 truncate text-[13px] text-white/90">施工事例　{current.photoCaption}</span>}
             {current.wantsYou && (
@@ -237,8 +240,14 @@ export function CompanyDeck({
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <h2 className="jp min-w-0 text-[24px] font-bold leading-tight sm:text-[26px]">{current.name}</h2>
               <span className="tnum shrink-0 text-[16px] font-semibold">
-                ★ {current.rating.toFixed(1)}
-                <span className="font-normal text-muted">（{current.reviews}）</span>
+                {current.reviews > 0 ? (
+                  <>
+                    ★ {current.rating.toFixed(1)}
+                    <span className="font-normal text-muted">（{current.reviews}）</span>
+                  </>
+                ) : (
+                  <span className="font-normal text-muted">口コミはまだありません</span>
+                )}
               </span>
             </div>
             <div className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
@@ -330,7 +339,7 @@ export function CompanyDeck({
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-medium">{c.name}</span>
-                  <span className="tnum block text-[12px] text-muted">★ {c.rating.toFixed(1)}・{c.priceBand}</span>
+                  <span className="tnum block text-[12px] text-muted">{c.reviews > 0 ? `★ ${c.rating.toFixed(1)}・` : ""}{c.priceBand}</span>
                 </span>
               </li>
             ))}

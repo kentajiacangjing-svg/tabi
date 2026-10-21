@@ -71,7 +71,7 @@ export default async function ProjectsPage() {
                   {p.status !== "cancelled" && (
                     <Link href={next.href} className="press mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-soft text-[15px] font-semibold text-brand hover:bg-[#dcebe1]">
                       {next.text}
-                      {p.unread > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] text-white">{p.unread}</span>}
+                      {p.unread > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent-strong px-1.5 text-[12px] text-white">{p.unread}</span>}
                     </Link>
                   )}
                 </div>

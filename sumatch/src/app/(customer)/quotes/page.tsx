@@ -5,8 +5,9 @@ import { projectForCustomer } from "@/lib/access";
 import { all, get } from "@/lib/db";
 import { contractForProject, latestQuotesForProject, projectsForCustomer, workImage } from "@/lib/queries";
 import { compareQuotes } from "@/lib/quote-compare";
-import { ButtonLink, EmptyState, PageHeader, cx } from "@/components/ui";
+import { ButtonLink, EmptyState, PageHeader, SampleTag, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { QuoteTable } from "@/components/quote-table";
 import { dateJa } from "@/lib/format";
 import type { Category, Match } from "@/lib/types";
 
@@ -39,7 +40,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
   );
   const staff = (id: string | null) => (id ? get<{ name: string }>("SELECT name FROM users WHERE id = ?", id)?.name : undefined);
 
-  // What makes each estimate stand out: 価格 / 安心 / 工期. Only shown when there is something to compare.
+  // Sort aids only — price, warranty length, duration. No invented scores. Only shown when there is something to compare.
   const multi = quotes.length > 1;
   const best = {
     price: Math.min(...quotes.map((q) => q.total)),
@@ -54,12 +55,12 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
   const view: View = sp.view === "safe" || sp.view === "days" ? sp.view : "price";
   const views: { key: View; label: string; win: Q | null; value: (q: Q) => string }[] = [
     { key: "price", label: "価格で選ぶ", win: winner((q) => q.total === best.price), value: (q) => `¥${q.total.toLocaleString("ja-JP")}` },
-    { key: "safe", label: "安心で選ぶ", win: winner((q) => q.warranty_years === best.warranty), value: (q) => `保証${q.warranty_years}年` },
+    { key: "safe", label: "保証で選ぶ", win: winner((q) => q.warranty_years === best.warranty), value: (q) => `保証${q.warranty_years}年` },
     { key: "days", label: "工期で選ぶ", win: winner((q) => q.duration_days === best.days), value: (q) => `約${q.duration_days}日` },
   ];
-  // Small tags: 最安 / 安心 (longest warranty) / 最短.
+  // Small factual tags: 最安 / 保証最長 / 最短.
   const tags = (q: Q) =>
-    multi ? ([q.total === best.price && "最安", q.warranty_years === best.warranty && "安心", q.duration_days === best.days && "最短"].filter(Boolean) as string[]) : [];
+    multi ? ([q.total === best.price && "最安", q.warranty_years === best.warranty && q.warranty_years > 0 && "保証最長", q.duration_days === best.days && "最短"].filter(Boolean) as string[]) : [];
   const order: Record<View, (a: Q, b: Q) => number> = {
     price: (a, b) => a.total - b.total,
     safe: (a, b) => b.warranty_years - a.warranty_years || b.company.rating_avg - a.company.rating_avg,
@@ -149,10 +150,11 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <div className="relative h-20 bg-soft sm:h-24">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {photo && <img src={photo} alt="" className="size-full object-cover" loading="lazy" decoding="async" />}
+                    {photo && <SampleTag className="absolute bottom-2 right-3" />}
                     <div className="absolute left-4 top-3 flex flex-wrap gap-1.5">
-                      {chosen && <span className="rounded-full bg-brand px-2.5 py-1 text-[12px] font-medium text-white">決定</span>}
+                      {chosen && <span className="rounded-full bg-brand px-2.5 py-1 text-[12px] font-medium text-white">依頼先</span>}
                       {tags(q).map((t) => (
-                        <span key={t} className="rounded-full bg-surface/95 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-brand shadow-[var(--shadow-card)]">
+                        <span key={t} className="rounded-full bg-surface/95 px-2 py-0.5 text-[12px] font-semibold tracking-wide text-brand shadow-[var(--shadow-card)]">
                           {t}
                         </span>
                       ))}
@@ -165,7 +167,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <div className={cx("tnum mt-2 whitespace-nowrap font-semibold leading-none tracking-tight", q.total >= 100_000_000 ? "text-[30px] lg:text-[34px]" : q.total >= 10_000_000 ? "text-[36px] lg:text-[40px]" : "text-[40px] lg:text-[44px]", view === "price" && lead && "text-brand")}>
                     ¥{q.total.toLocaleString("ja-JP")}
                   </div>
-                  <div className="mt-1.5 text-[13px] text-muted">税込</div>
+                  <div className="mt-1.5 text-[13px] text-muted">税込・第{q.version}版</div>
                   <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
                     <div>
                       <dt className="text-[12px] text-muted">工期</dt>
@@ -177,7 +179,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     </div>
                     <div>
                       <dt className="text-[12px] text-muted">評価</dt>
-                      <dd className="tnum mt-0.5 text-[19px] font-semibold">★{q.company.rating_avg.toFixed(1)}</dd>
+                      <dd className="tnum mt-0.5 text-[19px] font-semibold">{q.company.review_count > 0 ? `★${q.company.rating_avg.toFixed(1)}` : "—"}</dd>
                     </div>
                   </dl>
                   <details className="group mt-4 border-t border-line">
@@ -212,6 +214,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
               );
             })}
           </div>
+          <QuoteTable quotes={sorted} chosenQuoteId={contract?.quote_id ?? null} decided={!!contract} />
         </>
       )}
 

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitQuoteAction } from "@/app/actions/chat";
 import { TAX_RATE } from "@/lib/constants";
+import { calcQuote } from "@/lib/quote-calc";
 import { Icon } from "./icons";
 import { Button, Field, Input, Notice, Textarea, inputClass, cx } from "./ui";
 
@@ -40,10 +41,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const subtotal = items.reduce((a, i) => a + Math.round((i.quantity || 0) * (i.unit_price || 0)), 0);
-  const taxable = Math.max(0, subtotal + (overhead || 0) - (discount || 0));
-  const tax = Math.round(taxable * TAX_RATE);
-  const total = taxable + tax;
+  const { subtotal, tax, total } = calcQuote(items, overhead, discount);
 
   const upd = (idx: number, patch: Partial<Item>) => setItems((xs) => xs.map((x, i) => (i === idx ? { ...x, ...patch } : x)));
 
@@ -85,7 +83,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
               </div>
             ))}
           </div>
-          <div className="mt-2 hidden grid-cols-[1fr_5rem_4rem_7.5rem_7rem_auto] gap-2 px-1 text-[11px] text-faint sm:grid">
+          <div className="mt-2 hidden grid-cols-[1fr_5rem_4rem_7.5rem_7rem_auto] gap-2 px-1 text-[12px] text-faint sm:grid">
             <span>項目</span>
             <span className="text-right">数量</span>
             <span>単位</span>
@@ -157,7 +155,7 @@ export function QuoteForm({ matchId, defaults, revision }: { matchId: string; de
       {error && <Notice tone="danger" icon="alert">{error}</Notice>}
       <div className="sticky bottom-[calc(60px+env(safe-area-inset-bottom))] z-10 -mx-5 flex items-center justify-between gap-3 border-t border-line bg-canvas px-5 py-3 md:static md:mx-0 md:px-0">
         <div>
-          <div className="text-[11px] text-muted">合計（税込）</div>
+          <div className="text-[12px] text-muted">合計（税込）</div>
           <div className="text-lg font-semibold">{yen(total)}</div>
         </div>
         <Button size="lg" disabled={pending || total <= 0}>

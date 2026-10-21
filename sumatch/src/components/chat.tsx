@@ -148,7 +148,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
   let lastDay = "";
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollerRef} onLoadCapture={stickToBottom} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-8">
+      <div ref={scrollerRef} onLoadCapture={stickToBottom} role="log" aria-label="会話の履歴" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-8">
         {messages.map((m, i) => {
           const day = dayLabel(m.created_at);
           const showDay = day !== lastDay;
@@ -168,16 +168,16 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
                 <div className={cx("flex items-end gap-1.5", isMine ? "flex-row-reverse" : "flex-row")}>
                   <div className={cx("max-w-[78%] sm:max-w-[65%]", isMine ? "items-end" : "items-start", "flex flex-col")}>
                     {!isMine && side !== "admin" && m.sender_name && <span className="mb-1 px-1 text-[12px] text-muted">{m.sender_name}</span>}
-                    {side === "admin" && <span className="mb-0.5 px-1 text-[11px] text-muted">{m.sender_side === "customer" ? "お客様" : "企業"}・{m.sender_name}</span>}
+                    {side === "admin" && <span className="mb-0.5 px-1 text-[12px] text-muted">{m.sender_side === "customer" ? "お客様" : "企業"}・{m.sender_name}</span>}
                     <Bubble m={m} isMine={isMine} quoteHref={quoteHref} />
                     {flagged.length > 0 && (
-                      <span className="mt-1 flex items-center gap-1 px-1 text-[11px] text-warn">
+                      <span className="mt-1 flex items-center gap-1 px-1 text-[12px] text-warn">
                         <Icon name="alert" size={12} />
                         {flagged.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}の共有が検知されました
                       </span>
                     )}
                   </div>
-                  <div className={cx("flex shrink-0 flex-col pb-0.5 text-[11px] leading-tight text-faint", isMine ? "items-end" : "items-start")}>
+                  <div className={cx("flex shrink-0 flex-col pb-0.5 text-[12px] leading-tight text-faint", isMine ? "items-end" : "items-start")}>
                     {isMine && i === lastMineIndex && otherReadAt && otherReadAt >= m.created_at && <span className="text-ink-2">既読</span>}
                     {isMine && i !== lastMineIndex && otherReadAt && otherReadAt >= m.created_at && <span>既読</span>}
                     <span>{timeHM(m.created_at)}</span>
@@ -236,7 +236,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
               </button>
             </div>
           )}
-          {draftSource && <div className="mb-1.5 px-1 text-[11px] text-muted">{draftSource === "ai" ? "AIが下書きしました。内容を確認してから送信してください。" : "テンプレートから下書きしました。内容を調整してから送信してください。"}</div>}
+          {draftSource && <div className="mb-1.5 px-1 text-[12px] text-muted">{draftSource === "ai" ? "AIが下書きしました。内容を確認してから送信してください。" : "テンプレートから下書きしました。内容を調整してから送信してください。"}</div>}
           {error && <Notice tone="danger" className="mb-2">{error}</Notice>}
           {showTemplates && (
             <div className="mb-2 flex flex-wrap gap-2">
@@ -321,8 +321,12 @@ function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quo
   if (m.kind === "quote") {
     return (
       <Link href={quoteHref ?? "#"} className="block w-72 rounded-[24px] border border-line bg-surface p-5 text-ink shadow-[var(--shadow-card)] hover:border-ink/25">
-        <div className="text-[14px] text-muted">{m.quote_version && m.quote_version > 1 ? "見積が更新されました" : "見積が届きました"}</div>
-        <div className="mt-2 text-[28px] font-medium leading-none tracking-tight">¥{m.quote_total?.toLocaleString("ja-JP")}</div>
+        <div className="flex items-baseline justify-between gap-2 text-[14px] text-muted">
+          <span>{m.quote_version && m.quote_version > 1 ? "見積が更新されました" : "見積が届きました"}</span>
+          {m.quote_version ? <span className="shrink-0 text-[13px]">第{m.quote_version}版</span> : null}
+        </div>
+        <div className={cx("mt-2 text-[28px] font-medium leading-none tracking-tight", m.quote_status === "superseded" && "text-muted line-through decoration-1")}>¥{m.quote_total?.toLocaleString("ja-JP")}</div>
+        {m.quote_status === "superseded" && <div className="mt-2 text-[13px] font-medium text-warn">この版は更新されています。最新の版を確認してください。</div>}
         {m.quote_days ? <div className="mt-2 text-[14px] text-ink-2">工期：約{m.quote_days}日</div> : null}
         <div className="mt-4 flex h-11 items-center justify-center rounded-xl bg-brand text-[15px] font-medium text-white">見積を見る</div>
       </Link>
@@ -348,7 +352,7 @@ function Bubble({ m, isMine, quoteHref }: { m: ChatMessage; isMine: boolean; quo
           </span>
           <span className="min-w-0">
             <span className="block truncate text-[13px] font-semibold">{m.file_name}</span>
-            <span className="text-[11px] text-muted">PDF・タップして開く</span>
+            <span className="text-[12px] text-muted">PDF・タップして開く</span>
           </span>
         </a>
         {m.body && <div className={cx(base, "px-4 py-2.5 whitespace-pre-wrap break-words")}>{m.body}</div>}

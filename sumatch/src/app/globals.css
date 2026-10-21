@@ -6,7 +6,7 @@
   --color-ink: #111111;
   --color-ink-2: #34362f;
   --color-muted: #666a66;
-  --color-faint: #8a8d89;
+  --color-faint: #6b6e6a;
   --color-line: #e4e5e1;
   --color-line-2: #eeefeb;
   --color-soft: #eef0ec;
@@ -18,6 +18,8 @@
   --color-brand-soft: #e7f0ea;
   --color-accent: #d97a4a;
   --color-accent-soft: #f8e9df;
+  /* white text on small badges needs more contrast than the accent itself (4.5:1) */
+  --color-accent-strong: #b4532a;
   --color-match: #d97a4a;
   --color-match-soft: #f8e9df;
   --color-ok: #184d3a;
@@ -291,4 +293,12 @@ h3 {
 /* A photo that fails to load leaves its calm placeholder background, not a broken-image icon. */
 img.img-broken {
   visibility: hidden;
+}
+
+/* Demo mode (<html data-demo>): sample photos and reviews say so. Hidden outside demo mode. */
+.sample-tag {
+  display: none;
+}
+html[data-demo] .sample-tag {
+  display: inline-flex;
 }

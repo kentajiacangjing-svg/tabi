@@ -117,7 +117,7 @@ export function ConversationList({ conversations, side }: { conversations: Conve
                 <span className={cx("truncate text-[15px]", c.unread ? "text-ink" : "text-muted")}>
                   {c.last_kind === "quote" ? "見積が届きました" : c.last_kind === "image" ? "写真を送りました" : c.last_kind === "file" ? "ファイルを送りました" : c.last_message}
                 </span>
-                {c.unread > 0 && <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white">{c.unread}</span>}
+                {c.unread > 0 && <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-accent-strong px-1.5 text-[12px] font-semibold text-white">{c.unread}</span>}
               </div>
             </div>
           </Link>

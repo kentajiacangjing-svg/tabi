@@ -7,6 +7,7 @@ import { cityOf, dateShort, manRange, responseSpeed } from "@/lib/format";
 import { MAX_MATCHES_PER_PROJECT } from "@/lib/constants";
 import { Icon } from "@/components/icons";
 import { ConsultButton } from "@/components/saved-actions";
+import { SampleTag } from "@/components/ui";
 import type { Match } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,8 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
 
       <div className="grid gap-x-10 lg:grid-cols-[minmax(0,1fr)_440px]">
         {/* 1. photo */}
-        <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] bg-soft">
+          <SampleTag />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {hero && workImage(hero) && <img src={workImage(hero)!} alt={hero.title} className="size-full object-cover" />}
         </div>
@@ -115,9 +117,10 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
               <div className="no-scrollbar -mx-5 mt-4 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 sm:mx-0 sm:scroll-px-0 sm:px-0 lg:grid lg:grid-cols-2 lg:gap-4">
                 {p.works.map((w) => (
                   <figure key={w.id} className="w-64 shrink-0 snap-start lg:w-auto">
-                    <div className="aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] bg-soft">
+                      <SampleTag />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {workImage(w) && <img src={workImage(w)!} alt={w.title} className="size-full object-cover" loading="lazy" decoding="async" />}
+                      {workImage(w) ? <img src={workImage(w)!} alt={w.title} className="size-full object-cover" loading="lazy" decoding="async" /> : <span className="grid size-full place-items-center text-[13px] text-muted">写真はまだありません</span>}
                     </div>
                     <figcaption className="mt-2.5 flex items-baseline justify-between gap-3">
                       <span className="truncate text-[14px] font-medium">{w.title}</span>
@@ -150,7 +153,10 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
           {/* 7. 口コミ */}
           <section className="mt-12 rounded-[28px] bg-brand-soft p-5 sm:p-7">
             <div className="flex items-end justify-between gap-4">
-              <h2 className="text-[22px] font-bold text-brand-ink">口コミ</h2>
+              <h2 className="flex items-center gap-2 text-[22px] font-bold text-brand-ink">
+                口コミ
+                <SampleTag label="サンプルの口コミ" className="" />
+              </h2>
               <span className="tnum text-[15px] text-brand-ink">
                 <span className="text-[32px] font-semibold leading-none">{c.rating_avg.toFixed(1)}</span> / 5
               </span>

@@ -32,7 +32,7 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
             className={cx("relative flex min-h-11 items-center rounded-xl px-3.5 text-[15px] transition-colors duration-150", active ? "font-semibold text-brand" : "text-muted hover:text-ink")}
           >
             {item.label}
-            {!!item.badge && <span className="ml-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white">{item.badge}</span>}
+            {!!item.badge && <span className="ml-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-accent-strong px-1.5 text-[12px] font-semibold text-white">{item.badge}</span>}
             {active && <span className="absolute -bottom-0.5 left-1/2 h-[3px] w-4 -translate-x-1/2 rounded-full bg-brand" />}
           </Link>
         );

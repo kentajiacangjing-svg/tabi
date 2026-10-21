@@ -91,7 +91,7 @@ export function MembersEditor({ members, isOwner, meId }: { members: { id: strin
           <li key={m.id} className="flex items-center gap-3 py-3">
             
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{m.name}{m.id === meId && <span className="ml-1 text-[11px] font-normal text-muted">（あなた）</span>}</div>
+              <div className="truncate text-sm font-semibold">{m.name}{m.id === meId && <span className="ml-1 text-[12px] font-normal text-muted">（あなた）</span>}</div>
               <div className="truncate text-[12px] text-muted">{m.email}</div>
             </div>
             <span className="text-[13px] text-muted">{m.role === "owner" ? "管理者" : "担当者"}</span>

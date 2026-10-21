@@ -155,6 +155,9 @@ export function ContractPanel({ contract: c, viewer }: { contract: Contract; vie
         <div className="mt-8">
           <h3 className="mb-4 text-[17px] font-medium">{terms ? "契約条件を変更する" : "契約条件を入力する"}</h3>
           <TermsForm contractId={c.id} initial={initial} hasTerms={!!terms} />
+          <Link href={`/business/quotes/new?match=${c.match_id}`} className="mt-4 flex min-h-11 items-center justify-center text-[15px] text-muted underline-offset-4 hover:text-ink hover:underline">
+            金額を変える場合は見積を改訂する
+          </Link>
         </div>
       )}
 

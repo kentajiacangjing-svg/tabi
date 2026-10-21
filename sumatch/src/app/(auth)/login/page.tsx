@@ -1,3 +1,4 @@
+import { isDemo } from "@/lib/demo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, homeFor } from "@/lib/auth";
@@ -9,7 +10,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { next } = await searchParams;
   const user = await getCurrentUser();
   if (user) redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : homeFor(user.role));
-  const demo = process.env.DEMO_MODE !== "false";
+  const demo = isDemo();
   return (
     <div className="w-full max-w-[440px]">
       <h1 className="text-[30px] font-semibold">ログイン</h1>

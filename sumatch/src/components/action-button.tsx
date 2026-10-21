@@ -43,7 +43,7 @@ export function ActionButton({
       >
         {children}
       </button>
-      {error && <span className="mt-1 text-[11px] text-danger">{error}</span>}
+      {error && <span className="mt-1 text-[12px] text-danger">{error}</span>}
     </span>
   );
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { isDemo } from "@/lib/demo";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { get } from "@/lib/db";
@@ -50,7 +51,7 @@ export async function logoutAction() {
 
 export async function demoLoginAction(email: string) {
   return handle(async () => {
-    if (process.env.DEMO_MODE === "false") throw new ActionError("デモログインは無効です。");
+    if (!isDemo()) throw new ActionError("デモログインは無効です。");
     if (!/(\.demo|@demo\.sumatch\.jp)$/.test(email)) throw new ActionError("デモアカウントではありません。");
     const row = get<User>("SELECT * FROM users WHERE email = ?", email);
     if (!row) throw new ActionError("デモアカウントが見つかりません。");

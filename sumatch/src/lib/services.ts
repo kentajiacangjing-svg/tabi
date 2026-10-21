@@ -3,7 +3,8 @@ import { all, get, insert, newId, now, run, tx, update, parseJson } from "./db";
 import { scoreCompany } from "./matching";
 import { notify, companyUserIds } from "./notify";
 import { publish } from "./realtime";
-import { MAX_MATCHES_PER_PROJECT, PROJECT_STATUS, TAX_RATE } from "./constants";
+import { MAX_MATCHES_PER_PROJECT, PROJECT_STATUS } from "./constants";
+import { calcQuote } from "./quote-calc";
 import { detectContactInfo } from "./contact-detect";
 import { appendContractEvent, assertNoContactInfo, contractForMatch, effectiveStage, latestQuoteForMatch, onQuoteRevised } from "./contract";
 import type { Category, Company, Contract, Match, Plan, Project, ProjectStatus, Quote } from "./types";
@@ -299,13 +300,7 @@ export interface QuoteInput {
   pdf_file_id: string | null;
 }
 
-export function calcQuote(items: QuoteInput["items"], overhead: number, discount: number) {
-  const lines = items.map((i) => ({ ...i, amount: Math.round(i.quantity * i.unit_price) }));
-  const subtotal = lines.reduce((a, b) => a + b.amount, 0);
-  const taxable = Math.max(0, subtotal + overhead - discount);
-  const tax = Math.round(taxable * TAX_RATE);
-  return { lines, subtotal, tax, total: taxable + tax };
-}
+export { calcQuote };
 
 export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput) {
   if (ctx.side !== "company") throw new DomainError("見積は企業のみ提出できます。");

@@ -17,7 +17,9 @@ export function Logo({ href = "/", sub }: { href?: string; sub?: string }) {
     <Link href={href} className="flex min-h-11 items-center gap-2.5" aria-label="SUMATCH ホーム">
       <LogoMark />
       <span className="text-[18px] font-bold tracking-[0.16em]">SUMATCH</span>
-      {sub && <span className="ml-0.5 whitespace-nowrap rounded-full bg-brand-soft px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-brand sm:text-[11px]">{sub}</span>}
+      {sub && <span className="ml-0.5 whitespace-nowrap rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-semibold tracking-wide text-brand">{sub}</span>}
+      {/* shown only in demo mode (html[data-demo]) */}
+      <span className="sample-tag whitespace-nowrap rounded-full bg-warn-soft px-2 py-0.5 text-[12px] font-semibold text-warn" title="会社・お客様・口コミ・写真はサンプルです">デモ</span>
     </Link>
   );
 }

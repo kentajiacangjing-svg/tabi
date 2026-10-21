@@ -50,7 +50,8 @@ function seedFile(name: string, scope: "project" | "match" | "public", scopeId: 
   return id;
 }
 
-export function seed() {
+/** Master data (plans, categories, areas) always; the sample people, companies and history only in demo mode. */
+export function seed(demo: boolean) {
   tx(() => {
     const pw = hashPassword(DEMO_PASSWORD);
     const user = (email: string, name: string, role: string, created = ago(60)) => {
@@ -117,6 +118,8 @@ export function seed() {
       areaId[city] = newId("area");
       insert("service_areas", { id: areaId[city], prefecture: pref, city, region, postal_prefixes: postal, active, sort: i, created_at: ago(90) });
     });
+
+    if (!demo) return;
 
     /* ---------- admin ---------- */
     user("admin@demo.sumatch.jp", "SUMATCH運営", "admin", ago(120));

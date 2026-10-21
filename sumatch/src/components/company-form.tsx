@@ -209,7 +209,7 @@ export function CompanyForm({
                   className={cx("min-h-11 rounded-xl border px-4 text-[15px]", on ? "border-brand bg-brand text-white" : "border-line bg-surface hover:border-ink/20")}
                 >
                   {a.name}
-                  {a.sub && <span className={cx("ml-1 text-[11px]", on ? "text-white/60" : "text-faint")}>{a.sub}</span>}
+                  {a.sub && <span className={cx("ml-1 text-[12px]", on ? "text-white/60" : "text-faint")}>{a.sub}</span>}
                 </button>
               );
             })}

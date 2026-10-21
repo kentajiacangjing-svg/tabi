@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LogoMark } from "./brand";
 import { Icon } from "./icons";
-import { Kicker } from "./ui";
+import { Kicker, SampleTag } from "./ui";
 
 /**
  * The brand moment. The company's work, softly blurred, fills the screen behind a dark wash; the same
@@ -44,7 +44,8 @@ export function MatchMoment({
 
       <div className="relative mx-auto flex w-full max-w-[460px] flex-1 flex-col items-center justify-center px-6 text-center">
         <div className="animate-reveal relative w-[min(78vw,360px)]">
-          <div className="aspect-[4/3] overflow-hidden rounded-[28px] bg-white/10 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] bg-white/10 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
+            {photo && <SampleTag />}
             {photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photo} alt="" className="size-full object-cover" />

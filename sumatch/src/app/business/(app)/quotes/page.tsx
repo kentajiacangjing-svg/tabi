@@ -8,7 +8,7 @@ import { Icon } from "@/components/icons";
 export const metadata = { title: "見積" };
 export const dynamic = "force-dynamic";
 
-const STATUS = { submitted: ["提出済み", "brand"], superseded: ["旧版", "neutral"], accepted: ["採用", "ok"], declined: ["不採用", "neutral"] } as const;
+const STATUS = { submitted: ["提出済み", "brand"], superseded: ["旧版", "neutral"], accepted: ["依頼先決定", "ok"], declined: ["不採用", "neutral"] } as const;
 
 export default async function BusinessQuotes({ searchParams }: { searchParams: Promise<{ match?: string }> }) {
   const { match } = await searchParams;

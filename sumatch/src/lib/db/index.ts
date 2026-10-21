@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync as DatabaseSyncType, SQLInputValue } from "node:sqlite";
 import { MIGRATIONS, SCHEMA } from "./schema";
 import { seed } from "./seed";
+import { isDemo } from "../demo";
+import { hashPassword } from "../password";
 
 // node:sqlite is loaded through getBuiltinModule so the bundler never tries to resolve it.
 const { DatabaseSync } = process.getBuiltinModule("node:sqlite") as typeof import("node:sqlite");
@@ -30,15 +32,17 @@ function open(): DatabaseSyncType {
 export function db(): DatabaseSyncType {
   if (!g.__sumatchDb) {
     g.__sumatchDb = open();
-    const row = g.__sumatchDb.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number };
+    // A brand-new database gets its master data, plus the sample data in demo mode (see lib/demo.ts).
+    const row = g.__sumatchDb.prepare("SELECT COUNT(*) AS n FROM categories").get() as { n: number };
     if (row.n === 0 && !g.__sumatchSeeding) {
       g.__sumatchSeeding = true;
       try {
-        seed();
+        seed(isDemo());
       } finally {
         g.__sumatchSeeding = false;
       }
     }
+    ensureAdmin(g.__sumatchDb);
   }
   return g.__sumatchDb;
 }
@@ -109,4 +113,23 @@ export function parseJson<T>(s: string | null | undefined, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+/** Outside demo mode there is no sample admin: ADMIN_EMAIL + ADMIN_PASSWORD create the first one (once). */
+function ensureAdmin(d: DatabaseSyncType) {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password) return;
+  if (d.prepare("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1").get()) return;
+  if (password.length < 12) {
+    console.warn("ADMIN_PASSWORD must be at least 12 characters; admin account not created.");
+    return;
+  }
+  d.prepare("INSERT INTO users (id, email, name, role, password_hash, created_at) VALUES (?, ?, ?, 'admin', ?, ?)").run(
+    newId("usr"),
+    email,
+    "運営",
+    hashPassword(password),
+    new Date().toISOString(),
+  );
 }
