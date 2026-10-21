@@ -10,7 +10,8 @@ export default defineConfig({
   use: { baseURL: "http://localhost:3200", trace: "retain-on-failure" },
   projects: [{ name: "mobile", use: { ...devices["Pixel 7"] } }],
   webServer: {
-    command: "node scripts/reset-db.mjs && npx next start -p 3200",
+    // Only the throwaway e2e store is removed — never ./storage.
+    command: "node -e \"require('fs').rmSync('.e2e-storage',{recursive:true,force:true})\" && npx next start -p 3200",
     url: "http://localhost:3200",
     reuseExistingServer: false,
     timeout: 120_000,

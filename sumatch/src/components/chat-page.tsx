@@ -9,7 +9,8 @@ import { CompanyAvatar, UserAvatar } from "./brand";
 import { Chat } from "./chat";
 import { Icon } from "./icons";
 import { cx } from "./ui";
-import { contactsUnlocked, contractForMatch } from "@/lib/contract";
+import { CONTACT_USE_FORM_MESSAGE, contactsUnlocked, contractForMatch } from "@/lib/contract";
+import { CONTACT_BLOCK_MESSAGE } from "@/lib/contact-detect";
 
 /** Conversation screen: the other party's name on top, the conversation, the composer. Nothing else. */
 export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext; viewerName: string; conversations: Conversation[] }) {
@@ -91,7 +92,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
           initialOtherReadAt={otherReadAt}
           templates={templates}
           quoteHref={quoteHref}
-          contactLocked={!contactsUnlocked(ctx.match.id)}
+          blockMessage={contactsUnlocked(ctx.match.id) ? CONTACT_USE_FORM_MESSAGE : CONTACT_BLOCK_MESSAGE}
           readOnly={side === "admin" || ctx.match.status !== "matched"}
           readOnlyReason={side === "admin" ? "運営は閲覧のみです。" : "このチャットは終了しています。"}
         />

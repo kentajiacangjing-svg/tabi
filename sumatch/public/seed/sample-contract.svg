@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 842" font-family="sans-serif">
+  <rect width="595" height="842" fill="#ffffff"/>
+  <rect x="24" y="24" width="547" height="794" fill="none" stroke="#a8402c" stroke-width="4" stroke-dasharray="12 8"/>
+  <text x="297" y="120" text-anchor="middle" font-size="30" fill="#111">工事請負契約書（サンプル）</text>
+  <text x="297" y="175" text-anchor="middle" font-size="18" fill="#a8402c">デモ用の見本です。実在の契約書ではなく、法的効力はありません。</text>
+  <g font-size="16" fill="#34362f">
+    <text x="70" y="260">工事名：〔デモ〕工事</text>
+    <text x="70" y="300">請負代金：見積書記載のとおり（税込）</text>
+    <text x="70" y="340">工期・支払条件・保証・キャンセル条件：契約条件のとおり</text>
+    <text x="70" y="380">注文者：〔デモ〕　　請負者：〔デモ〕</text>
+  </g>
+  <text x="297" y="760" text-anchor="middle" font-size="14" fill="#6b6e6a">SUMATCH デモ環境 — sample document</text>
+</svg>

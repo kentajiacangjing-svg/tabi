@@ -28,8 +28,8 @@ export default async function BusinessHome() {
     `SELECT COUNT(*) n FROM matches m JOIN projects p ON p.id = m.project_id
       WHERE m.company_id = ? AND m.status = 'matched' AND p.status IN ('consulting','quoting','comparing') AND NOT EXISTS (SELECT 1 FROM quotes q WHERE q.match_id = m.id)`,
   );
-  // Chosen, but the terms still need the company's input or both agreements.
-  const termsTodo = n("SELECT COUNT(*) n FROM contracts WHERE company_id = ? AND status = 'contracted' AND stage != 'agreed'");
+  // Chosen, but not yet 契約成立: terms, agreements or the contract document still pending.
+  const termsTodo = n("SELECT COUNT(*) n FROM contracts WHERE company_id = ? AND status = 'contracted' AND stage != 'contracted'");
   const limit = matchLimitFor(c);
   const blocked = monthlyMatchUsage(c.id) >= limit ? `今月のマッチ上限（${limit}件）に達しています。` : undefined;
 

@@ -66,4 +66,39 @@ describe("save / pass", async () => {
     const other = db.get<{ id: string }>("SELECT id FROM users WHERE email = 'ito@demo.sumatch.jp'")!;
     expect(() => services.customerMark(m.id, other.id, "save")).toThrow();
   });
+
+  it("every screen's amount comes from one place: stored totals equal the calculation, latest versions agree", async () => {
+    const { calcQuote } = await import("../quote-calc");
+    const { latestQuotesForProject } = await import("../queries");
+    const { latestQuoteForMatch } = await import("../contract");
+    const quotes = db.all<import("../types").Quote>("SELECT * FROM quotes");
+    for (const q of quotes) {
+      const items = db.all<{ name: string; quantity: number; unit: string; unit_price: number; amount: number }>("SELECT * FROM quote_items WHERE quote_id = ?", q.id);
+      const calc = calcQuote(items, q.overhead, q.discount);
+      expect(calc.total).toBe(q.total);
+      expect(calc.tax).toBe(q.tax);
+      expect(items.map((i) => i.amount)).toEqual(calc.lines.map((l) => l.amount));
+    }
+    // The comparison list and the decide/contract logic pick the same version for each company.
+    for (const p of db.all<{ id: string }>("SELECT id FROM projects")) {
+      for (const q of latestQuotesForProject(p.id).filter((x) => x.status !== "declined")) {
+        expect(latestQuoteForMatch(q.match_id)?.id).toBe(q.id);
+      }
+    }
+    // A contract's amount is its quote's total.
+    for (const c of db.all<{ amount: number; quote_id: string }>("SELECT amount, quote_id FROM contracts")) {
+      expect(c.amount).toBe(db.get<{ total: number }>("SELECT total FROM quotes WHERE id = ?", c.quote_id)!.total);
+    }
+  });
+
+  it("110万円 and 118万円 in the demo are two different consultations, not one quote shown two ways", async () => {
+    const { calcQuote } = await import("../quote-calc");
+    // A new customer's e2e quote: 1,000,000円 + 10% tax.
+    expect(calcQuote([{ name: "外壁塗装一式", quantity: 1, unit: "式", unit_price: 1000000 }], 0, 0).total).toBe(1100000);
+    // 山田 太郎's seeded 湘南ペイント quote is a separate project.
+    const q = db.get<{ total: number; version: number }>(
+      "SELECT q.total, q.version FROM quotes q JOIN companies c ON c.id = q.company_id JOIN projects p ON p.id = q.project_id JOIN users u ON u.id = p.customer_id WHERE c.name = '湘南ペイント' AND u.email = 'yamada@demo.sumatch.jp'",
+    )!;
+    expect(q).toEqual({ total: 1180000, version: 1 });
+  });
 });

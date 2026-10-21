@@ -22,7 +22,8 @@ export async function loginAction(fd: FormData) {
   return handle(async () => {
     const input = loginSchema.parse(formObject(fd));
     const row = get<User & { password_hash: string }>("SELECT * FROM users WHERE email = ?", input.email.toLowerCase());
-    if (!row || !verifyPassword(input.password, row.password_hash)) throw new ActionError("メールアドレスまたはパスワードが違います。");
+    // Sample accounts cannot sign in outside demo mode; the message is the same as a wrong password.
+    if (!row || (row.is_demo && !isDemo()) || !verifyPassword(input.password, row.password_hash)) throw new ActionError("メールアドレスまたはパスワードが違います。");
     if (row.status !== "active") throw new ActionError("このアカウントは停止されています。");
     await createSession(row.id);
     return { redirect: safeNext(input.next, homeFor(row.role)) };

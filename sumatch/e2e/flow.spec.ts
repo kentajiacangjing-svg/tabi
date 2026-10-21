@@ -32,7 +32,8 @@ async function freshCustomerAtDeck(browser: Browser): Promise<Page> {
   return page;
 }
 
-test("customer → company → chat → quote → revise → compare → decide → terms → both agree", async ({ page, browser }) => {
+test("customer & company: chat → quote → revise → compare → decide → terms → agree → contract document → 契約成立 → contacts", async ({ page, browser }) => {
+  test.setTimeout(240_000);
   const email = `e2e-${Date.now()}@example.com`;
 
   // 1. Top: one question, pick a category, 次へ
@@ -159,9 +160,11 @@ test("customer → company → chat → quote → revise → compare → decide 
   await biz.goto("/business/active");
   await biz.getByRole("link", { name: /テスト 花子様/ }).first().click();
   await biz.waitForURL(/\/business\/contract\//);
-  // another company cannot open this contract
+  const contractUrl = biz.url();
+  // another company cannot open this contract, nor read this conversation through the API
   const other = await demoLogin(browser, "藤沢リフォーム");
-  expect((await other.goto(biz.url()))?.status()).toBe(404);
+  expect((await other.goto(contractUrl))?.status()).toBe(404);
+  expect((await other.request.get(`/api/matches/${chatUrl.split("/").pop()}/messages`)).status()).toBe(404);
   await expect(biz.getByText("依頼先決定（契約条件はこれから）")).toBeVisible();
   await biz.getByLabel(/工事範囲/).fill("外壁全面の塗装（足場・洗浄・付帯部を含む）");
   await biz.getByLabel(/工事開始予定日/).fill("2026-12-01");
@@ -186,19 +189,72 @@ test("customer → company → chat → quote → revise → compare → decide 
   await expect(page.getByText("外壁全面の塗装（足場・洗浄・付帯部を含む）")).toBeVisible();
   await page.getByLabel("上の契約条件をすべて確認しました。").check();
   await page.getByRole("button", { name: "この条件に同意する" }).click();
-  await expect(page.getByText(/双方の合意を確認しました/)).toBeVisible();
-  await expect(page.getByText("双方の合意確認済み").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "工事が始まった" })).toBeVisible();
+  await expect(page.getByText(/双方が契約条件に合意しました/)).toBeVisible();
+  await expect(page.getByText("双方の合意確認済み（契約書の確認待ち）").first()).toBeVisible();
+  // agreeing is not 契約成立: no work start, no contact form, chat still refuses contact details
+  await expect(page.getByRole("button", { name: "工事が始まった" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "連絡先" })).toHaveCount(0);
+  await expect(page.getByText("テスト運用中：契約まわりの機能は法務確認中です。", { exact: false })).toBeVisible();
   await biz.goto(chatUrl);
   await expect(biz.locator("section").getByText("双方が、契約条件に合意したことを確認しました", { exact: false })).toBeVisible();
+  await biz.getByLabel("メッセージ", { exact: true }).fill("携帯は 090-1234-5678 です");
+  await biz.getByRole("button", { name: "送信", exact: true }).click();
+  await expect(biz.getByText(/契約手続き前の外部連絡先の共有はできません/)).toBeVisible();
+  await biz.getByRole("button", { name: "修正する" }).click();
 
-  // 7. Admin: funnel and the new contract
+  // 8. Company registers its contract document; both confirm it at the same moment → 契約成立
+  await biz.goto(contractUrl);
+  await biz.getByLabel(/契約書（PDFまたは画像）/).setInputFiles({ name: "keiyakusho.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n") });
+  await biz.getByRole("button", { name: "契約書を登録する" }).click();
+  await expect(biz.getByRole("link", { name: "開く" })).toBeVisible();
+  const docHref = await biz.getByRole("link", { name: "開く" }).getAttribute("href");
+  // another company cannot download it; the customer can
+  expect((await other.request.get(docHref!)).status()).toBe(404);
+  expect((await page.request.get(docHref!)).status()).toBe(200);
+  await page.reload();
+  await expect(page.getByText("施工会社が契約書を登録している")).toBeVisible();
+  const docCheck = "登録された契約書を開き、内容が上の契約条件と一致していることを確認しました。";
+  await page.getByLabel(docCheck).check();
+  await biz.getByLabel(docCheck).check();
+  await Promise.all([page.getByRole("button", { name: "契約書の内容を確認した" }).click(), biz.getByRole("button", { name: "契約書の内容を確認した" }).click()]);
+  await expect(page.getByText("契約成立（SUMATCHの要件を確認済み）").first()).toBeVisible();
+  await biz.reload();
+  await expect(biz.getByText("契約成立（SUMATCHの要件を確認済み）").first()).toBeVisible();
+  // reload keeps everything; the history has exactly one 契約成立
+  await page.reload();
+  await page.getByText(/^記録（\d+件）$/).click();
+  await expect(page.getByText("SUMATCH：契約成立の要件を満たした")).toHaveCount(1);
+
+  // 9. Contacts: only through the contract's form; chat still refuses them
+  await page.getByLabel("お名前").fill("テスト 花子");
+  await page.getByLabel("電話番号").fill("090-1111-2222");
+  await page.getByLabel("工事場所の住所").fill("藤沢市辻堂1-2-3");
+  await page.getByRole("button", { name: "連絡先を登録する" }).click();
+  await expect(page.getByText("連絡先を保存しました。相手にお知らせしました。")).toBeVisible();
+  await biz.reload();
+  await expect(biz.getByText("090-1111-2222")).toBeVisible();
+  await expect(biz.getByText("藤沢市辻堂1-2-3")).toBeVisible();
+  await page.goto(chatUrl.replace("/business/messages/", "/messages/"));
+  await page.getByLabel("メッセージ", { exact: true }).fill("電話は 090-1111-2222 です");
+  await page.getByRole("button", { name: "送信", exact: true }).click();
+  await expect(page.getByText(/連絡先はチャットでは送れません。契約ページの「連絡先」欄で交換してください。/)).toBeVisible();
+  biz.once("dialog", (d) => d.accept());
+  // the page must not be wider than the phone (it was, once the header had both labels)
+  const widths = await biz.evaluate(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
+  expect(widths.w).toBeLessThanOrEqual(widths.vw);
+  await biz.getByRole("button", { name: "工事が始まった" }).click();
+  await expect(biz.getByRole("button", { name: "工事が終わった" })).toBeVisible();
+
+  // 10. Same amount everywhere for this quote version
+  await biz.goto("/business/quotes");
+  await expect(biz.getByText("¥1,320,000").first()).toBeVisible();
+
+  // 11. Admin: funnel and the new contract
   const admin = await demoLogin(browser, "SUMATCH運営");
   await admin.goto("/admin?tab=analytics");
   await expect(admin.getByText("会社閲覧")).toBeVisible();
   await admin.goto("/admin?tab=contracts");
   await expect(admin.getByText("テスト 花子")).toBeVisible();
-  await expect(admin.getByText("双方の合意確認済み").first()).toBeVisible();
   await admin.goto("/admin?tab=chats");
   await expect(admin.getByText("送信を止めた連絡先（本文は保存していません）")).toBeVisible();
   await expect(admin.getByText("090-1234-5678")).toHaveCount(0);

@@ -24,7 +24,10 @@ function open(): DatabaseSyncType {
   db.exec(SCHEMA);
   for (const m of MIGRATIONS) {
     const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as { name: string }[];
-    if (!cols.some((c) => c.name === m.column)) db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.ddl}`);
+    if (!cols.some((c) => c.name === m.column)) {
+      db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.ddl}`);
+      if (m.backfill) db.exec(m.backfill);
+    }
   }
   return db;
 }

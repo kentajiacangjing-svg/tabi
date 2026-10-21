@@ -4,7 +4,7 @@ import { matchForUser } from "@/lib/access";
 import { all, get } from "@/lib/db";
 import { QuoteForm, type QuoteDefaults } from "@/components/quote-form";
 import { PageHeader, Notice } from "@/components/ui";
-import { contractForMatch, effectiveStage, latestQuoteForMatch } from "@/lib/contract";
+import { contractForMatch, latestQuoteForMatch, termsLocked } from "@/lib/contract";
 import type { Category, QuoteItem } from "@/lib/types";
 
 export const metadata = { title: "見積作成" };
@@ -20,7 +20,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
   const prev = latestQuoteForMatch(ctx.match.id);
   // Same rule as submitQuote: open until a company is chosen; the chosen company may revise until both agree.
   const chosen = contractForMatch(ctx.match.id);
-  const closed = chosen ? effectiveStage(chosen) === "agreed" : !["consulting", "quoting", "comparing"].includes(ctx.project.status);
+  const closed = chosen ? termsLocked(chosen) : !["consulting", "quoting", "comparing"].includes(ctx.project.status);
   const c = membership.company;
   const defaults: QuoteDefaults = prev
     ? {

@@ -304,6 +304,30 @@ CREATE TABLE IF NOT EXISTS contact_blocks (
   created_at TEXT NOT NULL
 );
 
+-- Contact details for the people doing the work, exchanged only once the contract is established
+-- (lib/contract.ts → contractEstablished). One row per side; never shown in chat.
+CREATE TABLE IF NOT EXISTS contract_contacts (
+  contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  side TEXT NOT NULL CHECK (side IN ('customer','company')),
+  name TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  address TEXT NOT NULL DEFAULT '',
+  hours TEXT NOT NULL DEFAULT '',
+  updated_by TEXT,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (contract_id, side)
+);
+
+-- Who looked at the other side's contact details, and when.
+CREATE TABLE IF NOT EXISTS contact_access_log (
+  id TEXT PRIMARY KEY,
+  contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  viewer_user_id TEXT NOT NULL,
+  viewer_side TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -374,7 +398,8 @@ CREATE INDEX IF NOT EXISTS idx_members_user ON company_members(user_id);
 `;
 
 /** Columns added after the first release. Applied with ALTER TABLE when missing. */
-export const MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+// `backfill` runs once, right after its column is added, on databases created before the column existed.
+export const MIGRATIONS: { table: string; column: string; ddl: string; backfill?: string }[] = [
   { table: "matches", column: "customer_saved", ddl: "INTEGER NOT NULL DEFAULT 0" },
   { table: "matches", column: "customer_passed", ddl: "INTEGER NOT NULL DEFAULT 0" },
   { table: "matches", column: "customer_match_seen_at", ddl: "TEXT" },
@@ -389,4 +414,26 @@ export const MIGRATIONS: { table: string; column: string; ddl: string }[] = [
   { table: "contracts", column: "company_agreed_at", ddl: "TEXT" },
   { table: "contracts", column: "company_agreed_by", ddl: "TEXT" },
   { table: "contracts", column: "agreed_at", ddl: "TEXT" },
+  // 契約成立 = agreed terms + a registered contract document that both sides confirmed (by file hash).
+  { table: "contracts", column: "contract_file_hash", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "contracts", column: "customer_doc_confirmed_at", ddl: "TEXT" },
+  { table: "contracts", column: "customer_doc_confirmed_by", ddl: "TEXT" },
+  { table: "contracts", column: "company_doc_confirmed_at", ddl: "TEXT" },
+  { table: "contracts", column: "company_doc_confirmed_by", ddl: "TEXT" },
+  { table: "contracts", column: "established_at", ddl: "TEXT" },
+  // Sample data is flagged so it can be told apart from real accounts and hidden outside demo mode.
+  // Older databases: only the fixed demo addresses are flagged; nothing else is changed.
+  {
+    table: "users",
+    column: "is_demo",
+    ddl: "INTEGER NOT NULL DEFAULT 0",
+    backfill: "UPDATE users SET is_demo = 1 WHERE email LIKE '%@demo.sumatch.jp' OR email LIKE '%@%.demo'",
+  },
+  {
+    table: "companies",
+    column: "is_demo",
+    ddl: "INTEGER NOT NULL DEFAULT 0",
+    backfill:
+      "UPDATE companies SET is_demo = 1 WHERE id IN (SELECT m.company_id FROM company_members m JOIN users u ON u.id = m.user_id WHERE m.member_role = 'owner' AND u.is_demo = 1)",
+  },
 ];

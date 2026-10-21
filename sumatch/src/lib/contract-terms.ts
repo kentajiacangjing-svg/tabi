@@ -22,7 +22,8 @@ export const TERM_FIELDS: { key: TermKey; label: string; hint?: string; multilin
 export const STAGE_LABEL: Record<ContractStage, string> = {
   selected: "依頼先決定（契約条件はこれから）",
   terms: "契約条件の確認中",
-  agreed: "双方の合意確認済み",
+  agreed: "双方の合意確認済み（契約書の確認待ち）",
+  contracted: "契約成立（SUMATCHの要件を確認済み）",
 };
 
 /** Labels of required terms that are still empty. */
@@ -40,8 +41,11 @@ export function canonicalTerms(t: ContractTerms): string {
   return JSON.stringify(keys.map((k) => [k, typeof t[k] === "string" ? (t[k] as string).trim() : t[k]]));
 }
 
-/** SQL condition for "both sides agreed" — work that started under the old flow counts too. `a` is the table alias. */
-export const agreedSql = (a = "") => `(${a}stage = 'agreed' OR ${a}status IN ('in_progress','completed'))`;
+/** SQL condition for 契約成立 — work that started under the old flow counts too. `a` is the table alias. */
+export const agreedSql = (a = "") => `(${a}stage = 'contracted' OR ${a}status IN ('in_progress','completed'))`;
 
 export const AGREEMENT_NOTE =
-  "SUMATCHでの合意は、条件の確認と記録のためのものです。工事請負契約書の取り交わしは、施工会社と直接行ってください。";
+  "SUMATCHでの合意・確認は、条件と契約書を確認したことの記録です。SUMATCHの記録は工事請負契約書の代わりにはなりません。契約書の内容と法的な有効性は、お客様と施工会社の間で確認してください。";
+
+/** Shown at the top of every contract screen while the legal review is not finished. */
+export const TEST_OPERATION_NOTE = "テスト運用中：契約まわりの機能は法務確認中です。この画面の記録だけで契約が成立したことにはなりません。";

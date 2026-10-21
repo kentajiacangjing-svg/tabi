@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { get, now, update } from "@/lib/db";
-import { saveUpload } from "@/lib/files";
+import { createHash } from "node:crypto";
+import { get } from "@/lib/db";
+import { readStoredFile, saveUpload } from "@/lib/files";
 import { ActionError, actionUser } from "@/lib/auth";
 import { formObject, handle } from "@/lib/action";
 import { matchForUser } from "@/lib/access";
-import { agreeTerms, appendContractEvent, effectiveStage, saveTerms, type TermsInput } from "@/lib/contract";
+import { agreeTerms, attachContractDocument, confirmContractDocument, effectiveStage, saveContractContact, saveTerms, type TermsInput } from "@/lib/contract";
 import { TERM_FIELDS } from "@/lib/contract-terms";
 import type { Contract } from "@/lib/types";
 
@@ -43,16 +44,40 @@ export async function agreeTermsAction(contractId: string, shownHash: string) {
   });
 }
 
-/** The company attaches its own contract document (工事請負契約書) once both sides have agreed the terms. */
+/** The company registers its contract document (工事請負契約書). The file's hash is what both sides confirm. */
 export async function uploadContractFileAction(contractId: string, fd: FormData) {
   return handle(async () => {
-    const { user, c } = await contractCtx(contractId, ["business"]);
-    if (effectiveStage(c) !== "agreed") throw new ActionError("契約書は、双方の合意が確認できてから添付できます。");
+    const { user, c, ctx } = await contractCtx(contractId, ["business"]);
     const f = fd.get("contract_file");
     if (!(f instanceof File) || f.size === 0) throw new ActionError("ファイルを選んでください。");
+    // Check the stage before storing anything.
+    if (effectiveStage(c) !== "agreed") throw new ActionError(effectiveStage(c) === "contracted" ? "契約成立後は契約書を差し替えられません。" : "契約書は、契約条件に双方が同意してから登録できます。");
     const file = await saveUpload(f, { ownerUserId: user.id, scope: "contract", scopeId: c.id, allow: ["pdf", "image"] });
-    update("contracts", c.id, { contract_file_id: file.id, updated_at: now() });
-    appendContractEvent(c.id, "company", user.id, "document_attached", c.terms_hash, file.id);
+    const sha256 = createHash("sha256").update(readStoredFile(file)).digest("hex");
+    attachContractDocument(ctx, user.id, { id: file.id, sha256 });
+    revalidatePath(`/business/contract/${c.id}`);
+    revalidatePath(`/projects/${c.project_id}`);
+    return {};
+  });
+}
+
+/** Either side confirms the exact contract document it was shown. */
+export async function confirmContractDocumentAction(contractId: string, shownFileHash: string) {
+  return handle(async () => {
+    const { user, c, ctx } = await contractCtx(contractId, ["customer", "business"]);
+    const r = confirmContractDocument(ctx, user.id, shownFileHash);
+    revalidatePath(`/business/contract/${c.id}`);
+    revalidatePath(`/projects/${c.project_id}`);
+    return r;
+  });
+}
+
+/** Each side's own contact details, after 契約成立 only. */
+export async function saveContractContactAction(contractId: string, fd: FormData) {
+  return handle(async () => {
+    const { user, c, ctx } = await contractCtx(contractId, ["customer", "business"]);
+    const o = formObject(fd);
+    saveContractContact(ctx, user.id, { name: o.name ?? "", phone: o.phone ?? "", email: o.email ?? "", address: o.address ?? "", hours: o.hours ?? "" });
     revalidatePath(`/business/contract/${c.id}`);
     revalidatePath(`/projects/${c.project_id}`);
     return {};

@@ -10,6 +10,8 @@ export interface User {
   notify_browser: number;
   created_at: string;
   last_login_at: string | null;
+  /** 1 = sample account created by the demo seed */
+  is_demo: number;
 }
 
 export interface Plan {
@@ -53,6 +55,8 @@ export type CompanyStatus = "pending" | "approved" | "rejected" | "suspended";
 
 export interface Company {
   id: string;
+  /** 1 = sample company created by the demo seed */
+  is_demo: number;
   name: string;
   name_kana: string;
   status: CompanyStatus;
@@ -211,7 +215,7 @@ export interface Contract {
   notes: string;
   created_at: string;
   updated_at: string;
-  /** selected = 依頼先決定 / terms = 契約条件の確認中 / agreed = 双方の合意確認済み */
+  /** selected = 依頼先決定 / terms = 契約条件の確認中 / agreed = 双方の合意確認済み / contracted = 契約成立 */
   stage: ContractStage;
   terms_json: string;
   terms_hash: string;
@@ -220,9 +224,27 @@ export interface Contract {
   company_agreed_at: string | null;
   company_agreed_by: string | null;
   agreed_at: string | null;
+  contract_file_hash: string;
+  customer_doc_confirmed_at: string | null;
+  customer_doc_confirmed_by: string | null;
+  company_doc_confirmed_at: string | null;
+  company_doc_confirmed_by: string | null;
+  established_at: string | null;
 }
 
-export type ContractStage = "selected" | "terms" | "agreed";
+export type ContractStage = "selected" | "terms" | "agreed" | "contracted";
+
+export interface ContractContact {
+  contract_id: string;
+  side: "customer" | "company";
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  hours: string;
+  updated_by: string | null;
+  updated_at: string;
+}
 
 /** What both sides confirm before the work starts. Every field is required; amount comes from the quote. */
 export interface ContractTerms {

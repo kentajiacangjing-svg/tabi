@@ -44,7 +44,7 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
       <header className="sticky top-0 z-30 border-b border-line bg-surface/95 pt-[env(safe-area-inset-top)] backdrop-blur-sm">
         <div className={cx("mx-auto flex h-[60px] items-center justify-between gap-3 px-5 sm:px-10 md:h-[68px] lg:px-12", width)}>
           <Logo href={homeHref} sub={mode === "business" ? "for Business" : mode === "admin" ? "Admin" : undefined} />
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <DesktopNav items={items} />
             {user ? (
               <>

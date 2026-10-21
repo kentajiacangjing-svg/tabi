@@ -1,4 +1,5 @@
 // Read models for pages. Callers must have performed access checks (see access.ts).
+import { isDemo } from "./demo";
 import { all, get, parseJson } from "./db";
 import { fileUrl } from "./urls";
 import type { Area, Category, Company, CompanyWork, Contract, Match, Project, Quote, QuoteItem, Review } from "./types";
@@ -195,7 +196,8 @@ export interface CompanyProfile {
 
 export function companyProfile(id: string): CompanyProfile | null {
   const company = get<Company>("SELECT * FROM companies WHERE id = ?", id);
-  if (!company) return null;
+  // Sample companies do not exist outside demo mode.
+  if (!company || (company.is_demo && !isDemo())) return null;
   return {
     company,
     categories: all<Category & { works_count: number }>(

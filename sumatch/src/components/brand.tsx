@@ -14,12 +14,17 @@ export function LogoMark({ size = 28 }: { size?: number }) {
 
 export function Logo({ href = "/", sub }: { href?: string; sub?: string }) {
   return (
-    <Link href={href} className="flex min-h-11 items-center gap-2.5" aria-label="SUMATCH ホーム">
+    <Link href={href} className="flex min-h-11 min-w-0 items-center gap-2.5" aria-label="SUMATCH ホーム">
       <LogoMark />
-      <span className="text-[18px] font-bold tracking-[0.16em]">SUMATCH</span>
-      {sub && <span className="ml-0.5 whitespace-nowrap rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-semibold tracking-wide text-brand">{sub}</span>}
-      {/* shown only in demo mode (html[data-demo]) */}
-      <span className="sample-tag whitespace-nowrap rounded-full bg-warn-soft px-2 py-0.5 text-[12px] font-semibold text-warn" title="会社・お客様・口コミ・写真はサンプルです">デモ</span>
+      <span className="shrink-0 text-[18px] font-bold tracking-[0.16em]">SUMATCH</span>
+      {/* on phones the small labels stack, so the header never gets wider than the screen */}
+      <span className="flex min-w-0 flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1.5">
+        {sub && <span className="whitespace-nowrap rounded-full bg-brand-soft px-2 py-px text-[12px] font-semibold leading-[18px] tracking-wide text-brand">{sub}</span>}
+        {/* shown only in demo mode (html[data-demo]) */}
+        <span className="sample-tag whitespace-nowrap rounded-full bg-warn-soft px-2 py-px text-[12px] font-semibold leading-[18px] text-warn" title="会社・お客様・口コミ・写真はサンプルです">
+          デモ
+        </span>
+      </span>
     </Link>
   );
 }

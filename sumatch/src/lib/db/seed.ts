@@ -6,7 +6,8 @@ import { all, get, insert, newId, run, tx, update, STORAGE_DIR } from "./index";
 import { hashPassword } from "../password";
 import { calcQuote, generateCandidates, recalcCompanyRating } from "../services";
 import { estimateRange } from "../estimate";
-import { seedAgreedContract } from "../contract";
+import { createHash } from "node:crypto";
+import { seedEstablishedContract } from "../contract";
 import type { Category, Contract, Match, Project, Quote } from "../types";
 
 export const DEMO_PASSWORD = "sumatch123";
@@ -23,7 +24,7 @@ function rng(seed: number) {
   };
 }
 
-function seedFile(name: string, scope: "project" | "match" | "public", scopeId: string | null, owner: string | null) {
+function seedFile(name: string, scope: "project" | "match" | "public" | "contract", scopeId: string | null, owner: string | null) {
   const src = path.join(process.cwd(), "public", "seed", name);
   const id = newId("file");
   const dir = path.join(STORAGE_DIR, "uploads");
@@ -51,12 +52,19 @@ function seedFile(name: string, scope: "project" | "match" | "public", scopeId: 
 }
 
 /** Master data (plans, categories, areas) always; the sample people, companies and history only in demo mode. */
+/** A clearly-marked sample contract document, and the hash both sides "confirmed" in the demo. */
+function sampleDoc(contractId: string, owner: string) {
+  const fileId = seedFile("sample-contract.svg", "contract", contractId, owner);
+  const bytes = fs.readFileSync(path.join(STORAGE_DIR, "uploads", `${fileId}.svg`));
+  return { fileId, sha256: createHash("sha256").update(bytes).digest("hex") };
+}
+
 export function seed(demo: boolean) {
   tx(() => {
     const pw = hashPassword(DEMO_PASSWORD);
     const user = (email: string, name: string, role: string, created = ago(60)) => {
       const id = newId("usr");
-      insert("users", { id, email, name, role, password_hash: pw, created_at: created });
+      insert("users", { id, email, name, role, password_hash: pw, created_at: created, is_demo: 1 });
       return id;
     };
 
@@ -211,6 +219,7 @@ export function seed(demo: boolean) {
       companyId[c.key] = id;
       const status = c.status ?? "approved";
       insert("companies", {
+        is_demo: 1,
         id, name: c.name, name_kana: c.kana, status, address: c.address, phone: "0466-00-0000", email: c.owner[0], contact_person: c.owner[1],
         tagline: c.tagline, description: c.desc, specialties: c.specialties, warranty: c.warranty, self_construction: c.self,
         price_band_min: c.band[0], price_band_max: c.band[1], lead_time_weeks: c.lead, website_url: c.site ?? "", business_hours: c.hours,
@@ -387,7 +396,15 @@ export function seed(demo: boolean) {
     }, "declined");
     const ctS = newId("ct");
     insert("contracts", { id: ctS, project_id: pS.id, company_id: companyId["fujisawa-reform"], match_id: sFR.id, quote_id: qS, amount: 1280000, contract_date: ago(25).slice(0, 10), start_date: ago(2).slice(0, 10), status: "in_progress", success_fee_rate: 0.03, created_at: ago(25), updated_at: ago(2) });
-    seedAgreedContract(get<Contract>("SELECT * FROM contracts WHERE id = ?", ctS)!, get<Quote>("SELECT * FROM quotes WHERE id = ?", qS)!, ago(2).slice(0, 10), { selected: ago(25), terms: ago(24), agreed: ago(23) }, { customer: suzuki, company: ownerId["fujisawa-reform"] });
+    seedEstablishedContract(
+      get<Contract>("SELECT * FROM contracts WHERE id = ?", ctS)!, get<Quote>("SELECT * FROM quotes WHERE id = ?", qS)!, ago(2).slice(0, 10),
+      { selected: ago(25), terms: ago(24), agreed: ago(23), established: ago(22) }, { customer: suzuki, company: ownerId["fujisawa-reform"] },
+      sampleDoc(ctS, ownerId["fujisawa-reform"]),
+      {
+        customer: { name: "鈴木 花子（サンプル）", phone: "", email: "suzuki@example.com", address: "茅ヶ崎市〔サンプル住所〕", hours: "土日祝" },
+        company: { name: "中村 浩二（サンプル）", phone: "", email: "fujisawa-reform@example.com", address: "", hours: "9:00〜18:00" },
+      },
+    );
     msg(sFR.id, "system", null, "お客様が依頼先として藤沢リフォームを選びました（見積 第1版・税込1,280,000円）。契約条件はこれから確認します。", ago(25));
     msg(sFR.id, "system", null, "お客様と施工会社の双方が、契約条件に合意したことを確認しました。工事請負契約書は施工会社から受け取ってください。", ago(23));
     msg(sFR.id, "system", null, "藤沢リフォームがステータスを「工事中」に更新しました。", ago(2));
@@ -411,7 +428,15 @@ export function seed(demo: boolean) {
     }, "accepted");
     const ctT = newId("ct");
     insert("contracts", { id: ctT, project_id: pT.id, company_id: companyId["chigasaki-roof"], match_id: tCR.id, quote_id: qT, amount: 860000, contract_date: ago(58).slice(0, 10), start_date: ago(45).slice(0, 10), end_date: ago(38).slice(0, 10), status: "completed", success_fee_rate: 0.05, created_at: ago(58), updated_at: ago(38) });
-    seedAgreedContract(get<Contract>("SELECT * FROM contracts WHERE id = ?", ctT)!, get<Quote>("SELECT * FROM quotes WHERE id = ?", qT)!, ago(45).slice(0, 10), { selected: ago(58), terms: ago(58), agreed: ago(57) }, { customer: takahashi, company: ownerId["chigasaki-roof"] });
+    seedEstablishedContract(
+      get<Contract>("SELECT * FROM contracts WHERE id = ?", ctT)!, get<Quote>("SELECT * FROM quotes WHERE id = ?", qT)!, ago(45).slice(0, 10),
+      { selected: ago(58), terms: ago(58), agreed: ago(57), established: ago(56) }, { customer: takahashi, company: ownerId["chigasaki-roof"] },
+      sampleDoc(ctT, ownerId["chigasaki-roof"]),
+      {
+        customer: { name: "高橋 誠（サンプル）", phone: "", email: "takahashi@example.com", address: "平塚市〔サンプル住所〕", hours: "いつでも可" },
+        company: { name: "茅ヶ崎ルーフ工業 担当（サンプル）", phone: "", email: "chigasaki-roof@example.com", address: "", hours: "8:30〜17:30" },
+      },
+    );
     msg(tCR.id, "system", null, "茅ヶ崎ルーフ工業がステータスを「完了」に更新しました。", ago(38));
     insert("reviews", { id: newId("rv"), company_id: companyId["chigasaki-roof"], project_id: pT.id, customer_id: takahashi, rating: 5, title: "雨漏りがぴたりと止まりました", body: "ドローンの写真で状態を説明してもらえて納得して依頼できました。", author_label: "平塚市 60代", created_at: ago(36) });
     recalcCompanyRating(companyId["chigasaki-roof"]);

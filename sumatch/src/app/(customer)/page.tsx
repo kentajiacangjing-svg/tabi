@@ -2,6 +2,7 @@ import Link from "next/link";
 import { activeAreas, activeCategories, projectsForCustomer, workImage } from "@/lib/queries";
 import { all, get } from "@/lib/db";
 import { HERO_PHOTO } from "@/lib/visuals";
+import { demoVisibleSql } from "@/lib/demo";
 import { Icon } from "@/components/icons";
 import { ImageTag, Kicker, SampleTag } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
@@ -38,9 +39,9 @@ export default async function Home() {
   const ongoing = user?.role === "customer" ? projectsForCustomer(user.id).filter((p) => !["completed", "cancelled"].includes(p.status)) : [];
   const works = all<{ id: string; title: string; cost_label: string; image_url: string | null; file_id: string | null; company: string }>(
     `SELECT w.id, w.title, w.cost_label, w.image_url, w.file_id, c.name AS company FROM company_works w JOIN companies c ON c.id = w.company_id
-      WHERE c.status = 'approved' ORDER BY w.created_at DESC, w.id LIMIT 8`,
+      WHERE c.status = 'approved' AND ${demoVisibleSql("c.")} ORDER BY w.created_at DESC, w.id LIMIT 8`,
   );
-  const stats = get<{ n: number; rating: number }>("SELECT COUNT(*) n, AVG(rating_avg) rating FROM companies WHERE status = 'approved'");
+  const stats = get<{ n: number; rating: number }>(`SELECT COUNT(*) n, AVG(rating_avg) rating FROM companies WHERE status = 'approved' AND ${demoVisibleSql()}`);
   return (
     <>
       <Track kind="visit" />

@@ -60,7 +60,7 @@ export default async function ProjectDetailPage({ params, searchParams }: { para
 
       {contract && contract.status !== "cancelled" && (
         <div className="mt-14">
-          <ContractPanel contract={contract} viewer="customer" />
+          <ContractPanel contract={contract} viewer="customer" viewerUserId={user.id} />
         </div>
       )}
 

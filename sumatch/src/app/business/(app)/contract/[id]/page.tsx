@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BusinessContractPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { membership } = await requireBusiness();
+  const { user, membership } = await requireBusiness();
   const c = get<Contract>("SELECT * FROM contracts WHERE id = ?", id);
   // Only the chosen company sees its contract — other companies get the same 404 as a missing id.
   if (!c || c.company_id !== membership.company.id) notFound();
@@ -29,7 +29,7 @@ export default async function BusinessContractPage({ params }: { params: Promise
       </p>
       <h1 className="mt-1 text-[26px] font-semibold">{customer?.name ?? "お客"}様の契約条件</h1>
       <div className="mt-8">
-        <ContractPanel contract={c} viewer="company" />
+        <ContractPanel contract={c} viewer="company" viewerUserId={user.id} />
       </div>
     </div>
   );

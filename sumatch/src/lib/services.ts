@@ -5,8 +5,9 @@ import { notify, companyUserIds } from "./notify";
 import { publish } from "./realtime";
 import { MAX_MATCHES_PER_PROJECT, PROJECT_STATUS } from "./constants";
 import { calcQuote } from "./quote-calc";
+import { demoVisibleSql } from "./demo";
 import { detectContactInfo } from "./contact-detect";
-import { appendContractEvent, assertNoContactInfo, contractForMatch, effectiveStage, latestQuoteForMatch, onQuoteRevised } from "./contract";
+import { appendContractEvent, assertNoContactInfo, contractForMatch, effectiveStage, latestQuoteForMatch, onQuoteRevised, termsLocked } from "./contract";
 import type { Category, Company, Contract, Match, Plan, Project, ProjectStatus, Quote } from "./types";
 import type { MatchContext } from "./access";
 
@@ -28,7 +29,7 @@ export function generateCandidates(project: Project) {
     `SELECT c.*, cc.works_count FROM companies c
        JOIN company_categories cc ON cc.company_id = c.id AND cc.category_id = ?
        JOIN company_areas ca ON ca.company_id = c.id AND ca.area_id = ?
-      WHERE c.status = 'approved'`,
+      WHERE c.status = 'approved' AND ${demoVisibleSql("c.")}`,
     project.category_id,
     project.area_id,
   );
@@ -308,7 +309,7 @@ export function submitQuote(ctx: MatchContext, userId: string, input: QuoteInput
   // After the customer chose a company, only that company may still revise — and only until both sides
   // have agreed the terms. A revision sends both back to confirm.
   const chosen = contractForMatch(ctx.match.id);
-  if (chosen ? effectiveStage(chosen) === "agreed" : ["contracted", "in_progress", "completed", "cancelled"].includes(ctx.project.status))
+  if (chosen ? termsLocked(chosen) : ["contracted", "in_progress", "completed", "cancelled"].includes(ctx.project.status))
     throw new DomainError(chosen ? "双方の合意が確認済みのため、見積は変更できません。" : "この案件は既に依頼先が決定しています。");
   assertNoContactInfo(ctx, userId, [input.title, input.warranty, input.duration, input.materials, input.payment_terms, input.extra_costs, input.notes, ...input.items.map((i) => i.name)], "quote");
   return tx(() => {
@@ -449,7 +450,9 @@ export function decideCompany(ctx: MatchContext, input: { quoteId: string }, use
 export function advanceContract(contract: Contract, to: "in_progress" | "completed", actorLabel: string) {
   const order = ["contracted", "in_progress", "completed"];
   if (order.indexOf(to) <= order.indexOf(contract.status)) throw new DomainError("ステータスを戻すことはできません。");
-  if (effectiveStage(contract) !== "agreed") throw new DomainError("契約条件への双方の合意が確認できてから、工事を開始できます。");
+  // Work starts only at 契約成立; finishing needs work that has started (including work started before this rule).
+  if (to === "in_progress" && effectiveStage(contract) !== "contracted") throw new DomainError("契約成立の要件（契約書の登録と双方の確認）を満たしてから、工事を開始できます。");
+  if (to === "completed" && contract.status !== "in_progress") throw new DomainError("工事が始まってから完了にできます。");
   const ts = now();
   update("contracts", contract.id, { status: to, updated_at: ts, ...(to === "completed" ? { end_date: ts.slice(0, 10) } : {}) });
   appendContractEvent(contract.id, "system", null, to === "in_progress" ? "work_started" : "work_completed", contract.terms_hash, actorLabel);

@@ -6,3 +6,11 @@ export function isDemo(): boolean {
   if (v === "false") return false;
   return process.env.NODE_ENV !== "production";
 }
+
+/**
+ * SQL condition that hides sample rows (is_demo = 1) outside demo mode. `a` is the table alias, e.g. "c.".
+ * Used wherever companies or accounts reach a public screen, matching or login.
+ */
+export function demoVisibleSql(a = ""): string {
+  return isDemo() ? "1 = 1" : `${a}is_demo = 0`;
+}

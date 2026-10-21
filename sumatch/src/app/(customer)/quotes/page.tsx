@@ -131,10 +131,14 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
             );
           })()}
 
+          {multi && (
+            <p className="mb-4 rounded-xl bg-soft px-4 py-3 text-[14px] leading-relaxed text-ink-2">
+              並び順：{{ price: "税込総額の安い順", safe: "保証期間の長い順", days: "工期の短い順" }[view]}（おすすめ順ではありません）。金額は工事の範囲や材料で変わります。施工範囲・材料・保証・追加費用の条件も下の表で比べてください。
+            </p>
+          )}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {sorted.map((q, i) => {
+            {sorted.map((q) => {
               const chosen = contract?.quote_id === q.id;
-              const lead = multi && i === 0 && !contract;
               const photo = cover(q.company_id);
               const mine = cautions.filter((n) => n.companyId === q.company_id);
               return (
@@ -143,7 +147,8 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   aria-labelledby={`q-${q.id}`}
                   className={cx(
                     "overflow-hidden rounded-[24px] border-2 bg-surface",
-                    chosen || lead ? "border-brand shadow-[var(--shadow-lift)]" : "border-transparent shadow-[var(--shadow-card)]",
+                    // Every quote looks the same: the order is a sort, not a recommendation. Only the chosen one stands out.
+                    chosen ? "border-brand shadow-[var(--shadow-lift)]" : "border-transparent shadow-[var(--shadow-card)]",
                     contract && !chosen && "opacity-60",
                   )}
                 >
@@ -164,18 +169,18 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                   <h2 id={`q-${q.id}`} className="text-[17px] font-semibold">
                     {q.company.name}
                   </h2>
-                  <div className={cx("tnum mt-2 whitespace-nowrap font-semibold leading-none tracking-tight", q.total >= 100_000_000 ? "text-[30px] lg:text-[34px]" : q.total >= 10_000_000 ? "text-[36px] lg:text-[40px]" : "text-[40px] lg:text-[44px]", view === "price" && lead && "text-brand")}>
+                  <div className={cx("tnum mt-2 whitespace-nowrap font-semibold leading-none tracking-tight", q.total >= 100_000_000 ? "text-[30px] lg:text-[34px]" : q.total >= 10_000_000 ? "text-[36px] lg:text-[40px]" : "text-[40px] lg:text-[44px]")}>
                     ¥{q.total.toLocaleString("ja-JP")}
                   </div>
                   <div className="mt-1.5 text-[13px] text-muted">税込・第{q.version}版</div>
                   <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
                     <div>
                       <dt className="text-[12px] text-muted">工期</dt>
-                      <dd className={cx("tnum mt-0.5 text-[19px] font-semibold", view === "days" && lead && "text-brand")}>{q.duration_days ? `${q.duration_days}日` : "—"}</dd>
+                      <dd className={"tnum mt-0.5 text-[19px] font-semibold"}>{q.duration_days ? `${q.duration_days}日` : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[12px] text-muted">保証</dt>
-                      <dd className={cx("tnum mt-0.5 text-[19px] font-semibold", view === "safe" && lead && "text-brand")}>{q.warranty_years ? `${q.warranty_years}年` : "—"}</dd>
+                      <dd className={"tnum mt-0.5 text-[19px] font-semibold"}>{q.warranty_years ? `${q.warranty_years}年` : "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[12px] text-muted">評価</dt>
@@ -204,7 +209,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                     href={`/quotes/${q.id}`}
                     className={cx(
                       "press mt-5 flex h-12 items-center justify-center rounded-xl text-[15px] font-medium",
-                      lead ? "bg-brand text-white hover:bg-brand-2" : "border border-line hover:border-ink/20",
+                      "border border-line hover:border-ink/20",
                     )}
                   >
                     見積を見る

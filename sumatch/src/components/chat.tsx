@@ -22,7 +22,8 @@ export interface ChatProps {
   readOnly?: boolean;
   readOnlyReason?: string;
   /** Before both sides agree the contract terms, contact details can't be sent (the server refuses them too). */
-  contactLocked?: boolean;
+  /** Contact details are always blocked in chat; this is the reason shown (before / after 契約成立). */
+  blockMessage?: string;
 }
 
 function dayLabel(iso: string) {
@@ -34,7 +35,7 @@ function dayLabel(iso: string) {
   return `${d.getMonth() + 1}月${d.getDate()}日（${"日月火水木金土"[d.getDay()]}）`;
 }
 
-export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason, contactLocked = true }: ChatProps) {
+export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason, blockMessage = CONTACT_BLOCK_MESSAGE }: ChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [otherReadAt, setOtherReadAt] = useState(initialOtherReadAt);
   const [text, setText] = useState("");
@@ -104,7 +105,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
     if (!body && !file) return;
     if (body) {
       const flags = detectContactInfo(body);
-      const blocked = contactLocked ? blockedFlags(flags) : [];
+      const blocked = blockedFlags(flags);
       // Contact details before agreement: no way to push it through — fix the text (it stays in the box).
       if (blocked.length) return setWarn({ flags: blocked, blocked: true });
       if (!skipCheck && flags.length) return setWarn({ flags, blocked: false });
@@ -201,7 +202,7 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
                 {warn.blocked ? "この内容は送信できません" : `${warn.flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}が含まれているようです`}
               </div>
               <p className="mt-1 leading-relaxed text-ink-2">
-                {warn.blocked ? `${CONTACT_BLOCK_MESSAGE}（${warn.flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}）` : CONTACT_WARNING}
+                {warn.blocked ? `${blockMessage}（${warn.flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}）` : CONTACT_WARNING}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" type="button" onClick={() => setWarn(null)}>

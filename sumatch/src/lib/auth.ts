@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { isDemo } from "./demo";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createHash, randomBytes } from "node:crypto";
@@ -38,11 +39,13 @@ export async function destroySession() {
 export function userFromToken(token: string | undefined): User | null {
   if (!token) return null;
   const row = get<User & { expires_at: string }>(
-    `SELECT u.id, u.email, u.name, u.role, u.status, u.notify_email, u.notify_browser, u.created_at, u.last_login_at, s.expires_at
+    `SELECT u.id, u.email, u.name, u.role, u.status, u.notify_email, u.notify_browser, u.created_at, u.last_login_at, u.is_demo, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
     tokenHash(token),
   );
   if (!row || row.expires_at < now() || row.status !== "active") return null;
+  // Sample accounts only work in demo mode (their sessions stop working when it is turned off).
+  if (row.is_demo && !isDemo()) return null;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropped on purpose
   const { expires_at: _e, ...user } = row;
   return user;
