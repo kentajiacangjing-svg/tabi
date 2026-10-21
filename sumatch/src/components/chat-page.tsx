@@ -92,6 +92,7 @@ export function ChatPage({ ctx, viewerName, conversations }: { ctx: MatchContext
           initialOtherReadAt={otherReadAt}
           templates={templates}
           quoteHref={quoteHref}
+          visitHref={side === "company" ? `/business/messages/${ctx.match.id}/visit` : side === "customer" ? `/messages/${ctx.match.id}/visit` : undefined}
           blockMessage={contactsUnlocked(ctx.match.id) ? CONTACT_USE_FORM_MESSAGE : CONTACT_BLOCK_MESSAGE}
           readOnly={side === "admin" || ctx.match.status !== "matched"}
           readOnlyReason={side === "admin" ? "運営は閲覧のみです。" : "このチャットは終了しています。"}

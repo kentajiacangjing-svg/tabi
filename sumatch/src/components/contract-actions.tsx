@@ -3,9 +3,12 @@
 import { soft } from "@/lib/soft";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { agreeTermsAction, confirmContractDocumentAction, saveContractContactAction, saveTermsAction, uploadContractFileAction } from "@/app/actions/contract";
+import { agreeTermsAction, confirmContractDocumentAction, revokeContractContactAction, saveContractContactAction, saveTermsAction, uploadContractFileAction } from "@/app/actions/contract";
 import { TERM_FIELDS, type TermKey } from "@/lib/contract-terms";
 import { Button, Field, Input, Notice, Textarea } from "./ui";
+
+/** Mirrors CONTACT_DAYS_AFTER_COMPLETION in lib/contract.ts (a client component cannot import the server module). */
+const CONTACT_DAYS = 90;
 
 /** Agree to the exact terms on screen. The hash tells the server which version that was. */
 export function AgreeButton({
@@ -171,9 +174,31 @@ export function ContactForm({
       </Field>
       {error && <Notice tone="danger">{error}</Notice>}
       {saved && !error && <Notice tone="ok">連絡先を保存しました。相手にお知らせしました。</Notice>}
-      <Button variant="secondary" disabled={pending}>
-        {pending ? "保存中…" : initial ? "連絡先を更新する" : "連絡先を登録する"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" disabled={pending}>
+          {pending ? "保存中…" : initial ? "連絡先を更新する" : "連絡先を登録する"}
+        </Button>
+        {initial && (
+          <button
+            type="button"
+            disabled={pending}
+            className="min-h-11 px-2 text-[14px] text-muted underline-offset-4 hover:text-danger hover:underline"
+            onClick={() => {
+              if (!confirm("登録した連絡先を削除しますか？相手からは見えなくなります。")) return;
+              start(async () => {
+                const r = await soft(revokeContractContactAction(contractId));
+                if (!r.ok) return setError(r.error);
+                router.refresh();
+              });
+            }}
+          >
+            自分の連絡先を削除する
+          </button>
+        )}
+      </div>
+      <p className="text-[13px] leading-relaxed text-muted">
+        連絡先は、工事完了の{CONTACT_DAYS}日後まで表示され、その後消去されます。いつでも自分の連絡先を削除できます。保存時は暗号化されます。（この説明は法務レビュー前の案です）
+      </p>
     </form>
   );
 }

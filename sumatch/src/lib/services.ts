@@ -381,73 +381,80 @@ export function refreshProjectStatus(projectId: string) {
  * no-op, so a double tap or a retried request can't create two records.
  */
 export function decideCompany(ctx: MatchContext, input: { quoteId: string }, userId: string) {
-  if (ctx.side !== "customer") throw new DomainError("依頼先の決定はお客様のみ行えます。");
-  if (ctx.match.status !== "matched") throw new DomainError("マッチ済みの会社のみ選べます。");
-  const existing = get<Contract>("SELECT * FROM contracts WHERE project_id = ?", ctx.project.id);
-  if (existing) {
-    if (existing.match_id === ctx.match.id && existing.quote_id === input.quoteId) return existing.id;
-    throw new DomainError("この相談は既に依頼先が決まっています。");
-  }
-  const latest = latestQuoteForMatch(ctx.match.id);
-  if (!latest) throw new DomainError("見積が届いてから依頼先を決められます。");
-  if (latest.id !== input.quoteId) throw new DomainError("この見積は更新されています。最新の見積を確認してから決めてください。");
-  if (latest.valid_until && latest.valid_until < now().slice(0, 10)) throw new DomainError("この見積は有効期限を過ぎています。会社に再提出を依頼してください。");
-  const plan = ctx.company.plan_id ? get<Plan>("SELECT * FROM plans WHERE id = ?", ctx.company.plan_id) : undefined;
-  const amount = latest.total;
+  // One write transaction: the checks below and the writes cannot interleave with another process.
   return tx(() => {
-    const id = newId("ct");
-    const ts = now();
-    insert("contracts", {
-      id,
-      project_id: ctx.project.id,
-      company_id: ctx.company.id,
-      match_id: ctx.match.id,
-      quote_id: latest.id,
-      amount,
-      contract_date: null,
-      start_date: null,
-      contract_file_id: null,
-      status: "contracted",
-      stage: "selected",
-      success_fee_rate: plan?.success_fee_rate ?? 0.03,
-      notes: "",
-      created_at: ts,
-      updated_at: ts,
-    });
-    appendContractEvent(id, "customer", userId, "selected", "", `${latest.id} v${latest.version} ${amount}`);
-    update("quotes", latest.id, { status: "accepted" });
-    run("UPDATE quotes SET status = 'declined' WHERE project_id = ? AND status = 'submitted' AND id != ?", ctx.project.id, latest.id);
-    update("projects", ctx.project.id, { status: "contracted", updated_at: ts });
-    insert("messages", {
-      id: newId("msg"),
-      match_id: ctx.match.id,
-      sender_side: "system",
-      kind: "system",
-      body: `お客様が依頼先として${ctx.company.name}を選びました（見積 第${latest.version}版・税込${amount.toLocaleString("ja-JP")}円）。契約条件はこれから確認します。`,
-      created_at: ts,
-    });
-    run("UPDATE matches SET last_message_at = ? WHERE id = ?", ts, ctx.match.id);
-    notify(companyUserIds(ctx.company.id), "contract", "依頼先に選ばれました", `${ctx.project.city}・${ctx.project.title}。契約条件を入力してください。`, `/business/contract/${id}`);
-    // Politely close the other conversations.
-    const others = all<Match>("SELECT * FROM matches WHERE project_id = ? AND id != ? AND status = 'matched'", ctx.project.id, ctx.match.id);
-    for (const o of others) {
+    if (ctx.side !== "customer") throw new DomainError("依頼先の決定はお客様のみ行えます。");
+    if (ctx.match.status !== "matched") throw new DomainError("マッチ済みの会社のみ選べます。");
+    const existing = get<Contract>("SELECT * FROM contracts WHERE project_id = ?", ctx.project.id);
+    if (existing) {
+      if (existing.match_id === ctx.match.id && existing.quote_id === input.quoteId) return existing.id;
+      throw new DomainError("この相談は既に依頼先が決まっています。");
+    }
+    const latest = latestQuoteForMatch(ctx.match.id);
+    if (!latest) throw new DomainError("見積が届いてから依頼先を決められます。");
+    if (latest.id !== input.quoteId) throw new DomainError("この見積は更新されています。最新の見積を確認してから決めてください。");
+    if (latest.valid_until && latest.valid_until < now().slice(0, 10)) throw new DomainError("この見積は有効期限を過ぎています。会社に再提出を依頼してください。");
+    const plan = ctx.company.plan_id ? get<Plan>("SELECT * FROM plans WHERE id = ?", ctx.company.plan_id) : undefined;
+    const amount = latest.total;
+    return tx(() => {
+      const id = newId("ct");
+      const ts = now();
+      insert("contracts", {
+        id,
+        project_id: ctx.project.id,
+        company_id: ctx.company.id,
+        match_id: ctx.match.id,
+        quote_id: latest.id,
+        amount,
+        contract_date: null,
+        start_date: null,
+        contract_file_id: null,
+        status: "contracted",
+        stage: "selected",
+        success_fee_rate: plan?.success_fee_rate ?? 0.03,
+        notes: "",
+        created_at: ts,
+        updated_at: ts,
+      });
+      appendContractEvent(id, "customer", userId, "selected", "", `${latest.id} v${latest.version} ${amount}`);
+      update("quotes", latest.id, { status: "accepted" });
+      run("UPDATE quotes SET status = 'declined' WHERE project_id = ? AND status = 'submitted' AND id != ?", ctx.project.id, latest.id);
+      update("projects", ctx.project.id, { status: "contracted", updated_at: ts });
       insert("messages", {
         id: newId("msg"),
-        match_id: o.id,
+        match_id: ctx.match.id,
         sender_side: "system",
         kind: "system",
-        body: "お客様は今回、別の会社に依頼することを決定しました。ご対応ありがとうございました。",
+        body: `お客様が依頼先として${ctx.company.name}を選びました（見積 第${latest.version}版・税込${amount.toLocaleString("ja-JP")}円）。契約条件はこれから確認します。`,
         created_at: ts,
       });
-      notify(companyUserIds(o.company_id), "contract", "案件の結果のお知らせ", `${ctx.project.city}の案件は他社に決定しました。`, `/business/messages/${o.id}`);
-    }
-    run("UPDATE matches SET status = 'closed' WHERE project_id = ? AND status = 'candidate'", ctx.project.id);
-    publish([ctx.project.customer_id, ...companyUserIds(ctx.company.id)], { type: "message", matchId: ctx.match.id });
-    return id;
+      run("UPDATE matches SET last_message_at = ? WHERE id = ?", ts, ctx.match.id);
+      notify(companyUserIds(ctx.company.id), "contract", "依頼先に選ばれました", `${ctx.project.city}・${ctx.project.title}。契約条件を入力してください。`, `/business/contract/${id}`);
+      // Politely close the other conversations.
+      const others = all<Match>("SELECT * FROM matches WHERE project_id = ? AND id != ? AND status = 'matched'", ctx.project.id, ctx.match.id);
+      for (const o of others) {
+        insert("messages", {
+          id: newId("msg"),
+          match_id: o.id,
+          sender_side: "system",
+          kind: "system",
+          body: "お客様は今回、別の会社に依頼することを決定しました。ご対応ありがとうございました。",
+          created_at: ts,
+        });
+        notify(companyUserIds(o.company_id), "contract", "案件の結果のお知らせ", `${ctx.project.city}の案件は他社に決定しました。`, `/business/messages/${o.id}`);
+      }
+      run("UPDATE matches SET status = 'closed' WHERE project_id = ? AND status = 'candidate'", ctx.project.id);
+      publish([ctx.project.customer_id, ...companyUserIds(ctx.company.id)], { type: "message", matchId: ctx.match.id });
+      return id;
+    });
   });
 }
 
-export function advanceContract(contract: Contract, to: "in_progress" | "completed", actorLabel: string) {
+export function advanceContract(given: Contract, to: "in_progress" | "completed", actorLabel: string) {
+  return tx(() => advanceContractLocked(get<Contract>("SELECT * FROM contracts WHERE id = ?", given.id)!, to, actorLabel));
+}
+
+function advanceContractLocked(contract: Contract, to: "in_progress" | "completed", actorLabel: string) {
   const order = ["contracted", "in_progress", "completed"];
   if (order.indexOf(to) <= order.indexOf(contract.status)) throw new DomainError("ステータスを戻すことはできません。");
   // Work starts only at 契約成立; finishing needs work that has started (including work started before this rule).

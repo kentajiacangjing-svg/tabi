@@ -22,7 +22,8 @@ export async function handle<T extends object>(fn: () => Promise<T> | T): Promis
     if (e instanceof ActionError || e instanceof DomainError || e instanceof UploadError) {
       return { ok: false, error: e.message };
     }
-    console.error("[action]", e);
+    // Type, message and stack only — never the submitted values (they can hold personal data).
+    console.error("[action]", e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ""}` : "non-Error thrown");
     return { ok: false, error: "エラーが発生しました。時間をおいて再度お試しください。" };
   }
 }

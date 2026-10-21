@@ -1,5 +1,6 @@
 "use server";
 
+import { CONTACT_FLAG_LABEL, PUBLIC_TEXT_BLOCK_MESSAGE, blockedInPublicText } from "@/lib/contact-detect";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { all, get, insert, newId, now, run, tx, update } from "@/lib/db";
@@ -9,6 +10,13 @@ import { saveUpload } from "@/lib/files";
 import { getSetting } from "@/lib/queries";
 import { adminUserIds, notify } from "@/lib/notify";
 import type { Plan } from "@/lib/types";
+
+
+/** Profiles, works, consultations and reviews are read by others outside a conversation: no contact details. */
+function assertPublicText(texts: (string | null | undefined)[]) {
+  const flags = blockedInPublicText(texts);
+  if (flags.length) throw new ActionError(`${PUBLIC_TEXT_BLOCK_MESSAGE}（${flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}）`);
+}
 
 const url = z
   .string()
@@ -80,6 +88,7 @@ export async function businessSignupAction(fd: FormData) {
     const current = await getCurrentUser();
     if (current) throw new ActionError("ログイン中です。企業登録には一度ログアウトしてください。");
     const input = signupSchema.parse(formObject(fd));
+    assertPublicText([input.tagline, input.description, input.specialties, input.warranty, input.qualifications, input.business_hours]);
     const loginEmail = input.login_email.toLowerCase();
     if (get("SELECT 1 FROM users WHERE email = ?", loginEmail)) throw new ActionError("このログイン用メールアドレスは既に登録されています。");
     const plan = get<Plan>("SELECT * FROM plans WHERE code = ? AND active = 1", input.plan_code) ?? get<Plan>("SELECT * FROM plans WHERE active = 1 ORDER BY sort LIMIT 1");
@@ -131,6 +140,7 @@ export async function updateCompanyProfileAction(fd: FormData) {
   return handle(async () => {
     const { user, membership } = await actionBusiness();
     const input = profileSchema.parse(formObject(fd));
+    assertPublicText([input.tagline, input.description, input.specialties, input.warranty, input.qualifications, input.business_hours]);
     const id = membership.company.id;
     const [logo] = formFiles(fd, "logo");
     const saved = logo ? await saveUpload(logo, { ownerUserId: user.id, scope: "public", scopeId: id, allow: ["image"] }) : null;
@@ -158,6 +168,7 @@ export async function addWorkAction(fd: FormData) {
   return handle(async () => {
     const { user, membership } = await actionBusiness();
     const input = workSchema.parse(formObject(fd));
+    assertPublicText([input.title, input.city, input.cost_label]);
     const [img] = formFiles(fd, "image");
     if (!img) throw new ActionError("施工写真を選んでください。");
     const saved = await saveUpload(img, { ownerUserId: user.id, scope: "public", scopeId: membership.company.id, allow: ["image"] });

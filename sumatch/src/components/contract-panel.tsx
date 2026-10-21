@@ -24,6 +24,8 @@ const EVENT_LABEL: Record<string, string> = {
   document_confirmed: "契約書の内容を確認",
   contract_established: "契約成立の要件を満たした",
   contact_updated: "連絡先を登録・更新",
+  contact_revoked: "連絡先を削除",
+  contacts_expired: "表示期限を過ぎた連絡先を消去",
   work_started: "工事開始",
   work_completed: "工事完了",
 };
@@ -46,7 +48,14 @@ export function ContractPanel({ contract: c, viewer, viewerUserId }: { contract:
   const locked = termsLocked(c);
   const checks = establishmentChecks(c);
   const docMine = viewer === "customer" ? c.customer_doc_confirmed_at : c.company_doc_confirmed_at;
-  const contacts = contractContactsFor(c, { side: viewer, userId: viewerUserId });
+  let contacts: ReturnType<typeof contractContactsFor> = null;
+  let contactsError: string | null = null;
+  try {
+    contacts = contractContactsFor(c, { side: viewer, userId: viewerUserId });
+  } catch (e) {
+    // e.g. the encryption key is not configured: say so instead of breaking the page
+    contactsError = e instanceof Error ? e.message : "連絡先を表示できません。";
+  }
   const quoteItems = quote ? quoteWithItems(quote) : null;
   const history = contractHistory(c.id);
   const intact = verifyContractHistory(c.id);
@@ -229,6 +238,7 @@ export function ContractPanel({ contract: c, viewer, viewerUserId }: { contract:
           </div>
           {viewer === "company" && stage === "agreed" && <ContractFileForm contractId={c.id} replacing={!!c.contract_file_id} />}
 
+          {contactsError && <Notice tone="danger">{contactsError}</Notice>}
           {contacts && (
             <div className="rounded-2xl border border-line p-4 sm:p-5">
               <h3 className="text-[17px] font-medium">連絡先</h3>

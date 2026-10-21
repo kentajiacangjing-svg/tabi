@@ -7,6 +7,7 @@ import { ActionError, actionUser } from "@/lib/auth";
 import { formObject, handle } from "@/lib/action";
 import { notify, companyUserIds } from "@/lib/notify";
 import { generateCandidates, notifyNewLeads } from "@/lib/services";
+import { setFeeStatus, type FeeStatus } from "@/lib/fees";
 import type { Company, Project } from "@/lib/types";
 
 const admin = () => actionUser(["admin"]);
@@ -172,6 +173,16 @@ export async function resolveReportAction(reportId: string) {
   return handle(async () => {
     await admin();
     update("reports", reportId, { status: "resolved" });
+    return done();
+  });
+}
+
+/** 成功報酬の記録の状態を手動で変更（請求・決済は行わない）。 */
+export async function setFeeStatusAction(feeId: string, fd: FormData) {
+  return handle(async () => {
+    const user = await admin();
+    const o = formObject(fd);
+    setFeeStatus(feeId, (o.status ?? "") as FeeStatus, user.id, o.note ?? "");
     return done();
   });
 }

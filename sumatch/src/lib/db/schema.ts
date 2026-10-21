@@ -328,6 +328,75 @@ CREATE TABLE IF NOT EXISTS contact_access_log (
   created_at TEXT NOT NULL
 );
 
+-- 現地調査 (site visit) before any contract. The company proposes dates; the customer picks one and, by explicit
+-- consent, discloses the visit address to that company only. The address is encrypted, shown only to the
+-- company's members until visible_until, and erased when the visit is cancelled or the period ends.
+CREATE TABLE IF NOT EXISTS site_visits (
+  id TEXT PRIMARY KEY,
+  match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  proposed_by TEXT NOT NULL,
+  slots_json TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','approved','declined','cancelled')),
+  visit_at TEXT,
+  address_enc TEXT,
+  access_note_enc TEXT,
+  consent_json TEXT,
+  approved_by TEXT,
+  approved_at TEXT,
+  visible_until TEXT,
+  closed_by TEXT,
+  closed_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- Every step of a site visit, and every time the company opened the address. Never the address itself.
+CREATE TABLE IF NOT EXISTS site_visit_events (
+  id TEXT PRIMARY KEY,
+  visit_id TEXT NOT NULL REFERENCES site_visits(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  actor_side TEXT NOT NULL,
+  actor_user_id TEXT,
+  detail TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+-- 成功報酬 (provisional rules, see lib/fees.ts): one internal record per 契約成立. Nothing here bills anyone;
+-- statuses are set by the operator by hand. fee_events keeps who changed what.
+CREATE TABLE IF NOT EXISTS fee_records (
+  id TEXT PRIMARY KEY,
+  contract_id TEXT NOT NULL UNIQUE REFERENCES contracts(id),
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  base_amount INTEGER NOT NULL,
+  rate REAL NOT NULL,
+  fee_amount INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_review' CHECK (status IN ('pending_review','confirmed','invoiced','paid','void')),
+  rule_version TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fee_events (
+  id TEXT PRIMARY KEY,
+  fee_id TEXT NOT NULL REFERENCES fee_records(id),
+  from_status TEXT NOT NULL,
+  to_status TEXT NOT NULL,
+  actor_user_id TEXT,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+-- Operator (admin) access to private data: which chat or file, when. For audits of the operator itself.
+CREATE TABLE IF NOT EXISTS admin_access_log (
+  id TEXT PRIMARY KEY,
+  admin_user_id TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -436,4 +505,22 @@ export const MIGRATIONS: { table: string; column: string; ddl: string; backfill?
     backfill:
       "UPDATE companies SET is_demo = 1 WHERE id IN (SELECT m.company_id FROM company_members m JOIN users u ON u.id = m.user_id WHERE m.member_role = 'owner' AND u.is_demo = 1)",
   },
+  // Notification email delivery: queued → sending → sent | failed (retried) | suppressed. No mail leaves the
+  // app unless a transport is configured (lib/mailer.ts); there is no real transport yet.
+  { table: "email_outbox", column: "user_id", ddl: "TEXT" },
+  { table: "email_outbox", column: "kind", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "email_outbox", column: "dedupe_key", ddl: "TEXT" },
+  { table: "email_outbox", column: "attempts", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "email_outbox", column: "next_attempt_at", ddl: "TEXT" },
+  { table: "email_outbox", column: "last_error", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "email_outbox", column: "sent_at", ddl: "TEXT" },
 ];
+
+// Database-level guarantees that hold even if application code runs twice (double tap, retry, two processes).
+export const INDEXES = `
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_once_both_agreed ON contract_events(contract_id, terms_hash) WHERE action = 'both_agreed';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_once_established ON contract_events(contract_id) WHERE action = 'contract_established';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_once_selected ON contract_events(contract_id) WHERE action = 'selected';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_outbox_dedupe ON email_outbox(dedupe_key) WHERE dedupe_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_outbox_status ON email_outbox(status, next_attempt_at);
+`;

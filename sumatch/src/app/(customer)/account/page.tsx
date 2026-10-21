@@ -1,3 +1,4 @@
+import { mailIsDelivered } from "@/lib/mailer";
 import { requireUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
 import { AccountForm, PasswordForm } from "@/components/account-forms";
@@ -14,7 +15,7 @@ export default async function AccountPage() {
       <div className="space-y-14">
         <section>
           <h2 className="mb-5 text-[20px] font-medium">お名前と通知</h2>
-          <AccountForm name={user.name} notifyEmail={!!user.notify_email} notifyBrowser={!!user.notify_browser} />
+          <AccountForm name={user.name} notifyEmail={!!user.notify_email} notifyBrowser={!!user.notify_browser} mailActive={mailIsDelivered()} />
         </section>
         <section className="border-t border-line pt-10">
           <h2 className="mb-5 text-[20px] font-medium">パスワード</h2>

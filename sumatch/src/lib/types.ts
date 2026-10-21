@@ -307,3 +307,23 @@ export interface CompanyWork {
   file_id: string | null;
   created_at: string;
 }
+
+export interface SiteVisit {
+  id: string;
+  match_id: string;
+  company_id: string;
+  proposed_by: string;
+  slots_json: string;
+  note: string;
+  status: "proposed" | "approved" | "declined" | "cancelled";
+  visit_at: string | null;
+  address_enc: string | null;
+  access_note_enc: string | null;
+  consent_json: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  visible_until: string | null;
+  closed_by: string | null;
+  closed_at: string | null;
+  created_at: string;
+}

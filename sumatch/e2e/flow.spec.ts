@@ -1,7 +1,8 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
 
-async function demoLogin(browser: Browser, name: string): Promise<Page> {
-  const ctx = await browser.newContext();
+/** Demo sign-in. `baseURL` picks the server process (3200 by default, 3201 is a second, independent server). */
+async function demoLogin(browser: Browser, name: string, baseURL?: string): Promise<Page> {
+  const ctx = await browser.newContext(baseURL ? { baseURL } : {});
   const page = await ctx.newPage();
   await page.goto("/login");
   await page.getByText("デモアカウントで試す").click();
@@ -75,7 +76,10 @@ test("customer & company: chat → quote → revise → compare → decide → t
   await expect(page.getByText("湘南ペイントに相談を送りました")).toBeVisible();
 
   // 4. Company: one lead at a time → 対応したい → match moment → chat
-  const biz = await demoLogin(browser, "湘南ペイント");
+  // The company works through a second server process (3201); the customer stays on 3200.
+  const biz = await demoLogin(browser, "湘南ペイント", "http://localhost:3201");
+  await biz.goto("/business/leads");
+  expect(new URL(biz.url()).port).toBe("3201");
   await biz.goto("/business/leads");
   await expect(biz.getByText("お客様が相談を希望しています")).toBeVisible();
   await expect(biz.getByText("藤沢市").first()).toBeVisible();
@@ -127,6 +131,35 @@ test("customer & company: chat → quote → revise → compare → decide → t
   await expect(biz.getByRole("heading", { name: "今日やること" })).toBeVisible();
   await biz.goto("/business/active");
   await expect(biz.getByText("テスト 花子").first()).toBeVisible();
+
+  // 5b. 現地調査: the company proposes dates; the customer discloses the address with explicit consent
+  await biz.goto(chatUrl);
+  await biz.getByRole("button", { name: "その他" }).click();
+  await biz.getByRole("link", { name: "現地調査の日程" }).click();
+  await expect(biz.getByRole("heading", { name: "現地調査" })).toBeVisible();
+  const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const visitDay = new Date(Date.now() + 3 * 86400_000);
+  visitDay.setHours(10, 0, 0, 0);
+  await biz.getByLabel("候補日時 1").fill(local(visitDay));
+  await biz.getByLabel("メモ（任意）").fill("1時間ほどで外壁と屋根を確認します");
+  await biz.getByRole("button", { name: "候補日をお客様に送る" }).click();
+  await expect(biz.getByText("お客様の返事を待っています")).toBeVisible();
+
+  await page.goto(chatUrl.replace("http://localhost:3201/business/messages/", "/messages/") + "/visit");
+  await expect(page.getByText("湘南ペイントからの候補日")).toBeVisible();
+  await page.getByRole("radio").first().check();
+  await page.getByRole("textbox", { name: /訪問先の住所/ }).fill("藤沢市辻堂元町9-9-9");
+  const approve = page.getByRole("button", { name: "この日時で承認し、住所を開示する" });
+  await expect(approve).toBeDisabled();
+  await page.getByLabel(/訪問先の住所を湘南ペイントに開示することに同意します/).check();
+  await approve.click();
+  await expect(page.getByText("日時が決まりました")).toBeVisible();
+  await biz.reload();
+  await expect(biz.getByText("藤沢市辻堂元町9-9-9")).toBeVisible();
+  // the address is not in the conversation
+  await biz.goto(chatUrl);
+  await expect(biz.getByRole("log").getByText("現地調査の日時が決まりました", { exact: false })).toBeVisible();
+  await expect(biz.getByRole("log").getByText("辻堂元町")).toHaveCount(0);
 
   // 6. Customer: notification → match moment, chat, compare (latest version only), decide
   await page.goto("/projects");
@@ -320,7 +353,10 @@ test("unknown pages show a friendly 404 with a way back", async ({ page }) => {
 });
 
 test("a message sent with a double keypress arrives once", async ({ browser }) => {
-  const biz = await demoLogin(browser, "湘南ペイント");
+  // The company works through a second server process (3201); the customer stays on 3200.
+  const biz = await demoLogin(browser, "湘南ペイント", "http://localhost:3201");
+  await biz.goto("/business/leads");
+  expect(new URL(biz.url()).port).toBe("3201");
   await biz.goto("/business/messages");
   await biz.locator("main a[href^='/business/messages/']").first().click();
   await biz.waitForURL(/\/business\/messages\/.+/);
@@ -364,7 +400,10 @@ test("holding the → key sends one consultation, not several", async ({ browser
 });
 
 test("a very long message wraps inside its bubble", async ({ browser }) => {
-  const biz = await demoLogin(browser, "湘南ペイント");
+  // The company works through a second server process (3201); the customer stays on 3200.
+  const biz = await demoLogin(browser, "湘南ペイント", "http://localhost:3201");
+  await biz.goto("/business/leads");
+  expect(new URL(biz.url()).port).toBe("3201");
   await biz.goto("/business/messages");
   await biz.locator("main a[href^='/business/messages/']").first().click();
   await biz.waitForURL(/\/business\/messages\/.+/);

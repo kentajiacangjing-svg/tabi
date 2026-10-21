@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { all, parseJson } from "@/lib/db";
 import { kpis } from "@/lib/kpi";
+import { mailTransportName } from "@/lib/mailer";
+import { FEE_RULE_VERSION, FEE_STATUS_LABEL, allowedFeeTransitions, feeLedger, reviewQueues } from "@/lib/fees";
 import { allAreas, allCategories, getSetting } from "@/lib/queries";
 import { PROJECT_STATUS } from "@/lib/constants";
 import { dateShort, man, pct, relative, yen } from "@/lib/format";
 import { CONTACT_FLAG_LABEL, type ContactFlag } from "@/lib/contact-detect";
 import {
   resolveReportAction,
+  setFeeStatusAction,
   setCompanyBillingAction,
   setCompanyStatusAction,
   setUserStatusAction,
@@ -35,6 +38,7 @@ const TABS = [
   ["analytics", "分析"],
 ] as const;
 const MORE = [
+  ["fees", "成功報酬・要確認"],
   ["chats", "チャット確認"],
   ["reports", "通報"],
   ["categories", "カテゴリ"],
@@ -78,6 +82,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {tab === "areas" && <AreasTab />}
       {tab === "plans" && <PlansTab />}
       {tab === "outbox" && <OutboxTab />}
+      {tab === "fees" && <FeesTab />}
     </div>
   );
 }
@@ -368,7 +373,7 @@ function ChatsTab() {
                 <td><Link href={`/admin/chats/${b.match_id}`} className="text-brand hover:underline">{b.customer} × {b.company}</Link></td>
                 <td>{b.sender_side === "customer" ? "お客様" : "企業"}</td>
                 <td><Badge tone="danger">{b.flags.split(",").map((x) => CONTACT_FLAG_LABEL[x as ContactFlag] ?? x).join("・")}</Badge></td>
-                <td>{{ message: "チャット", quote: "見積", terms: "契約条件" }[b.source] ?? b.source}</td>
+                <td>{{ message: "チャット", quote: "見積", terms: "契約条件", visit: "現地調査" }[b.source] ?? b.source}</td>
               </tr>
             ))}
           </Table>
@@ -577,24 +582,152 @@ function PlansTab() {
 }
 
 function OutboxTab() {
-  const rows = all<{ id: string; to_email: string; subject: string; body: string; created_at: string }>("SELECT * FROM email_outbox ORDER BY created_at DESC LIMIT 200");
+  const rows = all<{ id: string; to_email: string; subject: string; body: string; created_at: string; status: string; attempts: number; last_error: string }>("SELECT * FROM email_outbox ORDER BY created_at DESC LIMIT 200");
+  const counts = all<{ status: string; n: number }>("SELECT status, COUNT(*) n FROM email_outbox GROUP BY status");
+  const transport = mailTransportName();
+  const label: Record<string, string> = { queued: "送信待ち", sending: "送信中", sent: "送信済み", failed: "失敗（再試行）", suppressed: "停止（通知オフ）" };
   return (
     <div>
-      <p className="mb-3 text-[13px] text-muted">MVPではメールは送信キューに記録されます。SMTP・LINE公式アカウント等の送信処理を接続するとここから配信されます。</p>
+      <p className="mb-3 text-[13px] text-muted">
+        {transport === "none"
+          ? "メールは送信されていません（MAIL_TRANSPORT 未設定）。通知はキューに記録されるだけです。実際の送信は運営の承認後に設定します。"
+          : "テスト用の送信先（mail-sandbox.jsonl）に出力しています。実在の宛先には送信していません。"}
+        {" "}
+        {counts.map((c) => `${label[c.status] ?? c.status} ${c.n}件`).join("・")}
+      </p>
       {rows.length === 0 ? (
         <p className="text-sm text-muted">まだ通知メールはありません。</p>
       ) : (
-        <Table head={["日時", "宛先", "件名", "本文"]}>
+        <Table head={["日時", "宛先", "件名", "本文", "状態"]}>
           {rows.map((r) => (
             <tr key={r.id}>
               <td>{relative(r.created_at)}</td>
               <td>{r.to_email}</td>
               <td className="font-semibold">{r.subject}</td>
               <td className="max-w-md whitespace-pre-wrap text-[12px] text-muted">{r.body}</td>
+              <td className="text-[12px]">
+                {label[r.status] ?? r.status}
+                {r.attempts > 0 && `（${r.attempts}回）`}
+                {r.last_error && <div className="text-danger">{r.last_error}</div>}
+              </td>
             </tr>
           ))}
         </Table>
       )}
+    </div>
+  );
+}
+
+function FeesTab() {
+  const fees = feeLedger();
+  const q = reviewQueues();
+  const total = (st: string) => fees.filter((f) => f.status === st).reduce((a, f) => a + f.fee_amount, 0);
+  return (
+    <div className="space-y-10">
+      <section>
+        <SectionTitle>成功報酬の記録（仮仕様 {FEE_RULE_VERSION}）</SectionTitle>
+        <p className="mb-3 text-[13px] leading-relaxed text-muted">
+          契約成立（契約書の双方確認）ごとに1件、要確認として記録します。料率・計算基準・請求時期・キャンセル時の扱いは未決定の仮仕様です。ここでは請求・決済を行いません。状態は運営が手動で記録します。
+          要確認 {yen(total("pending_review"))}・確認済み {yen(total("confirmed"))}・請求済み {yen(total("invoiced"))}・入金確認 {yen(total("paid"))}
+        </p>
+        {fees.length === 0 ? (
+          <p className="text-sm text-muted">まだ記録はありません。</p>
+        ) : (
+          <Table head={["契約成立", "企業 / 案件", "基準額", "料率", "報酬（仮）", "状態", "変更"]}>
+            {fees.map((f) => (
+              <tr key={f.id}>
+                <td>{f.established_at ? dateShort(f.established_at) : "—"}</td>
+                <td>
+                  {f.company}
+                  <div className="text-[12px] text-muted">{f.project}</div>
+                </td>
+                <td className="tabular-nums">{yen(f.base_amount)}</td>
+                <td className="tabular-nums">{Math.round(f.rate * 1000) / 10}%</td>
+                <td className="tabular-nums font-semibold">{yen(f.fee_amount)}</td>
+                <td>
+                  <Badge tone={f.status === "paid" ? "ok" : f.status === "void" ? "neutral" : "brand"}>{FEE_STATUS_LABEL[f.status]}</Badge>
+                  {f.note && <div className="max-w-[16rem] text-[12px] text-muted">{f.note}</div>}
+                </td>
+                <td>
+                  {allowedFeeTransitions(f.status).length > 0 && (
+                    <ActionForm action={setFeeStatusAction.bind(null, f.id)} className="flex flex-wrap items-center gap-1.5">
+                      <select name="status" className={cx(inputClass, "w-auto py-1.5 text-[13px]")} aria-label="新しい状態">
+                        {allowedFeeTransitions(f.status).map((s) => (
+                          <option key={s} value={s}>
+                            {FEE_STATUS_LABEL[s]}
+                          </option>
+                        ))}
+                      </select>
+                      <input name="note" placeholder="メモ（対象外・差戻しは必須）" className={cx(inputClass, "w-44 py-1.5 text-[13px]")} />
+                      <button className="min-h-9 rounded-lg border border-line px-3 text-[13px] hover:bg-soft">記録</button>
+                    </ActionForm>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
+
+      <section>
+        <SectionTitle>要確認：契約記録が足りない既存案件</SectionTitle>
+        <p className="mb-3 text-[13px] text-muted">工事中・完了ですが、契約書の登録と双方確認の記録がない案件です。状態・金額・履歴は自動で変更しません。個別に確認してください。</p>
+        {q.legacy.length === 0 ? (
+          <p className="text-sm text-muted">ありません。</p>
+        ) : (
+          <Table head={["契約ID", "企業", "状態", "記録上の段階", "金額", "最終更新"]}>
+            {q.legacy.map((c) => (
+              <tr key={c.id}>
+                <td className="font-mono text-[12px]">{c.id}</td>
+                <td>{c.company}</td>
+                <td>{c.status === "completed" ? "完了" : "工事中"}</td>
+                <td>{c.stage}</td>
+                <td className="tabular-nums">{yen(c.amount)}</td>
+                <td>{relative(c.updated_at)}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
+
+      <section>
+        <SectionTitle>要確認：SUMATCH外への移動の兆候（自動判定ではありません）</SectionTitle>
+        <p className="mb-3 text-[13px] leading-relaxed text-muted">
+          以下は確認のきっかけになる兆候だけです。違反と断定せず、必要に応じて双方に事情を確認してください。
+        </p>
+        <h3 className="mb-2 mt-4 text-[14px] font-medium">依頼先決定から14日以上、契約成立に進んでいない</h3>
+        {q.stalled.length === 0 ? (
+          <p className="text-sm text-muted">ありません。</p>
+        ) : (
+          <Table head={["契約ID", "企業", "段階", "金額", "最終更新"]}>
+            {q.stalled.map((c) => (
+              <tr key={c.id}>
+                <td className="font-mono text-[12px]">{c.id}</td>
+                <td>{c.company}</td>
+                <td>{c.stage}</td>
+                <td className="tabular-nums">{yen(c.amount)}</td>
+                <td>{relative(c.updated_at)}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+        <h3 className="mb-2 mt-6 text-[14px] font-medium">連絡先の送信が止められた後、やり取りが途絶えている会話</h3>
+        {q.quietAfterBlock.length === 0 ? (
+          <p className="text-sm text-muted">ありません。</p>
+        ) : (
+          <Table head={["会話", "企業", "止めた回数", "最後に止めた日時", "最後のメッセージ"]}>
+            {q.quietAfterBlock.map((r) => (
+              <tr key={r.match_id}>
+                <td><Link href={`/admin/chats/${r.match_id}`} className="text-brand hover:underline">会話を見る</Link></td>
+                <td>{r.company}</td>
+                <td className="tabular-nums">{r.blocks}</td>
+                <td>{relative(r.last_block)}</td>
+                <td>{relative(r.last_message)}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </section>
     </div>
   );
 }

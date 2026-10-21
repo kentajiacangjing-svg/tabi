@@ -1,3 +1,4 @@
+import { mailIsDelivered } from "@/lib/mailer";
 import Link from "next/link";
 import { requireBusiness } from "@/lib/auth";
 import { all } from "@/lib/db";
@@ -52,7 +53,7 @@ export default async function BusinessProfilePage() {
         <section className="border-t border-line pt-10">
           <SectionTitle>通知設定（{user.name}）</SectionTitle>
           <p className="mb-6 text-[15px] text-muted">新しい相談とメッセージは、メールとブラウザ通知でお知らせします。LINE公式アカウント・LINE WORKSでの通知も準備中です（会話はSUMATCHの中で行います）。</p>
-          <AccountForm name={user.name} notifyEmail={!!user.notify_email} notifyBrowser={!!user.notify_browser} />
+          <AccountForm name={user.name} notifyEmail={!!user.notify_email} notifyBrowser={!!user.notify_browser} mailActive={mailIsDelivered()} />
         </section>
         <section className="border-t border-line pt-10">
           <SectionTitle>パスワード</SectionTitle>

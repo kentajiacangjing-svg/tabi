@@ -76,3 +76,11 @@ export function detectContactInfo(text: string): ContactFlag[] {
 export function blockedFlags(flags: ContactFlag[]): ContactFlag[] {
   return flags.filter((f) => BLOCKED_FLAGS.has(f));
 }
+
+export const PUBLIC_TEXT_BLOCK_MESSAGE =
+  "公開される欄（プロフィール・施工事例・相談内容・口コミ）には、電話番号・メールアドレス・LINE・SNSなどの連絡先を書けません。";
+
+/** Texts other people read outside a conversation. Returns the blocked kinds (empty = fine). */
+export function blockedInPublicText(texts: (string | null | undefined)[]): ContactFlag[] {
+  return [...new Set(texts.flatMap((t) => blockedFlags(detectContactInfo(t ?? ""))))];
+}

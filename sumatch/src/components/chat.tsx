@@ -24,6 +24,8 @@ export interface ChatProps {
   /** Before both sides agree the contract terms, contact details can't be sent (the server refuses them too). */
   /** Contact details are always blocked in chat; this is the reason shown (before / after 契約成立). */
   blockMessage?: string;
+  /** 現地調査 page for this conversation (customer / company only). */
+  visitHref?: string;
 }
 
 function dayLabel(iso: string) {
@@ -35,7 +37,7 @@ function dayLabel(iso: string) {
   return `${d.getMonth() + 1}月${d.getDate()}日（${"日月火水木金土"[d.getDay()]}）`;
 }
 
-export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason, blockMessage = CONTACT_BLOCK_MESSAGE }: ChatProps) {
+export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templates, quoteHref, readOnly, readOnlyReason, blockMessage = CONTACT_BLOCK_MESSAGE, visitHref }: ChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [otherReadAt, setOtherReadAt] = useState(initialOtherReadAt);
   const [text, setText] = useState("");
@@ -244,6 +246,11 @@ export function Chat({ matchId, side, initialMessages, initialOtherReadAt, templ
               <button type="button" onClick={draft} disabled={drafting} className="min-h-10 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink-2 hover:border-ink/30 disabled:opacity-40">
                 {drafting ? "下書き中…" : "返信の下書きを作る"}
               </button>
+              {visitHref && (
+                <Link href={visitHref} className="flex min-h-10 items-center rounded-lg border border-line bg-surface px-3 text-[14px] text-ink-2 hover:border-ink/30">
+                  現地調査の日程
+                </Link>
+              )}
               <button type="button" onClick={() => setReporting(true)} className="min-h-10 rounded-lg px-3 text-[14px] text-muted hover:text-ink">
                 運営に通報
               </button>

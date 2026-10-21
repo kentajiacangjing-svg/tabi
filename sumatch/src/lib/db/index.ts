@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync as DatabaseSyncType, SQLInputValue } from "node:sqlite";
-import { MIGRATIONS, SCHEMA } from "./schema";
+import { INDEXES, MIGRATIONS, SCHEMA } from "./schema";
 import { seed } from "./seed";
 import { isDemo } from "../demo";
 import { hashPassword } from "../password";
@@ -20,15 +20,20 @@ const g = globalThis as unknown as { __sumatchDb?: DatabaseSyncType; __sumatchSe
 function open(): DatabaseSyncType {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
   const db = new DatabaseSync(DB_PATH);
-  db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
-  db.exec(SCHEMA);
-  for (const m of MIGRATIONS) {
-    const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as { name: string }[];
-    if (!cols.some((c) => c.name === m.column)) {
-      db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.ddl}`);
-      if (m.backfill) db.exec(m.backfill);
+  db.exec("PRAGMA busy_timeout = 10000; PRAGMA journal_mode = WAL;");
+  // Several server processes may open the same file at once: the schema, migrations and indexes are applied
+  // under the write lock, each step re-checked inside it, so no process half-applies or repeats a change.
+  locked(db, () => {
+    db.exec(SCHEMA);
+    for (const m of MIGRATIONS) {
+      const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as { name: string }[];
+      if (!cols.some((c) => c.name === m.column)) {
+        db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.ddl}`);
+        if (m.backfill) db.exec(m.backfill);
+      }
     }
-  }
+    db.exec(INDEXES);
+  });
   return db;
 }
 
@@ -36,6 +41,7 @@ export function db(): DatabaseSyncType {
   if (!g.__sumatchDb) {
     g.__sumatchDb = open();
     // A brand-new database gets its master data, plus the sample data in demo mode (see lib/demo.ts).
+    // seed() re-checks inside its write transaction, so two processes starting together seed once.
     const row = g.__sumatchDb.prepare("SELECT COUNT(*) AS n FROM categories").get() as { n: number };
     if (row.n === 0 && !g.__sumatchSeeding) {
       g.__sumatchSeeding = true;
@@ -45,7 +51,8 @@ export function db(): DatabaseSyncType {
         g.__sumatchSeeding = false;
       }
     }
-    ensureAdmin(g.__sumatchDb);
+    const d = g.__sumatchDb;
+    locked(d, () => ensureAdmin(d));
   }
   return g.__sumatchDb;
 }
@@ -83,11 +90,28 @@ export function update(table: string, id: string, row: Record<string, Param>, id
   return run(sql, ...keys.map((k) => row[k]), id);
 }
 
+/** Runs fn holding the database write lock (BEGIN IMMEDIATE); other processes wait (busy_timeout). */
+function locked<T>(d: DatabaseSyncType, fn: () => T): T {
+  d.exec("BEGIN IMMEDIATE");
+  try {
+    const r = fn();
+    d.exec("COMMIT");
+    return r;
+  } catch (e) {
+    d.exec("ROLLBACK");
+    throw e;
+  }
+}
+
 let txDepth = 0;
+/**
+ * A write transaction. It takes the write lock before the first read (BEGIN IMMEDIATE), so a check-then-write
+ * inside fn cannot interleave with the same code running in another server process.
+ */
 export function tx<T>(fn: () => T): T {
   if (txDepth > 0) return fn();
   const d = db();
-  d.exec("BEGIN");
+  d.exec("BEGIN IMMEDIATE");
   txDepth++;
   try {
     const result = fn();

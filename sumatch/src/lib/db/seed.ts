@@ -61,6 +61,8 @@ function sampleDoc(contractId: string, owner: string) {
 
 export function seed(demo: boolean) {
   tx(() => {
+    // Another process may have seeded while this one waited for the lock.
+    if (get<{ n: number }>("SELECT COUNT(*) n FROM categories")!.n > 0) return;
     const pw = hashPassword(DEMO_PASSWORD);
     const user = (email: string, name: string, role: string, created = ago(60)) => {
       const id = newId("usr");

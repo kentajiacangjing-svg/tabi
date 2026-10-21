@@ -11,8 +11,10 @@
 //   • Contact details are never sent through chat, quotes or terms. After 契約成立 each side may share them in
 //     the contract's own contact form; who viewed them is logged.
 import { createHash } from "node:crypto";
-import { all, get, insert, newId, now, run, update } from "./db";
+import { all, get, insert, newId, now, run, tx, update } from "./db";
 import { DomainError } from "./errors";
+import { decryptField, encryptField } from "./field-crypto";
+import { recordFeeForContract } from "./fees";
 import { notify, companyUserIds } from "./notify";
 import { publish } from "./realtime";
 import { CONTACT_BLOCK_MESSAGE, blockedFlags, detectContactInfo, normalizeForDetection } from "./contact-detect";
@@ -51,7 +53,7 @@ export function contactsUnlocked(matchId: string): boolean {
  * Refuse text that carries contact details before the terms are agreed. The attempt is logged with the
  * kind of detail only (no text). Throws a DomainError the person can read.
  */
-export function assertNoContactInfo(ctx: Pick<MatchContext, "match" | "side">, senderUserId: string | null, texts: string[], source: "message" | "quote" | "terms") {
+export function assertNoContactInfo(ctx: Pick<MatchContext, "match" | "side">, senderUserId: string | null, texts: string[], source: "message" | "quote" | "terms" | "visit") {
   const flags = [...new Set(texts.flatMap((t) => blockedFlags(detectContactInfo(t ?? ""))))];
   if (!flags.length) return;
   insert("contact_blocks", {
@@ -161,9 +163,13 @@ export function seedEstablishedContract(
   appendContractEvent(c.id, "company", ids.company, "document_confirmed", hash, `sha256:${doc.sha256}`, at.agreed);
   appendContractEvent(c.id, "customer", ids.customer, "document_confirmed", hash, `sha256:${doc.sha256}`, at.established);
   appendContractEvent(c.id, "system", null, "contract_established", hash, `sha256:${doc.sha256}`, at.established);
+  recordFeeForContract(c, at.established);
   for (const side of ["customer", "company"] as const) {
     const v = contacts[side];
-    insert("contract_contacts", { contract_id: c.id, side, name: v.name, phone: v.phone, email: v.email, address: v.address, hours: v.hours, updated_by: ids[side], updated_at: at.established });
+    insert("contract_contacts", {
+      contract_id: c.id, side, name: encryptField(v.name), phone: encryptField(v.phone), email: encryptField(v.email),
+      address: encryptField(v.address), hours: encryptField(v.hours), updated_by: ids[side], updated_at: at.established,
+    });
   }
 }
 
@@ -182,6 +188,12 @@ function systemMessage(matchId: string, body: string) {
 
 /** The company writes (or rewrites) the terms. Both agreements are cleared. */
 export function saveTerms(ctx: MatchContext, userId: string, input: TermsInput) {
+  // Checked before the transaction so the block record is kept even though nothing is saved.
+  assertNoContactInfo(ctx, userId, TERM_FIELDS.map((f) => String(input[f.key] ?? "")), "terms");
+  return tx(() => saveTermsLocked(ctx, userId, input));
+}
+
+function saveTermsLocked(ctx: MatchContext, userId: string, input: TermsInput) {
   if (ctx.side !== "company") throw new DomainError("契約条件は施工会社が入力します。");
   const c = contractForMatch(ctx.match.id);
   if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
@@ -191,7 +203,6 @@ export function saveTerms(ctx: MatchContext, userId: string, input: TermsInput) 
   const terms: ContractTerms = { quote_id: quote.id, quote_version: quote.version, amount: quote.total, ...trimTerms(input) };
   const missing = missingTerms(terms);
   if (missing.length) throw new DomainError(`未入力の項目があります：${missing.join("・")}`);
-  assertNoContactInfo(ctx, userId, TERM_FIELDS.map((f) => terms[f.key]), "terms");
   const hash = hashTerms(terms);
   if (hash === c.terms_hash) return { hash, changed: false };
   const ts = now();
@@ -224,41 +235,43 @@ function trimTerms(input: TermsInput): TermsInput {
  * same hash, the contract becomes 双方の合意確認済み. Repeating the same agreement is a no-op.
  */
 export function agreeTerms(ctx: MatchContext, userId: string, shownHash: string) {
-  if (ctx.side === "admin") throw new DomainError("運営は同意できません。");
-  const c = contractForMatch(ctx.match.id);
-  if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
-  if (termsLocked(c)) return { agreed: true };
-  const terms = termsOf(c);
-  if (!terms || !c.terms_hash) throw new DomainError("契約条件がまだ届いていません。");
-  if (missingTerms(terms).length) throw new DomainError("未入力の契約条件があるため、同意できません。");
-  if (shownHash !== c.terms_hash) throw new DomainError("契約条件が更新されています。最新の内容を確認してから同意してください。");
-  const latest = latestQuoteForMatch(ctx.match.id);
-  if (!latest || latest.id !== terms.quote_id) throw new DomainError("見積が更新されています。最新の見積を確認してください。");
+  return tx(() => {
+    if (ctx.side === "admin") throw new DomainError("運営は同意できません。");
+    const c = contractForMatch(ctx.match.id);
+    if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
+    if (termsLocked(c)) return { agreed: true };
+    const terms = termsOf(c);
+    if (!terms || !c.terms_hash) throw new DomainError("契約条件がまだ届いていません。");
+    if (missingTerms(terms).length) throw new DomainError("未入力の契約条件があるため、同意できません。");
+    if (shownHash !== c.terms_hash) throw new DomainError("契約条件が更新されています。最新の内容を確認してから同意してください。");
+    const latest = latestQuoteForMatch(ctx.match.id);
+    if (!latest || latest.id !== terms.quote_id) throw new DomainError("見積が更新されています。最新の見積を確認してください。");
 
-  const col = ctx.side === "customer" ? "customer" : "company";
-  if (c[`${col}_agreed_at`]) return { agreed: false };
-  const ts = now();
-  const otherAgreed = !!c[`${col === "customer" ? "company" : "customer"}_agreed_at`];
-  update("contracts", c.id, {
-    [`${col}_agreed_at`]: ts,
-    [`${col}_agreed_by`]: userId,
-    ...(otherAgreed ? { stage: "agreed", agreed_at: ts } : {}),
-    updated_at: ts,
+    const col = ctx.side === "customer" ? "customer" : "company";
+    if (c[`${col}_agreed_at`]) return { agreed: false };
+    const ts = now();
+    const otherAgreed = !!c[`${col === "customer" ? "company" : "customer"}_agreed_at`];
+    update("contracts", c.id, {
+      [`${col}_agreed_at`]: ts,
+      [`${col}_agreed_by`]: userId,
+      ...(otherAgreed ? { stage: "agreed", agreed_at: ts } : {}),
+      updated_at: ts,
+    });
+    appendContractEvent(c.id, ctx.side, userId, "agreed", c.terms_hash);
+    if (otherAgreed) appendContractEvent(c.id, "system", null, "both_agreed", c.terms_hash);
+    const p = participants(c);
+    if (otherAgreed) {
+      systemMessage(ctx.match.id, "お客様と施工会社の双方が、契約条件に合意したことを確認しました。次に、施工会社が契約書を登録し、双方が内容を確認します。");
+      notify(p.customer, "contract", "双方の合意を確認しました", "施工会社が契約書を登録したら、内容を確認してください。", `/projects/${c.project_id}#contract`);
+      notify(p.company, "contract", "双方の合意を確認しました", "契約書（工事請負契約書）を登録してください。", `/business/contract/${c.id}`);
+    } else {
+      systemMessage(ctx.match.id, ctx.side === "customer" ? "お客様が契約条件に同意しました。" : `${ctx.company.name}が契約条件に同意しました。`);
+      const to = ctx.side === "customer" ? p.company : p.customer;
+      notify(to, "contract", "契約条件への同意がありました", "あなたの同意で、双方の合意が確認されます。", ctx.side === "customer" ? `/business/contract/${c.id}` : `/projects/${c.project_id}`);
+    }
+    publish([...p.customer, ...p.company], { type: "message", matchId: ctx.match.id });
+    return { agreed: otherAgreed };
   });
-  appendContractEvent(c.id, ctx.side, userId, "agreed", c.terms_hash);
-  if (otherAgreed) appendContractEvent(c.id, "system", null, "both_agreed", c.terms_hash);
-  const p = participants(c);
-  if (otherAgreed) {
-    systemMessage(ctx.match.id, "お客様と施工会社の双方が、契約条件に合意したことを確認しました。次に、施工会社が契約書を登録し、双方が内容を確認します。");
-    notify(p.customer, "contract", "双方の合意を確認しました", "施工会社が契約書を登録したら、内容を確認してください。", `/projects/${c.project_id}#contract`);
-    notify(p.company, "contract", "双方の合意を確認しました", "契約書（工事請負契約書）を登録してください。", `/business/contract/${c.id}`);
-  } else {
-    systemMessage(ctx.match.id, ctx.side === "customer" ? "お客様が契約条件に同意しました。" : `${ctx.company.name}が契約条件に同意しました。`);
-    const to = ctx.side === "customer" ? p.company : p.customer;
-    notify(to, "contract", "契約条件への同意がありました", "あなたの同意で、双方の合意が確認されます。", ctx.side === "customer" ? `/business/contract/${c.id}` : `/projects/${c.project_id}`);
-  }
-  publish([...p.customer, ...p.company], { type: "message", matchId: ctx.match.id });
-  return { agreed: otherAgreed };
 }
 
 /**
@@ -301,27 +314,29 @@ export function establishmentChecks(c: Contract) {
 
 /** The company registers its contract document. Allowed between agreement and 契約成立; replacing it clears both confirmations. */
 export function attachContractDocument(ctx: MatchContext, userId: string, file: { id: string; sha256: string }) {
-  if (ctx.side !== "company") throw new DomainError("契約書は施工会社が登録します。");
-  const c = contractForMatch(ctx.match.id);
-  if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
-  const stage = effectiveStage(c);
-  if (stage === "contracted") throw new DomainError("契約成立後は契約書を差し替えられません。変更が必要な場合は運営にご連絡ください。");
-  if (stage !== "agreed") throw new DomainError("契約書は、契約条件に双方が同意してから登録できます。");
-  const ts = now();
-  update("contracts", c.id, {
-    contract_file_id: file.id,
-    contract_file_hash: file.sha256,
-    customer_doc_confirmed_at: null,
-    customer_doc_confirmed_by: null,
-    company_doc_confirmed_at: null,
-    company_doc_confirmed_by: null,
-    updated_at: ts,
+  return tx(() => {
+    if (ctx.side !== "company") throw new DomainError("契約書は施工会社が登録します。");
+    const c = contractForMatch(ctx.match.id);
+    if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
+    const stage = effectiveStage(c);
+    if (stage === "contracted") throw new DomainError("契約成立後は契約書を差し替えられません。変更が必要な場合は運営にご連絡ください。");
+    if (stage !== "agreed") throw new DomainError("契約書は、契約条件に双方が同意してから登録できます。");
+    const ts = now();
+    update("contracts", c.id, {
+      contract_file_id: file.id,
+      contract_file_hash: file.sha256,
+      customer_doc_confirmed_at: null,
+      customer_doc_confirmed_by: null,
+      company_doc_confirmed_at: null,
+      company_doc_confirmed_by: null,
+      updated_at: ts,
+    });
+    appendContractEvent(c.id, "company", userId, c.contract_file_id ? "document_replaced" : "document_attached", c.terms_hash, `file:${file.id} sha256:${file.sha256}`);
+    systemMessage(ctx.match.id, `${ctx.company.name}が契約書を${c.contract_file_id ? "差し替え" : "登録し"}ました。内容を確認してください。`);
+    const p = participants(c);
+    notify(p.customer, "contract", "契約書が登録されました", "契約書の内容を確認してください。", `/projects/${c.project_id}#contract`);
+    publish([...p.customer, ...p.company], { type: "message", matchId: ctx.match.id });
   });
-  appendContractEvent(c.id, "company", userId, c.contract_file_id ? "document_replaced" : "document_attached", c.terms_hash, `file:${file.id} sha256:${file.sha256}`);
-  systemMessage(ctx.match.id, `${ctx.company.name}が契約書を${c.contract_file_id ? "差し替え" : "登録し"}ました。内容を確認してください。`);
-  const p = participants(c);
-  notify(p.customer, "contract", "契約書が登録されました", "契約書の内容を確認してください。", `/projects/${c.project_id}#contract`);
-  publish([...p.customer, ...p.company], { type: "message", matchId: ctx.match.id });
 }
 
 /**
@@ -329,41 +344,67 @@ export function attachContractDocument(ctx: MatchContext, userId: string, file: 
  * same document and every check passes, the contract becomes 契約成立. Repeating is a no-op.
  */
 export function confirmContractDocument(ctx: MatchContext, userId: string, shownFileHash: string) {
-  if (ctx.side === "admin") throw new DomainError("運営は確認できません。");
-  const c = contractForMatch(ctx.match.id);
-  if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
-  if (effectiveStage(c) === "contracted") return { established: true };
-  if (effectiveStage(c) !== "agreed") throw new DomainError("契約条件に双方が同意してから確認できます。");
-  if (!c.contract_file_id || !c.contract_file_hash) throw new DomainError("契約書がまだ登録されていません。");
-  if (shownFileHash !== c.contract_file_hash) throw new DomainError("契約書が差し替えられています。最新の契約書を確認してください。");
-  const col = ctx.side === "customer" ? "customer" : "company";
-  if (c[`${col}_doc_confirmed_at`]) return { established: false };
-  const ts = now();
-  const confirmed: Contract = { ...c, [`${col}_doc_confirmed_at`]: ts, [`${col}_doc_confirmed_by`]: userId };
-  const done = establishmentChecks(confirmed).every((x) => x.ok);
-  update("contracts", c.id, {
-    [`${col}_doc_confirmed_at`]: ts,
-    [`${col}_doc_confirmed_by`]: userId,
-    ...(done ? { stage: "contracted", established_at: ts, contract_date: ts.slice(0, 10) } : {}),
-    updated_at: ts,
+  return tx(() => {
+    if (ctx.side === "admin") throw new DomainError("運営は確認できません。");
+    const c = contractForMatch(ctx.match.id);
+    if (!c) throw new DomainError("この案件はまだ依頼先が決まっていません。");
+    if (effectiveStage(c) === "contracted") return { established: true };
+    if (effectiveStage(c) !== "agreed") throw new DomainError("契約条件に双方が同意してから確認できます。");
+    if (!c.contract_file_id || !c.contract_file_hash) throw new DomainError("契約書がまだ登録されていません。");
+    if (shownFileHash !== c.contract_file_hash) throw new DomainError("契約書が差し替えられています。最新の契約書を確認してください。");
+    const col = ctx.side === "customer" ? "customer" : "company";
+    if (c[`${col}_doc_confirmed_at`]) return { established: false };
+    const ts = now();
+    const confirmed: Contract = { ...c, [`${col}_doc_confirmed_at`]: ts, [`${col}_doc_confirmed_by`]: userId };
+    const done = establishmentChecks(confirmed).every((x) => x.ok);
+    update("contracts", c.id, {
+      [`${col}_doc_confirmed_at`]: ts,
+      [`${col}_doc_confirmed_by`]: userId,
+      ...(done ? { stage: "contracted", established_at: ts, contract_date: ts.slice(0, 10) } : {}),
+      updated_at: ts,
+    });
+    appendContractEvent(c.id, ctx.side, userId, "document_confirmed", c.terms_hash, `sha256:${c.contract_file_hash}`);
+    const p = participants(c);
+    if (done) {
+      appendContractEvent(c.id, "system", null, "contract_established", c.terms_hash, `sha256:${c.contract_file_hash}`);
+      recordFeeForContract(c);
+      systemMessage(ctx.match.id, "契約書の確認が双方そろい、SUMATCHの契約成立の要件を満たしました。連絡先は契約ページの「連絡先」欄で交換できます。");
+      notify(p.customer, "contract", "契約成立の要件を満たしました", "連絡先は契約ページの「連絡先」欄で交換できます。", `/projects/${c.project_id}#contract`);
+      notify(p.company, "contract", "契約成立の要件を満たしました", "連絡先は契約ページの「連絡先」欄で交換できます。", `/business/contract/${c.id}`);
+    } else {
+      systemMessage(ctx.match.id, ctx.side === "customer" ? "お客様が契約書の内容を確認しました。" : `${ctx.company.name}が契約書の内容を確認しました。`);
+      const to = ctx.side === "customer" ? p.company : p.customer;
+      notify(to, "contract", "契約書の確認がありました", "あなたの確認で、契約成立の要件がそろいます。", ctx.side === "customer" ? `/business/contract/${c.id}` : `/projects/${c.project_id}#contract`);
+    }
+    publish([...p.customer, ...p.company], { type: "message", matchId: ctx.match.id });
+    return { established: done };
   });
-  appendContractEvent(c.id, ctx.side, userId, "document_confirmed", c.terms_hash, `sha256:${c.contract_file_hash}`);
-  const p = participants(c);
-  if (done) {
-    appendContractEvent(c.id, "system", null, "contract_established", c.terms_hash, `sha256:${c.contract_file_hash}`);
-    systemMessage(ctx.match.id, "契約書の確認が双方そろい、SUMATCHの契約成立の要件を満たしました。連絡先は契約ページの「連絡先」欄で交換できます。");
-    notify(p.customer, "contract", "契約成立の要件を満たしました", "連絡先は契約ページの「連絡先」欄で交換できます。", `/projects/${c.project_id}#contract`);
-    notify(p.company, "contract", "契約成立の要件を満たしました", "連絡先は契約ページの「連絡先」欄で交換できます。", `/business/contract/${c.id}`);
-  } else {
-    systemMessage(ctx.match.id, ctx.side === "customer" ? "お客様が契約書の内容を確認しました。" : `${ctx.company.name}が契約書の内容を確認しました。`);
-    const to = ctx.side === "customer" ? p.company : p.customer;
-    notify(to, "contract", "契約書の確認がありました", "あなたの確認で、契約成立の要件がそろいます。", ctx.side === "customer" ? `/business/contract/${c.id}` : `/projects/${c.project_id}#contract`);
-  }
-  publish([...p.customer, ...p.company], { type: "message", matchId: ctx.match.id });
-  return { established: done };
 }
 
 /* ---------------- contact form (only after 契約成立) ---------------- */
+
+/**
+ * Provisional rule (see docs/release-checklist.md): contacts are shown from 契約成立 until this many days after
+ * the work is marked completed, then erased. A cancelled contract shows none. Either side can withdraw its own.
+ */
+export const CONTACT_DAYS_AFTER_COMPLETION = 90;
+
+function contactsExpired(c: Contract) {
+  if (c.status !== "completed" || !c.end_date) return false;
+  return new Date(c.end_date).getTime() + CONTACT_DAYS_AFTER_COMPLETION * 86400_000 < Date.now();
+}
+
+/** Withdraw (delete) one's own contact details. The other side no longer sees them. */
+export function revokeContractContact(ctx: MatchContext, userId: string) {
+  const side = ctx.side;
+  if (side === "admin") throw new DomainError("運営は操作できません。");
+  return tx(() => {
+    const c = contractForMatch(ctx.match.id);
+    if (!c) throw new DomainError("契約が見つかりません。");
+    const r = run("DELETE FROM contract_contacts WHERE contract_id = ? AND side = ?", c.id, side);
+    if (r.changes) appendContractEvent(c.id, side, userId, "contact_revoked", c.terms_hash);
+  });
+}
 
 export type ContactInput = Pick<ContractContact, "name" | "phone" | "email" | "address" | "hours">;
 
@@ -372,33 +413,36 @@ const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Each side shares only what the work needs: a name, a phone number and/or email, and (customer) the site address. */
 export function saveContractContact(ctx: MatchContext, userId: string, input: ContactInput) {
-  if (ctx.side === "admin") throw new DomainError("運営は登録できません。");
-  const c = contractForMatch(ctx.match.id);
-  if (!c || effectiveStage(c) !== "contracted") throw new DomainError("連絡先は、契約成立の要件を満たしてから交換できます。");
-  const v = {
-    name: normalizeForDetection(input.name ?? "").trim().slice(0, 60),
-    phone: normalizeForDetection(input.phone ?? "").trim().slice(0, 30),
-    email: normalizeForDetection(input.email ?? "").trim().toLowerCase().slice(0, 120),
-    address: ctx.side === "customer" ? String(input.address ?? "").normalize("NFKC").trim().slice(0, 200) : "",
-    hours: String(input.hours ?? "").normalize("NFKC").trim().slice(0, 100),
-  };
-  if (!v.name) throw new DomainError("お名前（担当者名）を入力してください。");
-  if (!v.phone && !v.email) throw new DomainError("電話番号かメールアドレスのどちらかを入力してください。");
-  if (v.phone && !PHONE_OK.test(v.phone)) throw new DomainError("電話番号の形式を確認してください。");
-  if (v.email && !EMAIL_OK.test(v.email)) throw new DomainError("メールアドレスの形式を確認してください。");
-  const ts = now();
-  run(
-    `INSERT INTO contract_contacts (contract_id, side, name, phone, email, address, hours, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT (contract_id, side) DO UPDATE SET name = excluded.name, phone = excluded.phone, email = excluded.email, address = excluded.address,
-       hours = excluded.hours, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
-    c.id, ctx.side, v.name, v.phone, v.email, v.address, v.hours, userId, ts,
-  );
-  // The history records that contacts changed and which fields, never the values themselves.
-  const filled = Object.entries(v).filter(([, x]) => x).map(([k]) => k).join(",");
-  appendContractEvent(c.id, ctx.side, userId, "contact_updated", c.terms_hash, filled);
-  const p = participants(c);
-  const to = ctx.side === "customer" ? p.company : p.customer;
-  notify(to, "contract", "連絡先が登録されました", "契約ページの「連絡先」欄で確認できます。", ctx.side === "customer" ? `/business/contract/${c.id}` : `/projects/${c.project_id}#contract`);
+  return tx(() => {
+    if (ctx.side === "admin") throw new DomainError("運営は登録できません。");
+    const c = contractForMatch(ctx.match.id);
+    if (!c || effectiveStage(c) !== "contracted") throw new DomainError("連絡先は、契約成立の要件を満たしてから交換できます。");
+    const v = {
+      name: normalizeForDetection(input.name ?? "").trim().slice(0, 60),
+      phone: normalizeForDetection(input.phone ?? "").trim().slice(0, 30),
+      email: normalizeForDetection(input.email ?? "").trim().toLowerCase().slice(0, 120),
+      address: ctx.side === "customer" ? String(input.address ?? "").normalize("NFKC").trim().slice(0, 200) : "",
+      hours: String(input.hours ?? "").normalize("NFKC").trim().slice(0, 100),
+    };
+    if (!v.name) throw new DomainError("お名前（担当者名）を入力してください。");
+    if (!v.phone && !v.email) throw new DomainError("電話番号かメールアドレスのどちらかを入力してください。");
+    if (v.phone && !PHONE_OK.test(v.phone)) throw new DomainError("電話番号の形式を確認してください。");
+    if (v.email && !EMAIL_OK.test(v.email)) throw new DomainError("メールアドレスの形式を確認してください。");
+    const ts = now();
+    run(
+      `INSERT INTO contract_contacts (contract_id, side, name, phone, email, address, hours, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (contract_id, side) DO UPDATE SET name = excluded.name, phone = excluded.phone, email = excluded.email, address = excluded.address,
+         hours = excluded.hours, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+      // Stored encrypted (field-crypto.ts): the database file and its backups never hold them in plain text.
+    c.id, ctx.side, encryptField(v.name), encryptField(v.phone), encryptField(v.email), encryptField(v.address), encryptField(v.hours), userId, ts,
+    );
+    // The history records that contacts changed and which fields, never the values themselves.
+    const filled = Object.entries(v).filter(([, x]) => x).map(([k]) => k).join(",");
+    appendContractEvent(c.id, ctx.side, userId, "contact_updated", c.terms_hash, filled);
+    const p = participants(c);
+    const to = ctx.side === "customer" ? p.company : p.customer;
+    notify(to, "contract", "連絡先が登録されました", "契約ページの「連絡先」欄で確認できます。", ctx.side === "customer" ? `/business/contract/${c.id}` : `/projects/${c.project_id}#contract`);
+  });
 }
 
 /**
@@ -407,7 +451,19 @@ export function saveContractContact(ctx: MatchContext, userId: string, input: Co
  */
 export function contractContactsFor(c: Contract, viewer: { side: "customer" | "company"; userId: string }) {
   if (effectiveStage(c) !== "contracted") return null;
-  const rows = all<ContractContact>("SELECT * FROM contract_contacts WHERE contract_id = ?", c.id);
+  if (contactsExpired(c)) {
+    // Past the period: erase (once) and show nothing.
+    if (run("DELETE FROM contract_contacts WHERE contract_id = ?", c.id).changes) appendContractEvent(c.id, "system", null, "contacts_expired", c.terms_hash);
+    return null;
+  }
+  const rows = all<ContractContact>("SELECT * FROM contract_contacts WHERE contract_id = ?", c.id).map((r) => ({
+    ...r,
+    name: decryptField(r.name),
+    phone: decryptField(r.phone),
+    email: decryptField(r.email),
+    address: decryptField(r.address),
+    hours: decryptField(r.hours),
+  }));
   const mine = rows.find((r) => r.side === viewer.side) ?? null;
   const theirs = rows.find((r) => r.side !== viewer.side) ?? null;
   if (theirs) insert("contact_access_log", { id: newId("cal"), contract_id: c.id, viewer_user_id: viewer.userId, viewer_side: viewer.side, created_at: now() });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { get } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { canReadFile } from "@/lib/access";
+import { canReadFile, logAdminAccess } from "@/lib/access";
 import { readStoredFile } from "@/lib/files";
 import type { FileRow } from "@/lib/types";
 
@@ -12,6 +12,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const file = get<FileRow>("SELECT * FROM files WHERE id = ?", id);
   const user = await getCurrentUser();
   if (!file || !canReadFile(user, file)) return new NextResponse("Not found", { status: 404 });
+  // An operator opening someone's private file (contract, chat attachment, project photo) is recorded.
+  if (user && file.scope !== "public" && file.owner_user_id !== user.id) logAdminAccess(user, "file", file.id);
   let data: Buffer;
   try {
     data = readStoredFile(file);

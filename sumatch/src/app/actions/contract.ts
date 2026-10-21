@@ -7,7 +7,7 @@ import { readStoredFile, saveUpload } from "@/lib/files";
 import { ActionError, actionUser } from "@/lib/auth";
 import { formObject, handle } from "@/lib/action";
 import { matchForUser } from "@/lib/access";
-import { agreeTerms, attachContractDocument, confirmContractDocument, effectiveStage, saveContractContact, saveTerms, type TermsInput } from "@/lib/contract";
+import { agreeTerms, attachContractDocument, confirmContractDocument, effectiveStage, revokeContractContact, saveContractContact, saveTerms, type TermsInput } from "@/lib/contract";
 import { TERM_FIELDS } from "@/lib/contract-terms";
 import type { Contract } from "@/lib/types";
 
@@ -78,6 +78,17 @@ export async function saveContractContactAction(contractId: string, fd: FormData
     const { user, c, ctx } = await contractCtx(contractId, ["customer", "business"]);
     const o = formObject(fd);
     saveContractContact(ctx, user.id, { name: o.name ?? "", phone: o.phone ?? "", email: o.email ?? "", address: o.address ?? "", hours: o.hours ?? "" });
+    revalidatePath(`/business/contract/${c.id}`);
+    revalidatePath(`/projects/${c.project_id}`);
+    return {};
+  });
+}
+
+/** Withdraw one's own contact details from the contract. */
+export async function revokeContractContactAction(contractId: string) {
+  return handle(async () => {
+    const { user, c, ctx } = await contractCtx(contractId, ["customer", "business"]);
+    revokeContractContact(ctx, user.id);
     revalidatePath(`/business/contract/${c.id}`);
     revalidatePath(`/projects/${c.project_id}`);
     return {};

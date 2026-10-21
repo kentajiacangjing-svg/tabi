@@ -1,5 +1,6 @@
 "use server";
 
+import { CONTACT_FLAG_LABEL, PUBLIC_TEXT_BLOCK_MESSAGE, blockedInPublicText } from "@/lib/contact-detect";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -25,6 +26,13 @@ import {
 import { matchForUser, projectForCustomer } from "@/lib/access";
 import { notify, companyUserIds } from "@/lib/notify";
 import type { Area, Category, Contract, Project } from "@/lib/types";
+
+
+/** Profiles, works, consultations and reviews are read by others outside a conversation: no contact details. */
+function assertPublicText(texts: (string | null | undefined)[]) {
+  const flags = blockedInPublicText(texts);
+  if (flags.length) throw new ActionError(`${PUBLIC_TEXT_BLOCK_MESSAGE}（${flags.map((f) => CONTACT_FLAG_LABEL[f]).join("・")}）`);
+}
 
 const diagnosisSchema = z.object({
   category_id: z.string().min(1, "カテゴリを選んでください。"),
@@ -52,6 +60,7 @@ const diagnosisSchema = z.object({
 export async function submitDiagnosisAction(fd: FormData) {
   return handle(async () => {
     const input = diagnosisSchema.parse(formObject(fd));
+    assertPublicText([input.details]);
     const photos = formFiles(fd, "photos");
     if (photos.length > MAX_PROJECT_PHOTOS) throw new ActionError(`写真は${MAX_PROJECT_PHOTOS}枚までです。`);
 
@@ -209,6 +218,7 @@ export async function reviewAction(fd: FormData) {
   return handle(async () => {
     const user = await actionUser(["customer"]);
     const input = reviewSchema.parse(formObject(fd));
+    assertPublicText([input.title, input.body]);
     const project = projectForCustomer(input.project_id, user);
     if (!project) throw new ActionError("案件が見つかりません。");
     const c = get<Contract>("SELECT * FROM contracts WHERE project_id = ?", project.id);

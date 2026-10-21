@@ -44,6 +44,8 @@ export function inspect(dbPath = DB_PATH) {
       total: n("SELECT COUNT(*) n FROM contracts"),
       byStatus: db.prepare(`SELECT status, ${has("contracts", "stage") ? "stage" : "'(no stage column)' AS stage"}, COUNT(*) n FROM contracts GROUP BY 1, 2`).all(),
       ofRealCustomers: n(`SELECT COUNT(*) n FROM contracts c JOIN projects p ON p.id = c.project_id JOIN users u ON u.id = p.customer_id WHERE NOT (${demoUser})`),
+      // Work started or finished without a 契約成立 record (contract document confirmed by both): review one by one.
+      needsReview: n(`SELECT COUNT(*) n FROM contracts WHERE status IN ('in_progress','completed')${has("contracts", "stage") ? " AND stage != 'contracted'" : ""}`),
     },
     uploads: fs.existsSync(UPLOAD_DIR) ? fs.readdirSync(UPLOAD_DIR).length : 0,
   };

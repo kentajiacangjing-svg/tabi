@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { changePasswordAction, markNotificationsReadAction, updateAccountAction } from "@/app/actions/customer";
 import { Button, Field, Input, Notice } from "./ui";
 
-export function AccountForm({ name, notifyEmail, notifyBrowser }: { name: string; notifyEmail: boolean; notifyBrowser: boolean }) {
+export function AccountForm({ name, notifyEmail, notifyBrowser, mailActive }: { name: string; notifyEmail: boolean; notifyBrowser: boolean; mailActive: boolean }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const [perm, setPerm] = useState<string>("default");
@@ -34,6 +34,11 @@ export function AccountForm({ name, notifyEmail, notifyBrowser }: { name: string
           <input type="checkbox" name="notify_email" defaultChecked={notifyEmail} className="size-4 accent-[var(--color-brand)]" />
           メールで通知を受け取る（新着の見積・マッチ成立など）
         </label>
+        {!mailActive && (
+          <p className="rounded-lg bg-warn-soft px-3 py-2 text-[13px] leading-relaxed text-warn">
+            テスト運用中のため、現在メールは送信されていません。お知らせはアプリ内（ベルのマーク）とブラウザ通知で届きます。
+          </p>
+        )}
         <label className="flex items-center gap-2.5 text-sm">
           <input type="checkbox" name="notify_browser" defaultChecked={notifyBrowser} className="size-4 accent-[var(--color-brand)]" />
           ブラウザ通知を受け取る

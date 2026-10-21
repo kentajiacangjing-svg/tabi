@@ -1,5 +1,5 @@
 // Row-level access control. Every read/write of a project, match or file goes through here.
-import { get } from "./db";
+import { get, insert, newId, now } from "./db";
 import type { Company, Contract, FileRow, Match, Project, User } from "./types";
 
 export function companyIdFor(userId: string): string | null {
@@ -64,4 +64,10 @@ export function canReadFile(user: User | null, file: FileRow): boolean {
     return p?.customer_id === user.id || companyIdFor(user.id) === c.company_id;
   }
   return false;
+}
+
+/** Record an operator's look at private data (a conversation, a non-public file). */
+export function logAdminAccess(user: User, targetType: "chat" | "file", targetId: string) {
+  if (user.role !== "admin") return;
+  insert("admin_access_log", { id: newId("aal"), admin_user_id: user.id, target_type: targetType, target_id: targetId, created_at: now() });
 }
