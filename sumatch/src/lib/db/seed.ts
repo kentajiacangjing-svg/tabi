@@ -72,7 +72,7 @@ export function seed(demo: boolean) {
 
     /* ---------- settings ---------- */
     run("INSERT OR REPLACE INTO settings (key, value) VALUES ('default_trial_days', '60')");
-    run("INSERT OR REPLACE INTO settings (key, value) VALUES ('success_fee_note', '成約時: 成功報酬 3〜5%（契約金額に対して）')");
+    run("INSERT OR REPLACE INTO settings (key, value) VALUES ('success_fee_note', '成功報酬（試案・未決定）: 税抜工事契約額の3〜5%。限定テスト中は請求しない')");
 
     /* ---------- plans (editable in /admin) ---------- */
     const plans = [

@@ -83,4 +83,38 @@ describe("hardening", async () => {
     // Amounts and dates stay.
     expect(ai.redactForAi("税込1,100,000円、12/3 9:30から", [])).toContain("1,100,000円");
   });
+
+  it("per-origin limits use the address added by the trusted proxy, not one the client wrote", async () => {
+    const { clientIp } = await import("../rate-limit");
+    const h = (xff: string) => new Headers({ "x-forwarded-for": xff });
+    // The client forged "1.1.1.1"; the proxy appended the real address last.
+    expect(clientIp(h("1.1.1.1, 203.0.113.9"), 1)).toBe("203.0.113.9");
+    expect(clientIp(h("1.1.1.1, 203.0.113.9, 10.0.0.2"), 2)).toBe("203.0.113.9");
+    expect(clientIp(h("1.1.1.1"), 0)).toBe("direct");
+    expect(clientIp(new Headers(), 1)).toBe("unknown");
+  });
+
+  it("the limited-test gate admits only the configured credentials", async () => {
+    const { siteGateAllows } = await import("../site-gate");
+    const basic = (s: string) => `Basic ${btoa(s)}`;
+    expect(siteGateAllows(basic("beta:secret-pass"), undefined)).toBeNull();
+    expect(siteGateAllows(null, "beta:secret-pass")).toBe(false);
+    expect(siteGateAllows(basic("beta:wrong"), "beta:secret-pass")).toBe(false);
+    expect(siteGateAllows("Basic %%%", "beta:secret-pass")).toBe(false);
+    expect(siteGateAllows(basic("beta:secret-pass"), "beta:secret-pass")).toBe(true);
+  });
+
+  it("changes made directly in the database are recorded in db_audit, which cannot be edited", () => {
+    const c = db.get<{ id: string; amount: number }>("SELECT id, amount FROM contracts LIMIT 1")!;
+    const before = db.get<{ n: number }>("SELECT COUNT(*) n FROM db_audit")!.n;
+    // As if someone opened the file with a SQLite tool:
+    db.db().exec(`UPDATE contracts SET amount = amount + 1 WHERE id = '${c.id}'`);
+    db.db().exec(`UPDATE contract_events SET detail = 'x' WHERE contract_id = '${c.id}' AND seq = 1`);
+    const rows = db.all<{ tbl: string; action: string; detail: string }>("SELECT tbl, action, detail FROM db_audit ORDER BY id DESC LIMIT 2");
+    expect(db.get<{ n: number }>("SELECT COUNT(*) n FROM db_audit")!.n).toBe(before + 2);
+    expect(rows.map((r) => r.tbl).sort()).toEqual(["contract_events", "contracts"]);
+    expect(JSON.parse(rows.find((r) => r.tbl === "contracts")!.detail).amount).toEqual([c.amount, c.amount + 1]);
+    expect(() => db.db().exec("DELETE FROM db_audit")).toThrow(/append-only/);
+    expect(() => db.db().exec("UPDATE db_audit SET detail = ''")).toThrow(/append-only/);
+  });
 });

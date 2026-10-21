@@ -46,8 +46,11 @@ export default function BusinessLanding() {
       </section>
 
       <section className="border-t border-line py-16 sm:py-24" id="pricing">
-        <h2 className="text-[28px] font-semibold">料金</h2>
-        <p className="mt-3 text-[15px] text-muted">お客様と双方が合意してメッセージが始まった件数（マッチ）に応じた月額制です。</p>
+        <h2 className="text-[28px] font-semibold">料金（案）</h2>
+        <p className="mt-3 text-[15px] text-muted">お客様と双方が合意してメッセージが始まった件数（マッチ）に応じた月額制を検討しています。</p>
+        <p className="mt-3 rounded-xl bg-warn-soft px-4 py-3 text-[14px] leading-relaxed text-warn">
+          現在は限定テスト中のため、月額料金・成功報酬の請求は行っていません。下の金額と料率は検討中の案で、正式な料金と条件は決まりしだい、ご同意をいただいたうえで適用します。
+        </p>
         <div className="mt-10 grid divide-y divide-line border-y border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {plans.map((p) => (
             <div key={p.id} className="py-8 sm:px-8 sm:first:pl-0 sm:last:pr-0">
@@ -57,7 +60,7 @@ export default function BusinessLanding() {
                 <span className="ml-1 text-[14px] font-normal text-muted">/ 月・税別</span>
               </div>
               <div className="mt-2 text-[16px]">月{p.match_limit}件までマッチ</div>
-              <div className="mt-1 text-[14px] text-muted">成約時 {Math.round(p.success_fee_rate * 1000) / 10}%</div>
+              <div className="mt-1 text-[14px] text-muted">成功報酬（案） 税抜工事契約額の{Math.round(p.success_fee_rate * 1000) / 10}%</div>
               <p className="mt-4 text-[14px] text-muted">{p.description}</p>
             </div>
           ))}

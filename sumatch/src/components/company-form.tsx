@@ -293,7 +293,7 @@ export function CompanyForm({
           <label className="flex items-start gap-2.5 text-sm">
             <input type="checkbox" name="agree" className="mt-0.5 size-4 accent-[var(--color-brand)]" required />
             <span>
-              利用規約に同意します。お客様とのやり取り・見積・契約はSUMATCH内で行い、成約時は成功報酬の対象となることを理解しました。
+              お客様とのやり取り・見積・契約の手続きはSUMATCH内で行うことに同意します。利用規約は準備中で、公開時にあらためて同意をお願いします。料金・成功報酬の条件は検討中で、限定テスト中は請求しません。
             </span>
           </label>
         </Section>

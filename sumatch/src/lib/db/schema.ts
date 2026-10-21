@@ -547,4 +547,66 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_once_established ON contract_event
 CREATE UNIQUE INDEX IF NOT EXISTS uq_contract_once_selected ON contract_events(contract_id) WHERE action = 'selected';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_outbox_dedupe ON email_outbox(dedupe_key) WHERE dedupe_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_outbox_status ON email_outbox(status, next_attempt_at);
+
+-- Database-level audit (db_audit): changes to contracts, their history, fee records, user roles/status and
+-- company status are recorded by triggers — whether made by the app or by someone editing the database file
+-- directly with a SQLite tool. No personal data is copied: ids and state values only. Rows cannot be updated or
+-- deleted through SQL. (Someone with full access to the file can still drop the triggers; this is evidence,
+-- not prevention — see docs/data-operations.md.)
+CREATE TABLE IF NOT EXISTS db_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  tbl TEXT NOT NULL,
+  row_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT ''
+);
+CREATE TRIGGER IF NOT EXISTS db_audit_no_update BEFORE UPDATE ON db_audit BEGIN SELECT RAISE(ABORT, 'db_audit is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS db_audit_no_delete BEFORE DELETE ON db_audit BEGIN SELECT RAISE(ABORT, 'db_audit is append-only'); END;
+
+CREATE TRIGGER IF NOT EXISTS audit_contracts_update AFTER UPDATE ON contracts
+WHEN OLD.stage IS NOT NEW.stage OR OLD.status IS NOT NEW.status OR OLD.amount IS NOT NEW.amount OR OLD.quote_id IS NOT NEW.quote_id
+  OR OLD.contract_file_hash IS NOT NEW.contract_file_hash OR OLD.terms_hash IS NOT NEW.terms_hash
+BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('contracts', NEW.id, 'update', json_object(
+    'stage', json_array(OLD.stage, NEW.stage), 'status', json_array(OLD.status, NEW.status), 'amount', json_array(OLD.amount, NEW.amount),
+    'quote_id', json_array(OLD.quote_id, NEW.quote_id), 'terms_hash', json_array(substr(OLD.terms_hash, 1, 12), substr(NEW.terms_hash, 1, 12)),
+    'file_hash', json_array(substr(OLD.contract_file_hash, 1, 12), substr(NEW.contract_file_hash, 1, 12))));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_contracts_delete AFTER DELETE ON contracts BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('contracts', OLD.id, 'delete', json_object('stage', OLD.stage, 'status', OLD.status, 'amount', OLD.amount));
+END;
+-- The app only ever appends to contract_events: any update or delete is a sign of tampering.
+CREATE TRIGGER IF NOT EXISTS audit_contract_events_update AFTER UPDATE ON contract_events BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('contract_events', OLD.id, 'update', json_object('contract_id', OLD.contract_id, 'seq', OLD.seq, 'action', OLD.action));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_contract_events_delete AFTER DELETE ON contract_events BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('contract_events', OLD.id, 'delete', json_object('contract_id', OLD.contract_id, 'seq', OLD.seq, 'action', OLD.action));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_fee_records_update AFTER UPDATE ON fee_records
+WHEN OLD.status IS NOT NEW.status OR OLD.fee_amount IS NOT NEW.fee_amount OR OLD.base_amount IS NOT NEW.base_amount OR OLD.rate IS NOT NEW.rate
+BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('fee_records', NEW.id, 'update', json_object(
+    'status', json_array(OLD.status, NEW.status), 'fee_amount', json_array(OLD.fee_amount, NEW.fee_amount),
+    'base_amount', json_array(OLD.base_amount, NEW.base_amount), 'rate', json_array(OLD.rate, NEW.rate)));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_fee_records_delete AFTER DELETE ON fee_records BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('fee_records', OLD.id, 'delete', json_object('contract_id', OLD.contract_id, 'status', OLD.status, 'fee_amount', OLD.fee_amount));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_users_update AFTER UPDATE ON users
+WHEN OLD.role IS NOT NEW.role OR OLD.status IS NOT NEW.status OR OLD.is_demo IS NOT NEW.is_demo OR OLD.email IS NOT NEW.email
+BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('users', NEW.id, 'update', json_object(
+    'role', json_array(OLD.role, NEW.role), 'status', json_array(OLD.status, NEW.status), 'is_demo', json_array(OLD.is_demo, NEW.is_demo),
+    'email_changed', OLD.email IS NOT NEW.email));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_users_delete AFTER DELETE ON users BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('users', OLD.id, 'delete', json_object('role', OLD.role));
+END;
+CREATE TRIGGER IF NOT EXISTS audit_companies_update AFTER UPDATE ON companies
+WHEN OLD.status IS NOT NEW.status OR OLD.plan_id IS NOT NEW.plan_id OR OLD.is_demo IS NOT NEW.is_demo
+BEGIN
+  INSERT INTO db_audit (tbl, row_id, action, detail) VALUES ('companies', NEW.id, 'update', json_object(
+    'status', json_array(OLD.status, NEW.status), 'plan_id', json_array(OLD.plan_id, NEW.plan_id), 'is_demo', json_array(OLD.is_demo, NEW.is_demo)));
+END;
 `;

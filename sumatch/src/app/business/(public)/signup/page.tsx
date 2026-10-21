@@ -26,7 +26,7 @@ export default async function BusinessSignupPage({ searchParams }: { searchParam
         initial={EMPTY_COMPANY}
         categories={activeCategories().map((c) => ({ id: c.id, name: c.name }))}
         areas={activeAreas().map((a) => ({ id: a.id, name: a.city, sub: a.prefecture }))}
-        plans={plans.map((p) => ({ code: p.code, label: `${p.name}（月${p.monthly_price.toLocaleString()}円・${p.match_limit}マッチ）` }))}
+        plans={plans.map((p) => ({ code: p.code, label: `${p.name}（案：月${p.monthly_price.toLocaleString()}円・${p.match_limit}マッチ／限定テスト中は請求なし）` }))}
         defaultPlan={plan ?? plans[0]?.code}
       />
     </main>

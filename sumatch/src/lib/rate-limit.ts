@@ -27,9 +27,20 @@ export function clearRateLimit(key: string) {
 }
 
 /**
- * The client address as seen by the app. Behind a reverse proxy, the first X-Forwarded-For entry is the client
- * only if the proxy sets it — configure the proxy to overwrite, not append, the header.
+ * The client address for per-origin limits.
+ *
+ * Proxies append the address they received the request from to X-Forwarded-For, so the trustworthy entries are
+ * the last ones; everything to the left can be written by the client. With TRUST_PROXY_HOPS = n (default 1:
+ * one reverse proxy / load balancer in front of the app), the client is the n-th entry from the right.
+ * TRUST_PROXY_HOPS=0 ignores the header (the app is reached directly). Per-account limits do not depend on this.
  */
-export function clientIp(headers: Headers): string {
-  return (headers.get("x-forwarded-for")?.split(",")[0] ?? headers.get("x-real-ip") ?? "local").trim().slice(0, 64);
+export function clientIp(headers: Headers, hops = Number(process.env.TRUST_PROXY_HOPS ?? "1")): string {
+  const n = Number.isFinite(hops) && hops >= 0 ? Math.floor(hops) : 1;
+  if (n === 0) return "direct";
+  const chain = (headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const ip = chain.length >= n ? chain[chain.length - n] : (headers.get("x-real-ip") ?? chain[0] ?? "unknown");
+  return ip.slice(0, 64);
 }

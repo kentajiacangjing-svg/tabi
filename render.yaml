@@ -1,0 +1,40 @@
+# Render Blueprint for a SUMATCH limited test (see docs/hosting-plan.md). Nothing is created until the owner
+# connects this repository in the Render dashboard and approves the plan. Secrets are entered there (sync: false),
+# never in this file.
+services:
+  - type: web
+    name: sumatch-beta
+    runtime: node
+    rootDir: sumatch
+    region: singapore # 要確認: 国内保存が必要なら別構成（docs/hosting-plan.md）
+    plan: starter # 有料プラン（永続ディスクに必要）。料金は公式サイトで要確認
+    numInstances: 1 # SQLite と同じディスクを使うため1台で運用
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -p $PORT
+    healthCheckPath: /api/health
+    disk:
+      name: sumatch-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: STORAGE_DIR
+        value: /var/data/storage
+      - key: BACKUP_DIR
+        value: /var/data/backups
+      - key: TRUST_PROXY_HOPS
+        value: "1" # 要確認: Render の前段プロキシが X-Forwarded-For の末尾に接続元を追加すること
+      - key: APP_URL
+        sync: false # 例: https://sumatch-beta.onrender.com または独自ドメイン
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: SITE_BASIC_AUTH
+        sync: false # 限定テスト中のサイト全体のパスワード（例: beta:長いパスワード）
+    # Not set on purpose: DEMO_MODE (off), MAIL_TRANSPORT (no mail), AI_DRAFT_ENABLED (off), ANTHROPIC_API_KEY.

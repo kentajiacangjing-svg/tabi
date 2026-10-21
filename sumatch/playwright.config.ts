@@ -5,10 +5,16 @@ import { defineConfig, devices } from "@playwright/test";
 //   3200, 3201 — demo mode (two independent servers: tests drive the customer and the company through
 //                different processes, including simultaneous confirmations)
 //   3202       — DEMO_MODE=false on the same data: sample companies and demo accounts must not appear or sign in
+//   3203       — the limited-test access gate (SITE_BASIC_AUTH) switched on
 // Usage: npm run build && npm run test:e2e
 const wait3200 = `node -e "(async()=>{for(;;){try{await fetch('http://localhost:3200/');process.exit(0)}catch{await new Promise(r=>setTimeout(r,500))}}})()"`;
 // One throwaway encryption key per test run, shared by the three servers (never stored in the repository).
 const env = { STORAGE_DIR: ".e2e-storage", NODE_NO_WARNINGS: "1", DATA_ENCRYPTION_KEY: randomBytes(32).toString("base64") };
+// 3203 runs the limited-test gate (SITE_BASIC_AUTH) with a throwaway password made for this run.
+// The config is loaded again in each test worker; the value made by the first load is passed on through the
+// environment so the servers and the tests use the same one.
+export const GATE_CREDENTIALS = process.env.E2E_GATE_CREDENTIALS ?? `beta:${randomBytes(12).toString("hex")}`;
+process.env.E2E_GATE_CREDENTIALS = GATE_CREDENTIALS;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -39,6 +45,13 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120_000,
       env: { ...env, DEMO_MODE: "false" },
+    },
+    {
+      command: `${wait3200} && npx next start -p 3203`,
+      url: "http://localhost:3203/api/health",
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: { ...env, DEMO_MODE: "false", SITE_BASIC_AUTH: GATE_CREDENTIALS },
     },
   ],
 });
