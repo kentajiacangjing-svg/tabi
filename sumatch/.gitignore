@@ -1,6 +1,7 @@
 node_modules/
 .next/
 storage/
+storage-demo/
 test-results/
 playwright-report/
 .env*

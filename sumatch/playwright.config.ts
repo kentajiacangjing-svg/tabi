@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 //   3200, 3201 — demo mode (two independent servers: tests drive the customer and the company through
 //                different processes, including simultaneous confirmations)
 //   3202       — DEMO_MODE=false on the same data: sample companies and demo accounts must not appear or sign in
-//   3203       — the limited-test access gate (SITE_BASIC_AUTH) switched on
+//   3203       — the limited-test access gate (SITE_BASIC_AUTH) switched on, no realtime stream (as behind a Quick Tunnel)
 // Usage: npm run build && npm run test:e2e
 const wait3200 = `node -e "(async()=>{for(;;){try{await fetch('http://localhost:3200/');process.exit(0)}catch{await new Promise(r=>setTimeout(r,500))}}})()"`;
 // One throwaway encryption key per test run, shared by the three servers (never stored in the repository).
@@ -51,7 +51,7 @@ export default defineConfig({
       url: "http://localhost:3203/api/health",
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { ...env, DEMO_MODE: "false", SITE_BASIC_AUTH: GATE_CREDENTIALS },
+      env: { ...env, DEMO_MODE: "false", SITE_BASIC_AUTH: GATE_CREDENTIALS, REALTIME_STREAM: "off" },
     },
   ],
 });

@@ -30,7 +30,7 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-[1240px] flex-col gap-4 px-5 py-10 text-[14px] text-muted sm:flex-row sm:justify-between sm:px-8">
         <span>
           © {new Date().getFullYear()} SUMATCH
-          <span className="sample-tag mt-1 block text-warn">デモ環境です。表示されている会社・お客様・口コミ・写真はサンプルです。</span>
+          <span className="sample-tag mt-1 block text-warn">デモ環境です。表示されている会社・お客様・口コミ・写真はサンプルです。実在の個人情報は入力しないでください。</span>
         </span>
         <span className="flex gap-6">
           <Link href="/" className="hover:text-ink">

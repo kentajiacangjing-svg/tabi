@@ -92,6 +92,10 @@ describe("hardening", async () => {
     expect(clientIp(h("1.1.1.1, 203.0.113.9, 10.0.0.2"), 2)).toBe("203.0.113.9");
     expect(clientIp(h("1.1.1.1"), 0)).toBe("direct");
     expect(clientIp(new Headers(), 1)).toBe("unknown");
+    // behind a Cloudflare tunnel: the edge sets cf-connecting-ip, a client-sent X-Forwarded-For is ignored
+    const cf = new Headers({ "cf-connecting-ip": "198.51.100.7", "x-forwarded-for": "1.1.1.1" });
+    expect(clientIp(cf, 1, "cf-connecting-ip")).toBe("198.51.100.7");
+    expect(clientIp(h("1.1.1.1"), 1, "cf-connecting-ip")).toBe("unknown");
   });
 
   it("the limited-test gate admits only the configured credentials", async () => {

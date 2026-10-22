@@ -1,3 +1,5 @@
+# UNUSED (2026-10-22): the owner decided not to use paid hosting. Kept only as a reference; do not connect it.
+# Free demo sharing instead: sumatch/docs/free-demo-share.md
 # Render Blueprint for a SUMATCH limited test (see docs/hosting-plan.md). Nothing is created until the owner
 # connects this repository in the Render dashboard and approves the plan. Secrets are entered there (sync: false),
 # never in this file.

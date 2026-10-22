@@ -55,6 +55,7 @@ export function SignupForm({ next }: { next?: string }) {
       className="space-y-4"
     >
       <input type="hidden" name="next" value={next ?? ""} />
+      <p className="sample-tag text-[13px] font-medium text-warn">デモ環境です。実在の氏名・メールアドレス・住所・電話番号は入力せず、架空の情報で登録してください。</p>
       <Field label="お名前（ニックネーム可）" required>
         <Input name="name" autoComplete="nickname" required maxLength={40} />
       </Field>

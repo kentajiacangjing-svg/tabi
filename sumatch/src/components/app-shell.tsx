@@ -70,7 +70,8 @@ export async function AppShell({ mode, children, wide }: { mode: Mode; children:
       </header>
       <main className={cx("mx-auto w-full px-5 py-8 sm:px-10 sm:py-12 lg:px-12 lg:py-10", width)}>{children}</main>
       {items.length > 0 && <BottomTabs items={items} />}
-      {user && <RealtimeClient browserNotify={!!user.notify_browser} />}
+      {/* REALTIME_STREAM=off: no long-lived stream (e.g. behind a Cloudflare Quick Tunnel, which has no SSE); chat polls */}
+      {user && process.env.REALTIME_STREAM !== "off" && <RealtimeClient browserNotify={!!user.notify_browser} />}
     </div>
   );
 }

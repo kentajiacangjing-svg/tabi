@@ -41,3 +41,31 @@ test("sign-in attempts are counted across two server processes", async ({ browse
   const second = await tryOn("http://localhost:3201", 6);
   await expect(second.getByText("操作の回数が多すぎます。", { exact: false })).toBeVisible();
 });
+
+test("with REALTIME_STREAM=off (shared through a Quick Tunnel) pages open no event stream; the demo server does", async ({ browser }) => {
+  const [user, password] = creds().split(":");
+  const ctx = await browser.newContext({ httpCredentials: { username: user, password } });
+  const page = await ctx.newPage();
+  const streams: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("/api/stream")) streams.push(r.url());
+  });
+  await page.goto(`${GATED}/signup`);
+  await page.getByLabel("お名前（ニックネーム可）").fill("テスト 花子");
+  await page.getByLabel("メールアドレス").fill(`nostream-${Date.now()}@example.com`);
+  await page.getByLabel("パスワード").fill("test-password-123");
+  await page.getByRole("button", { name: "無料で登録する" }).click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/signup"));
+  await page.goto(`${GATED}/messages`);
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(streams).toEqual([]);
+
+  // control: with the stream on, the same screen subscribes to it
+  const demo = await (await browser.newContext()).newPage();
+  await demo.goto("http://localhost:3200/login");
+  await demo.getByText("デモアカウントで試す").click();
+  await demo.getByRole("button", { name: /山田 太郎/ }).first().click();
+  await demo.waitForURL((u) => !u.pathname.startsWith("/login"));
+  await Promise.all([demo.waitForRequest((r) => r.url().includes("/api/stream")), demo.goto("http://localhost:3200/messages")]);
+});

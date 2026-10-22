@@ -33,8 +33,15 @@ export function clearRateLimit(key: string) {
  * the last ones; everything to the left can be written by the client. With TRUST_PROXY_HOPS = n (default 1:
  * one reverse proxy / load balancer in front of the app), the client is the n-th entry from the right.
  * TRUST_PROXY_HOPS=0 ignores the header (the app is reached directly). Per-account limits do not depend on this.
+ * CLIENT_IP_HEADER names a single-value header set by the proxy instead (e.g. cf-connecting-ip behind a Cloudflare
+ * tunnel); only use it when the app cannot be reached except through that proxy.
  */
-export function clientIp(headers: Headers, hops = Number(process.env.TRUST_PROXY_HOPS ?? "1")): string {
+export function clientIp(
+  headers: Headers,
+  hops = Number(process.env.TRUST_PROXY_HOPS ?? "1"),
+  ipHeader = process.env.CLIENT_IP_HEADER,
+): string {
+  if (ipHeader) return (headers.get(ipHeader)?.split(",")[0].trim() || "unknown").slice(0, 64);
   const n = Number.isFinite(hops) && hops >= 0 ? Math.floor(hops) : 1;
   if (n === 0) return "direct";
   const chain = (headers.get("x-forwarded-for") ?? "")
