@@ -58,7 +58,8 @@
     "test:api": "node --test tests/api.e2e.test.mjs",
     "test:ui": "node tests/ui/run-ui.mjs",
     "build:web": "expo export -p web",
-    "build:native-bundle": "expo export -p ios -p android --output-dir dist-native"
+    "build:native-bundle": "expo export -p ios -p android --output-dir dist-native",
+    "build:demo": "node scripts/build-browser-demo.mjs"
   },
   "private": true
 }

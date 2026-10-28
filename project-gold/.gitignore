@@ -46,3 +46,5 @@ example
 dev-server/.data/
 test-results/
 dist-native/
+demo-dist/
+dist-demo-build/

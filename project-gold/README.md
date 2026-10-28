@@ -10,6 +10,11 @@
 - バックエンドは **Supabase**（PostgreSQL・Auth・Storage・Realtime・Edge Functions）。ランク・利用額・報酬・予約状態・権限はすべて**サーバー側の SQL 関数で確定**し、テーブルには RLS を設定
 - Supabase を用意しなくても動かせるよう、同じマイグレーション・同じ supabase-js クライアントで動く**ローカル開発サーバー**（PGlite＝WASM 版 PostgreSQL）を同梱
 
+## ブラウザだけで触るデモ（サーバー不要）
+
+`npm run build:demo` で `demo-dist/` に、サーバーなしで動く1ページ版を書き出します。PGlite（WASM 版 PostgreSQL）をページに同梱し、本番と同じマイグレーション・RLS・サーバー関数をブラウザ内で実行します（`src/demo/gateway.ts`）。
+データはその端末のブラウザ（IndexedDB）にだけ保存され、他の人とは共有されません。男女のやりとりは、同じ端末でログアウト→別のデモアカウントでログインして試します。ログイン画面の「デモデータを初期状態に戻す」で初期化できます。
+
 ## すぐに動かす（ローカル・Supabase 不要）
 
 Node.js 20 以上が必要です。

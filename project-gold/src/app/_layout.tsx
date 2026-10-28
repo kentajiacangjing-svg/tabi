@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConfirmProvider, T, ToastProvider } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { DEMO_BROWSER } from '@/lib/supabase';
 import { colors } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -22,6 +23,7 @@ function RootStack() {
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         <T v="brand">GOLD</T>
         <ActivityIndicator color={colors.gold} />
+        {DEMO_BROWSER && !ready ? <T v="small" center style={{ maxWidth: 280 }}>デモ用のデータベースをこの端末の中に準備しています。初回は30秒ほどかかります。</T> : null}
       </View>
     );
   }

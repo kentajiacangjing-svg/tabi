@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button, Card, Field, Gap, Header, Notice, Row, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { DEMO_BROWSER, resetDemo } from '@/lib/supabase';
 import { colors, space } from '@/theme/tokens';
 
 const DEMO = [
@@ -45,7 +46,7 @@ export default function SignIn() {
         <Row style={{ justifyContent: 'center', marginTop: space.sm }}>
           <Link href="/auth/role" style={styles.link}>新規登録はこちら</Link>
         </Row>
-        {__DEV__ || process.env.EXPO_PUBLIC_SHOW_DEMO_LOGIN === 'on' ? (
+        {__DEV__ || DEMO_BROWSER || process.env.EXPO_PUBLIC_SHOW_DEMO_LOGIN === 'on' ? (
           <>
             <Gap h={space.xxl} />
             <Card>
@@ -56,6 +57,12 @@ export default function SignIn() {
                   <Button key={d.email} small variant="quiet" title={d.label} onPress={() => submit(d.email, 'DemoPass123!')} testID={`demo-${d.email.split('@')[0]}`} />
                 ))}
               </View>
+              {DEMO_BROWSER ? (
+                <>
+                  <T v="small" style={{ marginTop: space.lg }}>このデモはサーバーを使わず、ブラウザの中だけで動いています。登録した内容はこの端末にだけ保存され、他の人には見えません。</T>
+                  <Button small variant="ghost" title="デモデータを初期状態に戻す" onPress={() => resetDemo?.()} />
+                </>
+              ) : null}
             </Card>
           </>
         ) : null}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-import { PHOTO_BUCKET, supabase } from './supabase';
+import { demoFetch, PHOTO_BUCKET, supabase } from './supabase';
 
 /** 非公開バケットの写真は署名付きURLで表示する（メモリキャッシュ付き） */
 const cache = new Map<string, { url: string; exp: number }>();
@@ -21,7 +21,10 @@ async function signMany(paths: string[]) {
       (async () => {
         const { data } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(need, 3600);
         for (const d of data ?? []) {
-          if (d.signedUrl && d.path) cache.set(d.path, { url: d.signedUrl, exp: Date.now() + 3600_000 });
+          if (!d.signedUrl || !d.path) continue;
+          // ブラウザ内デモでは署名URLを実データ（blob URL）に変換して表示する
+          const url = demoFetch ? URL.createObjectURL(await (await demoFetch(d.signedUrl)).blob()) : d.signedUrl;
+          cache.set(d.path, { url, exp: Date.now() + 3600_000 });
         }
       })().finally(() => inflight.delete(key))
     );
@@ -57,7 +60,8 @@ export async function pickAndUploadPhoto(userId: string): Promise<string | null>
   const asset = res.assets[0];
   const mime = asset.mimeType && /^image\/(jpeg|png|webp|heic)$/.test(asset.mimeType) ? asset.mimeType : 'image/jpeg';
   const ext = mime.split('/')[1].replace('jpeg', 'jpg');
-  const body = await (await fetch(asset.uri)).arrayBuffer();
+  // Web では File を直接読む（data:/blob: URL への fetch を許可しない環境があるため）
+  const body = asset.file ? await asset.file.arrayBuffer() : await (await fetch(asset.uri)).arrayBuffer();
   if (body.byteLength > 5 * 1024 * 1024) throw new Error('画像は5MB以下にしてください');
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, body, { contentType: mime, upsert: false });
