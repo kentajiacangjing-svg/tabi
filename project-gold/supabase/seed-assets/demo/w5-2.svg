@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#F4EFE6"/><stop offset="1" stop-color="#EADBC2"/></linearGradient>
+    <linearGradient id="fig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D5B98C"/><stop offset="1" stop-color="#9B7841"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D7BE88"/><stop offset="1" stop-color="#B89B5E"/></linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <circle cx="3" cy="129" r="43" fill="#FFFFFF" opacity="0.21"/><circle cx="195" cy="533" r="34" fill="#FFFFFF" opacity="0.34"/><circle cx="96" cy="377" r="137" fill="#FFFFFF" opacity="0.23"/><circle cx="499" cy="400" r="65" fill="#FFFFFF" opacity="0.29"/><circle cx="766" cy="560" r="132" fill="#FFFFFF" opacity="0.16"/><circle cx="268" cy="565" r="136" fill="#FFFFFF" opacity="0.23"/><circle cx="313" cy="156" r="139" fill="#FFFFFF" opacity="0.16"/>
+  <g transform="rotate(2.3 400 398)" opacity="0.92">
+    <path d="M400 223 C 480 218, 520 308, 515 408 C 512 518, 470 568, 400 573 C 330 568, 288 518, 285 408 C 280 308, 320 218, 400 223 Z" fill="url(#fig)" opacity="0.55"/>
+    <ellipse cx="400" cy="398" rx="98" ry="122" fill="url(#fig)" opacity="0.85"/>
+  </g>
+  <path d="M150 1000 C 170 658, 290 588, 400 588 C 510 588, 630 658, 650 1000 Z" fill="url(#fig)" opacity="0.9"/>
+  <path d="M90 220 A 330 330 0 0 1 670 150" stroke="url(#gold)" stroke-width="2" fill="none" opacity="0.8"/>
+  <text x="760" y="960" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="22" letter-spacing="4" fill="#FFFFFF" opacity="0.75">DEMO</text>
+</svg>
