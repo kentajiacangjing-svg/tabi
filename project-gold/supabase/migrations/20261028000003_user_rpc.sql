@@ -670,7 +670,7 @@ begin
   perform public.recompute_woman(b.woman_id, 'booking_completed');
   perform public.recompute_man(b.man_id, 'booking_completed');
   perform public.notify(b.man_id, 'booking', 'ご利用ありがとうございました', '予約が完了しました。実績に反映されています。', '/booking/' || b.id);
-  perform public.notify(b.woman_id, 'earning', '報酬が確定しました（デモ）', '予約完了により報酬が台帳に記録されました。', '/w/earnings');
+  perform public.notify(b.woman_id, 'earning', '報酬が確定しました（デモ）', '予約完了により報酬が台帳に記録されました。', '/earnings');
   return public.get_booking(p_id);
 end $$;
 

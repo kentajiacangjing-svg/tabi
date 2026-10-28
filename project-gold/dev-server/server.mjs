@@ -169,7 +169,7 @@ export async function createDevServer({
            values ($1, extensions.crypt($2, extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', $3) returning *`,
           [mail, password, JSON.stringify(meta)]);
         return send(res, 200, await issueSession(r.rows[0]));
-      } catch (e) {
+      } catch {
         return send(res, 400, { code: 'unexpected_failure', msg: '登録に失敗しました（役割の指定が不正です）' });
       }
     }

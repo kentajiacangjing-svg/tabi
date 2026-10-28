@@ -2,7 +2,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,6 +11,7 @@ const migrationsDir = join(root, 'supabase', 'migrations');
 
 export async function openDatabase({ dataDir, seed = true, log = console.log } = {}) {
   const fresh = !dataDir || !existsSync(join(dataDir, 'PG_VERSION'));
+  if (dataDir) mkdirSync(dirname(dataDir), { recursive: true });
   const db = new PGlite({ ...(dataDir ? { dataDir } : {}), extensions: { btree_gist, pgcrypto } });
   await db.waitReady;
   if (fresh) {

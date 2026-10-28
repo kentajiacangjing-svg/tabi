@@ -45,3 +45,4 @@ example
 # dev server data
 dev-server/.data/
 test-results/
+dist-native/
