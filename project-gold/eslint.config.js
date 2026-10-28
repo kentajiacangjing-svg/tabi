@@ -9,6 +9,6 @@ module.exports = defineConfig([
     languageOptions: { globals: { Buffer: 'readonly', process: 'readonly', console: 'readonly', URL: 'readonly', fetch: 'readonly', setTimeout: 'readonly' } },
   },
   {
-    ignores: ['dist/*', 'dist-native/*', 'dev-server/.data/*', 'test-results/*', 'supabase/functions/*', '.expo/*'],
+    ignores: ['dist/*', 'demo-dist/*', 'dist-demo-build/*', 'src/demo/sql.generated.ts', 'dist-native/*', 'dev-server/.data/*', 'test-results/*', 'supabase/functions/*', '.expo/*'],
   },
 ]);
