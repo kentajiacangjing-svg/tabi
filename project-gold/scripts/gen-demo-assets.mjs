@@ -2,7 +2,9 @@
 // 実在人物の写真や人物シルエットは使わず、「写真の代わりのデモ画像」であることが分かる上品なイラストにする。
 //   1枚目: モノグラム（頭文字）  2枚目: ラウンジの静物（グラス・キャンドル）  3枚目: 花のスケッチ
 // 出力: supabase/seed-assets/demo/*.svg
-import { mkdirSync, writeFileSync } from 'node:fs';
+// supabase/seed-assets/photos/<名前>.jpg がある場合は、その画像（実在人物ではない AI 生成のデモ写真）を
+// 「DEMO・AI生成」表記付きで SVG に埋め込み、同名のイラストを置き換える。
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,4 +88,19 @@ men.forEach(([a, b, ink, name], i) => {
   writeFileSync(join(out, `m${i + 1}-1.svg`), frame(a, b, ink, monogram(name), (i + 1) * 311));
   n++;
 });
-console.log(`generated ${n} demo images in ${out}`);
+
+// AI 生成のデモ写真で置き換え（SVG に埋め込むので、配信・シードの仕組みはイラストと同じまま使える）
+const photos = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'seed-assets', 'photos');
+let p = 0;
+if (existsSync(photos)) {
+  for (const f of readdirSync(photos).filter((x) => x.endsWith('.jpg'))) {
+    const b64 = readFileSync(join(photos, f)).toString('base64');
+    writeFileSync(join(out, f.replace(/\.jpg$/, '.svg')), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <image width="800" height="1000" preserveAspectRatio="xMidYMid slice" href="data:image/jpeg;base64,${b64}"/>
+  <rect x="608" y="944" width="172" height="36" rx="18" fill="#000000" opacity="0.38"/>
+  <text x="694" y="968" text-anchor="middle" font-family="${SANS}" font-size="17" letter-spacing="2" fill="#FFFFFF">DEMO・AI生成</text>
+</svg>`);
+    p++;
+  }
+}
+console.log(`generated ${n} demo images (${p} replaced with AI-generated demo photos) in ${out}`);

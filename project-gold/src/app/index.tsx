@@ -10,11 +10,11 @@ import { useAuth, useServiceName } from '@/lib/auth';
 import { homeFor } from '@/lib/nav';
 import { colors, fonts, radius, shadow, space } from '@/theme/tokens';
 
-// 権利上安全な自作のデモ画像（実在人物の写真ではない）
+// デモ画像（AI 生成。実在人物の写真ではない）
 const SAMPLE = [
   require('../../assets/images/demo/w1-1.svg'),
-  require('../../assets/images/demo/w2-2.svg'),
-  require('../../assets/images/demo/w5-3.svg'),
+  require('../../assets/images/demo/w2-1.svg'),
+  require('../../assets/images/demo/w4-1.svg'),
 ];
 
 export default function Landing() {
@@ -61,7 +61,7 @@ export default function Landing() {
           <Link href="/legal/pricing" style={styles.link}>料金</Link>
           <Link href="/legal/guidelines" style={styles.link}>禁止事項・安全</Link>
         </View>
-        <T v="small" center style={{ marginBottom: space.xl }}>名称・料金・ランク条件は仮設定です。画像はデモ用のイラストです。</T>
+        <T v="small" center style={{ marginBottom: space.xl }}>名称・料金・ランク条件は仮設定です。人物画像は AI 生成のデモ画像で、実在の会員ではありません。</T>
       </View>
     </Screen>
   );

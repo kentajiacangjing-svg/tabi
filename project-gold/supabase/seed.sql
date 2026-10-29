@@ -1,5 +1,5 @@
 -- デモ/開発環境専用シード。本番環境では実行しないこと。
--- パスワードはすべて DemoPass123! （デモ用）。写真は権利上安全な自作の抽象イラスト（seed-assets/demo/*.svg）。
+-- パスワードはすべて DemoPass123! （デモ用）。写真は自作イラストと AI 生成のデモ写真（実在人物ではない・「DEMO・AI生成」表記入り）（seed-assets/demo/*.svg）。
 
 update public.app_settings set value = 'true' where key = 'demo_mode';
 
