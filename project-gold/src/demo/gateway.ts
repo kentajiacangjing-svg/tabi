@@ -60,46 +60,77 @@ function readToken(t: string | null | undefined): Row | null {
 }
 const rand = (n = 24) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, '0')).join('');
 
+type PG = DB & { waitReady: Promise<void>; close?: () => Promise<void> };
+
+function deleteIdb() {
+  return new Promise((r) => {
+    try {
+      const q = indexedDB.deleteDatabase(`/pglite/${IDB_NAME}`);
+      q.onsuccess = q.onerror = q.onblocked = () => r(null);
+    } catch {
+      r(null);
+    }
+  });
+}
+
+/** スキーマとデモデータを用意する。途中で止まった前回の状態（完了印なし）は作り直す */
+async function prepare(db: PG) {
+  const done = (await db.query(`select to_regclass('public._demo_done') is not null as ok`)).rows[0]?.ok;
+  if (done) {
+    // 既存データ: 追加されたマイグレーションだけ適用
+    const applied = new Set((await db.query('select name from public._dev_migrations')).rows.map((r) => r.name as string));
+    for (const m of MIGRATIONS) {
+      if (applied.has(m.name)) continue;
+      await db.exec(`set search_path = public, extensions;\n${m.sql}\nreset search_path;`);
+      await db.query('insert into public._dev_migrations (name) values ($1)', [m.name]);
+    }
+    return;
+  }
+  if ((await db.query(`select to_regclass('public._dev_migrations') is not null as ok`)).rows[0]?.ok) {
+    throw Object.assign(new Error('前回の準備が途中で止まっていました'), { incomplete: true });
+  }
+  setStatus({ step: 'デモデータを作成中（初回のみ）' });
+  await db.exec(SHIM);
+  await db.exec('create table public._dev_migrations (name text primary key); revoke all on public._dev_migrations from anon, authenticated;');
+  await db.exec('create table public._demo_blobs (bucket text, name text, mime text, data text, primary key (bucket, name)); revoke all on public._demo_blobs from anon, authenticated;');
+  for (const m of MIGRATIONS) {
+    await db.exec(`set search_path = public, extensions;\n${m.sql}\nreset search_path;`);
+    await db.query('insert into public._dev_migrations (name) values ($1)', [m.name]);
+  }
+  await db.exec(`set search_path = public, extensions;\n${SEED}\nreset search_path;`);
+  for (const a of DEMO_ASSETS) {
+    await db.query(`insert into storage.objects (bucket_id, name, metadata) values ('profile-photos', $1, '{"mimetype":"image/svg+xml"}') on conflict do nothing`, [`demo/${a.name}`]);
+    await db.query(`insert into public._demo_blobs values ('profile-photos', $1, 'image/svg+xml', $2) on conflict do nothing`, [`demo/${a.name}`, btoa(unescape(encodeURIComponent(a.svg)))]);
+  }
+  await db.exec('create table public._demo_done (at timestamptz default now()); revoke all on public._demo_done from anon, authenticated;');
+}
+
 async function openDb(): Promise<DB> {
-  if (!window.__PG) throw new Error('データベースの読み込み処理が見つかりません');
+  if (!window.__PG) throw new Error('データベースの読み込み処理が見つかりません（ページを再読み込みしてください）');
   setStatus({ step: 'データベースを読み込み中（約17MB）' });
-  const { PGlite, wasm, data, ext } = await withTimeout(window.__PG, 120000, 'データベースの読み込み');
+  const { PGlite, wasm, data, ext } = await withTimeout(window.__PG, 180000, 'データベースの読み込み');
   const opts = { wasmModule: wasm, fsBundle: data, extensions: { btree_gist: ext('btree_gist'), pgcrypto: ext('pgcrypto') } };
-  let db: DB & { waitReady: Promise<void> };
-  let persistent = true;
+  let db: PG | null = null;
+  // 1) 端末内保存（IndexedDB）で起動。前回の途中データ・保存不可・失敗のときは消してメモリ上で作り直す
   try {
     setStatus({ step: 'データベースを起動中' });
     db = new PGlite({ ...opts, dataDir: `idb://${IDB_NAME}` });
     await withTimeout(db.waitReady, 25000, '端末内への保存の準備');
-  } catch {
-    // 埋め込み表示などで端末内保存（IndexedDB）が使えない場合は、メモリ上で動かす（再読み込みで初期化される）
-    persistent = false;
-    setStatus({ step: 'データベースを起動中（一時保存モード）' });
-    db = new PGlite(opts);
-    await db.waitReady;
+    await prepare(db);
+    setStatus({ persistent: true });
+    return db;
+  } catch (e) {
+    console.warn('[demo] persistent database failed, falling back to memory:', e);
+    try {
+      await db?.close?.();
+    } catch {}
+    await deleteIdb();
   }
-  setStatus({ persistent });
-  const exists = (await db.query(`select to_regclass('public._dev_migrations') is not null as ok`)).rows[0]?.ok;
-  if (!exists) {
-    setStatus({ step: 'デモデータを作成中（初回のみ）' });
-    await db.exec(SHIM);
-    await db.exec('create table public._dev_migrations (name text primary key); revoke all on public._dev_migrations from anon, authenticated;');
-    await db.exec('create table public._demo_blobs (bucket text, name text, mime text, data text, primary key (bucket, name)); revoke all on public._demo_blobs from anon, authenticated;');
-  }
-  const applied = new Set((await db.query('select name from public._dev_migrations')).rows.map((r) => r.name as string));
-  for (const m of MIGRATIONS) {
-    if (applied.has(m.name)) continue;
-    await db.exec(`set search_path = public, extensions;\n${m.sql}\nreset search_path;`);
-    await db.query('insert into public._dev_migrations (name) values ($1)', [m.name]);
-  }
-  if (!exists) {
-    await db.exec(`set search_path = public, extensions;\n${SEED}\nreset search_path;`);
-    for (const a of DEMO_ASSETS) {
-      await db.query(`insert into storage.objects (bucket_id, name, metadata) values ('profile-photos', $1, '{"mimetype":"image/svg+xml"}') on conflict do nothing`, [`demo/${a.name}`]);
-      await db.query(`insert into public._demo_blobs values ('profile-photos', $1, 'image/svg+xml', $2) on conflict do nothing`, [`demo/${a.name}`, btoa(unescape(encodeURIComponent(a.svg)))]);
-    }
-  }
-  return db;
+  setStatus({ step: 'データベースを起動中（一時保存モード）', persistent: false });
+  const mem: PG = new PGlite(opts);
+  await withTimeout(mem.waitReady, 60000, 'データベースの起動');
+  await prepare(mem);
+  return mem;
 }
 
 export function demoDb() {
@@ -109,7 +140,7 @@ export function demoDb() {
       return db;
     },
     (e) => {
-      setStatus({ phase: 'error', step: '起動できませんでした', message: String((e as Error)?.message ?? e) });
+      setStatus({ phase: 'error', message: `「${status.step}」の段階で止まりました：${String((e as Error)?.message ?? e)}` });
       ready = null; // 再試行できるようにする
       throw e;
     }

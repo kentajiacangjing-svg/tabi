@@ -42,7 +42,12 @@ for (const s of scripts) {
 // ---- PGlite（配布できるファイル形式に名前を変えて同梱）
 const pg = join(root, 'node_modules/@electric-sql/pglite/dist');
 mkdirSync(join(out, 'pglite/contrib'), { recursive: true });
-for (const f of readdirSync(pg)) if (f.endsWith('.js')) copyFileSync(join(pg, f), join(out, 'pglite', f));
+for (const f of readdirSync(pg)) {
+  if (!f.endsWith('.js')) continue;
+  // 配信先が .wasm を application/wasm で返さない場合でも動くよう、ストリーミング読込をバイト列からの読込に置き換える
+  const js = readFileSync(join(pg, f), 'utf8').replaceAll('WebAssembly.instantiateStreaming(i.clone(),t)', 'WebAssembly.instantiate(await i.clone().arrayBuffer(),t)');
+  writeFileSync(join(out, 'pglite', f), js);
+}
 copyFileSync(join(pg, 'pglite.wasm'), join(out, 'pglite/pglite.wasm'));
 copyFileSync(join(pg, 'initdb.wasm'), join(out, 'pglite/initdb.wasm'));
 copyFileSync(join(pg, 'pglite.data'), join(out, 'pglite/pglite-data.wasm'));
@@ -61,15 +66,25 @@ html, body { background: #FAF9F6; }
 <script type="module">
 // 1) DB（PGlite）の読み込みを開始し、アプリから使えるようにする
 const base = new URL('./pglite/', window.__DEMO_BASE);
+// 配信先によって .wasm の Content-Type が異なるため、種類の指定に依存しない方法で読み込む
+const get = async (file, what) => {
+  let r;
+  try { r = await fetch(new URL(file, base)); } catch (e) { throw new Error(what + 'を取得できませんでした（' + (e && e.message) + '）'); }
+  if (!r.ok) throw new Error(what + 'を取得できませんでした（HTTP ' + r.status + '）');
+  return r;
+};
 window.__PG = (async () => {
-  const [{ PGlite }, wasm, data] = await Promise.all([
-    import(new URL('index.js', base).href),
-    WebAssembly.compileStreaming(fetch(new URL('pglite.wasm', base))),
-    fetch(new URL('pglite-data.wasm', base)).then((r) => r.blob()),
+  if (typeof WebAssembly === 'undefined') throw new Error('この画面では WebAssembly が使えません');
+  const [mod, wasm, data] = await Promise.all([
+    import(new URL('index.js', base).href).catch((e) => { throw new Error('データベースのプログラムを読み込めませんでした（' + (e && e.message) + '）'); }),
+    get('pglite.wasm', 'データベース本体').then((r) => r.arrayBuffer()).then((b) => WebAssembly.compile(b))
+      .catch((e) => { throw new Error(String(e && e.message).includes('取得') ? e.message : 'データベース本体を準備できませんでした（' + (e && e.message) + '）'); }),
+    get('pglite-data.wasm', 'データベースの初期データ').then((r) => r.blob()),
   ]);
   const ext = (name) => ({ name, setup: async () => ({ bundlePath: new URL(name + '-ext.wasm', base) }) });
-  return { PGlite, wasm, data, ext };
+  return { PGlite: mod.PGlite, wasm, data, ext };
 })();
+window.__PG.catch(() => {});
 // 2) アプリの画面遷移はルート（/）から始める
 try { history.replaceState(null, '', '/'); } catch (e) {}
 </script>
