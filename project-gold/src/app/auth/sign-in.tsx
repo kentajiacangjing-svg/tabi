@@ -2,7 +2,8 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Card, Field, Gap, Header, Notice, Row, Screen, T } from '@/components/ui';
+import { DemoStatus } from '@/components/DemoStatus';
+import { Button, Card, Field, Header, Notice, Row, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { DEMO_BROWSER, resetDemo } from '@/lib/supabase';
 import { colors, space } from '@/theme/tokens';
@@ -31,11 +32,34 @@ export default function SignIn() {
     }
   };
 
+  const showDemo = __DEV__ || DEMO_BROWSER || process.env.EXPO_PUBLIC_SHOW_DEMO_LOGIN === 'on';
+  const demoCard = showDemo ? (
+    <View style={{ marginVertical: space.lg }}>
+      <Card>
+        <T v="caption">DEMO ACCOUNTS</T>
+        <T v="small" style={{ marginTop: 4, marginBottom: space.md }}>ボタンを押すとそのアカウントで入れます（パスワード DemoPass123!）。本番では表示されません。</T>
+        <View style={{ gap: space.sm }}>
+          {DEMO.map((d) => (
+            <Button key={d.email} small variant="quiet" title={d.label} onPress={() => submit(d.email, 'DemoPass123!')} testID={`demo-${d.email.split('@')[0]}`} />
+          ))}
+        </View>
+        {DEMO_BROWSER ? (
+          <>
+            <T v="small" style={{ marginTop: space.lg }}>このデモはサーバーを使わず、ブラウザの中だけで動いています。登録した内容はこの端末にだけ保存され、他の人には見えません。</T>
+            <Button small variant="ghost" title="デモデータを初期状態に戻す" onPress={() => resetDemo?.()} />
+          </>
+        ) : null}
+      </Card>
+    </View>
+  ) : null;
+
   return (
     <>
       <Header title="ログイン" />
       <Screen>
         <T v="title" style={{ marginTop: space.md, marginBottom: space.xl }}>おかえりなさい</T>
+        <DemoStatus />
+        {DEMO_BROWSER ? demoCard : null}
         {err ? <View style={{ marginBottom: space.lg }}><Notice tone="danger" icon="alert">{err}</Notice></View> : null}
         <Field label="メールアドレス" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" testID="login-email" />
         <Field label="パスワード" value={pw} onChangeText={setPw} secureTextEntry autoComplete="current-password" onSubmitEditing={() => submit()} testID="login-password" />
@@ -46,26 +70,7 @@ export default function SignIn() {
         <Row style={{ justifyContent: 'center', marginTop: space.sm }}>
           <Link href="/auth/role" style={styles.link}>新規登録はこちら</Link>
         </Row>
-        {__DEV__ || DEMO_BROWSER || process.env.EXPO_PUBLIC_SHOW_DEMO_LOGIN === 'on' ? (
-          <>
-            <Gap h={space.xxl} />
-            <Card>
-              <T v="caption">DEMO ACCOUNTS</T>
-              <T v="small" style={{ marginTop: 4, marginBottom: space.md }}>開発環境のデモアカウント（パスワード DemoPass123!）。本番ビルドでは表示されません。</T>
-              <View style={{ gap: space.sm }}>
-                {DEMO.map((d) => (
-                  <Button key={d.email} small variant="quiet" title={d.label} onPress={() => submit(d.email, 'DemoPass123!')} testID={`demo-${d.email.split('@')[0]}`} />
-                ))}
-              </View>
-              {DEMO_BROWSER ? (
-                <>
-                  <T v="small" style={{ marginTop: space.lg }}>このデモはサーバーを使わず、ブラウザの中だけで動いています。登録した内容はこの端末にだけ保存され、他の人には見えません。</T>
-                  <Button small variant="ghost" title="デモデータを初期状態に戻す" onPress={() => resetDemo?.()} />
-                </>
-              ) : null}
-            </Card>
-          </>
-        ) : null}
+        {!DEMO_BROWSER ? demoCard : null}
       </Screen>
     </>
   );

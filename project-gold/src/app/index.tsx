@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { Icon, type IconName } from '@/components/Icon';
+import { DemoStatus } from '@/components/DemoStatus';
 import { Button, Gap, Pill, Row, Screen, T } from '@/components/ui';
 import { useAuth, useServiceName } from '@/lib/auth';
 import { homeFor } from '@/lib/nav';
@@ -40,6 +41,7 @@ export default function Landing() {
           </View>
         </View>
 
+        <DemoStatus compact />
         <View style={{ gap: space.md, marginTop: space.xl }}>
           <Button title="はじめる" variant="primary" onPress={() => router.push('/auth/role')} testID="cta-start" />
           <Button title="ログイン" variant="outline" onPress={() => router.push('/auth/sign-in')} testID="cta-login" />

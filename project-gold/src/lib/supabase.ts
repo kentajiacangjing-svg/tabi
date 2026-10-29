@@ -10,6 +10,7 @@ export const DEMO_BROWSER = process.env.EXPO_PUBLIC_DEMO_BROWSER === 'on';
 const demo: typeof import('../demo/gateway') | null = DEMO_BROWSER ? require('../demo/gateway') : null;
 export const demoFetch = demo?.demoFetch ?? null;
 export const resetDemo = demo?.resetDemo ?? null;
+export const demoStatusApi = demo ? { get: demo.getDemoStatus, subscribe: demo.subscribeDemoStatus, retry: demo.demoDb } : null;
 export const SUPABASE_URL = demo ? demo.DEMO_URL : (process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321');
 export const SUPABASE_ANON_KEY = demo ? 'demo-anon-key' : (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '');
 /** on: Supabase Realtime で購読 / off: ポーリング（ローカル開発サーバーは Realtime 非対応） */

@@ -21,6 +21,24 @@ declare global {
 export const DEMO_URL = 'https://demo.invalid';
 const IDB_NAME = 'project-gold-demo';
 let ready: Promise<DB> | null = null;
+
+/** 起動状況（画面に表示する） */
+export type DemoStatus = { phase: 'loading' | 'ready' | 'error'; step: string; message?: string; persistent?: boolean };
+let status: DemoStatus = { phase: 'loading', step: '読み込み中' };
+const listeners = new Set<(s: DemoStatus) => void>();
+function setStatus(s: Partial<DemoStatus>) {
+  status = { ...status, ...s };
+  listeners.forEach((l) => l(status));
+}
+export const getDemoStatus = () => status;
+export function subscribeDemoStatus(fn: (s: DemoStatus) => void) {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+const withTimeout = <T,>(p: Promise<T>, ms: number, what: string) =>
+  Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${what}がタイムアウトしました`)), ms))]);
 const mailbox: { to: string; link: string }[] = [];
 
 function b64url(s: string) {
@@ -43,19 +61,27 @@ function readToken(t: string | null | undefined): Row | null {
 const rand = (n = 24) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, '0')).join('');
 
 async function openDb(): Promise<DB> {
-  if (!window.__PG) throw new Error('demo database loader missing');
-  const { PGlite, wasm, data, ext } = await window.__PG;
+  if (!window.__PG) throw new Error('データベースの読み込み処理が見つかりません');
+  setStatus({ step: 'データベースを読み込み中（約17MB）' });
+  const { PGlite, wasm, data, ext } = await withTimeout(window.__PG, 120000, 'データベースの読み込み');
   const opts = { wasmModule: wasm, fsBundle: data, extensions: { btree_gist: ext('btree_gist'), pgcrypto: ext('pgcrypto') } };
   let db: DB & { waitReady: Promise<void> };
+  let persistent = true;
   try {
+    setStatus({ step: 'データベースを起動中' });
     db = new PGlite({ ...opts, dataDir: `idb://${IDB_NAME}` });
-    await db.waitReady;
+    await withTimeout(db.waitReady, 25000, '端末内への保存の準備');
   } catch {
-    db = new PGlite(opts); // IndexedDB が使えない環境ではメモリのみ
+    // 埋め込み表示などで端末内保存（IndexedDB）が使えない場合は、メモリ上で動かす（再読み込みで初期化される）
+    persistent = false;
+    setStatus({ step: 'データベースを起動中（一時保存モード）' });
+    db = new PGlite(opts);
     await db.waitReady;
   }
+  setStatus({ persistent });
   const exists = (await db.query(`select to_regclass('public._dev_migrations') is not null as ok`)).rows[0]?.ok;
   if (!exists) {
+    setStatus({ step: 'デモデータを作成中（初回のみ）' });
     await db.exec(SHIM);
     await db.exec('create table public._dev_migrations (name text primary key); revoke all on public._dev_migrations from anon, authenticated;');
     await db.exec('create table public._demo_blobs (bucket text, name text, mime text, data text, primary key (bucket, name)); revoke all on public._demo_blobs from anon, authenticated;');
@@ -77,9 +103,22 @@ async function openDb(): Promise<DB> {
 }
 
 export function demoDb() {
-  ready ??= openDb();
+  ready ??= openDb().then(
+    (db) => {
+      setStatus({ phase: 'ready', step: '準備完了' });
+      return db;
+    },
+    (e) => {
+      setStatus({ phase: 'error', step: '起動できませんでした', message: String((e as Error)?.message ?? e) });
+      ready = null; // 再試行できるようにする
+      throw e;
+    }
+  );
   return ready;
 }
+
+// アプリを開いた時点で準備を始める（ログインを押すまで待たせない）
+if (typeof window !== 'undefined') demoDb().catch(() => {});
 
 /** デモデータを初期状態に戻す（IndexedDB を削除して再読み込み） */
 export async function resetDemo() {
