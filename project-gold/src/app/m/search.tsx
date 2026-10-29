@@ -14,12 +14,16 @@ const AREAS = ['すべて', '銀座', '六本木', '新宿', '渋谷', '恵比�
 const RANKS = ['ALL', 'C', 'B', 'A', 'S'] as const;
 
 export default function Search() {
-  const params = useLocalSearchParams<{ area?: string }>();
+  const params = useLocalSearchParams<{ area?: string; rank?: string }>();
   // ホームのエリアチップから来た場合はそのエリアを初期値にする（ユーザーが選び直したらそちらを優先）
   const [picked, setPicked] = useState<{ from?: string; value: string } | null>(null);
   const area = picked && picked.from === params.area ? picked.value : (params.area ?? 'すべて');
   const setArea = (value: string) => setPicked({ from: params.area, value });
-  const [rank, setRank] = useState<(typeof RANKS)[number]>('ALL');
+  // ホームの「ランクから探す」から来た場合はそのランクを初期値にする
+  const [pickedRank, setPickedRank] = useState<{ from?: string; value: (typeof RANKS)[number] } | null>(null);
+  const initRank = (RANKS as readonly string[]).includes(params.rank ?? '') ? (params.rank as (typeof RANKS)[number]) : 'ALL';
+  const rank = pickedRank && pickedRank.from === params.rank ? pickedRank.value : initRank;
+  const setRank = (value: (typeof RANKS)[number]) => setPickedRank({ from: params.rank, value });
   const [day, setDay] = useState<number | null>(null);
   const [openOnly, setOpenOnly] = useState(false);
   const [q, setQ] = useState('');

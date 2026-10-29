@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Badges, Carousel, SlotRow } from '@/components/blocks';
 import { Icon } from '@/components/Icon';
@@ -11,13 +11,16 @@ import {
 import { call, toMessage, useRpc } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { durationLabel, rangeLabel, yen } from '@/lib/format';
-import type { Slot, WomanDetail } from '@/lib/types';
-import { colors, space } from '@/theme/tokens';
+import type { MembershipOverview, Slot, WomanDetail } from '@/lib/types';
+import { colors, radius, space } from '@/theme/tokens';
 
 export default function WomanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const res = useRpc<WomanDetail>('get_woman_detail', { p_woman: id });
-  const { refreshMe } = useAuth();
+  const { me, refreshMe } = useAuth();
+  // ランク解放の2つのルート（プラン／利用実績）を具体的に示すため、男性のみ会員情報を読む
+  const ov = useRpc<MembershipOverview>(me?.role === 'man' ? 'membership_overview' : null);
+  const [pickOpen, setPickOpen] = useState(false);
   const toast = useToast();
   const confirm = useConfirm();
   const [slot, setSlot] = useState<Slot | null>(null);
@@ -70,7 +73,7 @@ export default function WomanDetailScreen() {
   return (
     <>
       <Header title={w?.display_name ?? ''} right={<IconButton name="flag" label="その他の操作" onPress={() => setMenu(true)} />} />
-      <Screen padded={false}>
+      <Screen padded={false} footer={w ? <DetailCta w={w} has={has} onPick={() => setPickOpen(true)} onApply={() => setApplyOpen(true)} onVerify={async () => { await refreshMe(); router.push('/verification'); }} /> : undefined}>
         {res.loading ? <View style={{ padding: space.lg }}><LoadingList count={2} h={300} /></View> : res.error || !w ? (
           <ErrorState message={res.error ?? '見つかりません'} onRetry={res.reload} />
         ) : (
@@ -89,7 +92,7 @@ export default function WomanDetailScreen() {
               </Row>
               {w.headline ? <T v="h3" style={{ marginTop: space.lg }}>{w.headline}</T> : null}
               <Row gap={6} wrap style={{ marginTop: space.md }}>
-                <Pill label={w.accept_mode === 'open' ? '幅広く受け付けています' : '自分で選ぶ（承認制）'} tone={w.accept_mode === 'open' ? 'gold' : 'neutral'} />
+                <Pill label={w.accept_mode === 'open' ? '空き枠へ直接申し込み可' : 'まずプロフィール申請'} tone={w.accept_mode === 'open' ? 'gold' : 'neutral'} />
                 {w.plan_types.map((p) => <Pill key={p} label={p} />)}
               </Row>
               {w.venue ? (
@@ -99,13 +102,7 @@ export default function WomanDetailScreen() {
                 </Row>
               ) : null}
 
-              <EligibilityBlock w={w} has={has} onApply={() => setApplyOpen(true)} onVerify={async () => { await refreshMe(); router.push('/verification'); }} />
-
-              {w.conversation_id ? (
-                <View style={{ marginTop: space.lg }}>
-                  <Button variant="outline" icon="chat" title="メッセージ" onPress={() => router.push(`/chat/${w.conversation_id}`)} />
-                </View>
-              ) : null}
+              <EligibilityBlock w={w} has={has} ov={ov.data} />
 
               <Section title="ABOUT">
                 <T v="body" selectable>{w.bio || '自己紹介はまだありません。'}</T>
@@ -133,11 +130,25 @@ export default function WomanDetailScreen() {
                 )}
                 <T v="small" style={{ marginTop: space.sm }}>表示価格はデモ用の仮設定です。予約はお相手の承認後に確定します。</T>
               </Section>
+              <Section title="POLICY ・ ご利用にあたって">
+                <T v="small">申し込みは予約の「お願い」です。ランクを解放していても、成立には必ず{w.display_name}さんの承認が必要で、女性はどの申し込みも理由を示さずお断りできます。同席・交流のみのサービスで、性的なサービスの依頼は禁止です。</T>
+              </Section>
               <Gap h={space.xl} />
             </View>
           </>
         )}
       </Screen>
+
+      <Sheet visible={pickOpen} onClose={() => setPickOpen(false)} title="空き枠を選ぶ">
+        {(w?.slots ?? []).map((s, i) => (
+          <View key={s.id}>
+            {i > 0 ? <Divider /> : null}
+            <SlotRow start={s.start_at} end={s.end_at} plan={s.plan_type} area={s.area} price={s.price}
+              right={s.my_request === 'requested' ? <Pill label="申請中" tone="gold" /> : <Button small title="選ぶ" testID={`pick-${i}`} onPress={() => { setPickOpen(false); setSlot(s); }} />} />
+          </View>
+        ))}
+        <T v="small" style={{ marginTop: space.sm }}>予約はお相手の承認後に確定します。</T>
+      </Sheet>
 
       <Sheet visible={!!slot} onClose={() => setSlot(null)} title="予約内容の確認">
         {slot ? (
@@ -180,43 +191,106 @@ export default function WomanDetailScreen() {
 
 }
 
-function EligibilityBlock({ w, has, onApply, onVerify }: { w: WomanDetail; has: (c: string) => boolean; onApply: () => void; onVerify: () => void }) {
+/** 画面下に固定する主ボタン。状態に応じて「申し込む」「ランク解放を見る」などに切り替える */
+function DetailCta({ w, has, onPick, onApply, onVerify }: { w: WomanDetail; has: (c: string) => boolean; onPick: () => void; onApply: () => void; onVerify: () => void }) {
+  const e = w.eligibility;
+  if (!e) return null;
+  const open = w.slots.filter((s) => s.my_request !== 'requested');
+  let main: React.ReactNode;
+  if (e.can_request) {
+    main = open.length
+      ? <Button title="空き枠を選んで申し込む" icon="calendar" onPress={onPick} testID="detail-cta" />
+      : <Button title="現在申し込める空き枠はありません" variant="quiet" disabled onPress={() => {}} testID="detail-cta" />;
+  } else if (has('VERIFY_REQUIRED')) {
+    main = <Button title="本人確認へ進む" icon="shield" onPress={onVerify} testID="detail-cta" />;
+  } else if (has('RANK_LOCKED')) {
+    main = <Button title="ランク解放を見る" variant="gold" icon="unlock" onPress={() => router.push('/membership')} testID="unlock-cta" />;
+  } else if (has('APPROVAL_REQUIRED') && e.can_apply) {
+    main = <Button title="プロフィール申請を送る" onPress={onApply} testID="apply-cta" />;
+  } else if (e.application_status === 'pending') {
+    main = <Button title="申請済み・承認待ち" variant="quiet" disabled onPress={() => {}} testID="detail-cta" />;
+  } else {
+    main = <Button title="現在申し込みできません" variant="quiet" disabled onPress={() => {}} testID="detail-cta" />;
+  }
+  return (
+    <Row gap={space.sm}>
+      {w.conversation_id ? <IconButton name="chat" label="メッセージ" onPress={() => router.push(`/chat/${w.conversation_id}`)} /> : null}
+      <View style={{ flex: 1 }}>{main}</View>
+    </Row>
+  );
+}
+
+function EligibilityBlock({ w, has, ov }: { w: WomanDetail; has: (c: string) => boolean; ov: MembershipOverview | null }) {
   const e = w.eligibility;
   if (!e) return null;
   if (e.can_request) {
     return (
       <View style={{ marginTop: space.lg }}>
         <Notice tone="success" icon="unlock" title="申し込みできます">
-          {e.application_source === 'invite' ? '招待リンクから参加しているため、ランク条件にかかわらず申し込めます。' : '空き枠を選んで予約申請してください。'}
+          {e.application_source === 'invite' ? '招待リンクから参加しているため、ランク条件にかかわらず申し込めます。' : '空き枠を選んで予約申請してください。成立はお相手の承認後です。'}
         </Notice>
       </View>
     );
   }
+  const others = e.reasons.filter((r) => r.code !== 'RANK_LOCKED');
   return (
-    <Card style={{ marginTop: space.lg, borderColor: colors.goldLight }}>
+    <View style={{ marginTop: space.lg, gap: space.md }}>
+      {has('RANK_LOCKED') ? <UnlockRoutes rank={w.rank_code} ov={ov} current={e.access.unlocked_rank} /> : null}
+      {others.length ? (
+        <Card style={{ borderColor: colors.goldLight }}>
+          <Row gap={space.sm}>
+            <Icon name="lock" size={18} color={colors.goldDeep} />
+            <T v="h3">申し込みの条件</T>
+          </Row>
+          <View style={{ marginTop: space.sm, gap: 6 }}>
+            {others.map((r) => (
+              <Row key={r.code} gap={6} style={{ alignItems: 'flex-start' }}>
+                <T v="sub" color={colors.goldDeep}>・</T>
+                <T v="sub" style={{ flex: 1 }}>{r.message}</T>
+              </Row>
+            ))}
+          </View>
+          {has('APPROVAL_REQUIRED') && e.application_status === 'pending' ? <View style={{ marginTop: space.md }}><Pill label="申請済み・承認待ち" tone="gold" /></View> : null}
+        </Card>
+      ) : null}
+    </View>
+  );
+}
+
+/** ランク解放の2ルートを横並びで示す（プラン / 利用実績）。どちらも申し込み資格であり、成立の保証ではない */
+function UnlockRoutes({ rank, ov, current }: { rank: string; ov: MembershipOverview | null; current: string }) {
+  const rule = ov?.rank_rules.find((r) => r.code === rank);
+  const plan = rule && ov
+    ? [...ov.plans].sort((a, b) => a.monthly_price - b.monthly_price)
+      .find((p) => (ov.rank_rules.find((r) => r.code === p.unlock_rank)?.sort ?? -1) >= rule.sort)
+    : undefined;
+  const remain = rule && ov ? Math.max(rule.min_value - ov.spend_total, 0) : null;
+  return (
+    <Card style={{ borderColor: colors.goldLight }}>
       <Row gap={space.sm}>
         <Icon name="lock" size={18} color={colors.goldDeep} />
-        <T v="h3">申し込みの条件</T>
+        <View style={{ flex: 1 }}>
+          <T v="h3">{rank}ランクは解放後に申し込めます</T>
+          <T v="small">現在は {current} ランクまで申し込めます。次のどちらかで解放できます。</T>
+        </View>
       </Row>
-      <View style={{ marginTop: space.sm, gap: 6 }}>
-        {w.eligibility?.reasons.map((r) => (
-          <Row key={r.code} gap={6} style={{ alignItems: 'flex-start' }}>
-            <T v="sub" color={colors.goldDeep}>・</T>
-            <T v="sub" style={{ flex: 1 }}>{r.message}</T>
-          </Row>
-        ))}
-      </View>
-      {has('RANK_LOCKED') ? (
-        <>
-          <T v="small" style={{ marginTop: space.md }}>
-            現在は {e.access.unlocked_rank} ランクまで申し込めます。会員プランの変更、または利用実績（確定利用額）で解放できます。解放は申し込み資格であり、予約の成立を保証するものではありません。
-          </T>
-          <View style={{ marginTop: space.md }}><Button variant="gold" title="解放方法を見る" onPress={() => router.push('/membership')} testID="unlock-cta" /></View>
-        </>
-      ) : null}
-      {has('VERIFY_REQUIRED') ? <View style={{ marginTop: space.md }}><Button variant="outline" title="本人確認へ進む" onPress={onVerify} /></View> : null}
-      {has('APPROVAL_REQUIRED') && e.can_apply ? <View style={{ marginTop: space.md }}><Button title="プロフィール申請を送る" onPress={onApply} testID="apply-cta" /></View> : null}
-      {has('APPROVAL_REQUIRED') && e.application_status === 'pending' ? <View style={{ marginTop: space.md }}><Pill label="申請済み・承認待ち" tone="gold" /></View> : null}
+      <Row gap={space.sm} style={{ marginTop: space.md, alignItems: 'stretch' }}>
+        <View style={styles.route} testID="route-plan">
+          <T v="caption">ROUTE 1</T>
+          <T v="h3" style={{ fontSize: 14 }}>会員プラン</T>
+          <T v="small">{plan ? `${plan.name}（月額 ${yen(plan.monthly_price)}${plan.is_demo_price ? '・仮' : ''}）で解放` : '上位プランで解放'}</T>
+        </View>
+        <View style={styles.route} testID="route-spend">
+          <T v="caption">ROUTE 2</T>
+          <T v="h3" style={{ fontSize: 14 }}>利用実績</T>
+          <T v="small">{remain === null ? '確定利用額に応じて解放' : remain === 0 ? '条件を満たしています' : `確定利用額 あと ${yen(remain)}`}</T>
+        </View>
+      </Row>
+      <T v="small" style={{ marginTop: space.sm }}>利用額は完了した予約のみ計上します（承認待ち・未完了は含みません）。</T>
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  route: { flex: 1, gap: 2, padding: space.md, borderRadius: radius.md, backgroundColor: colors.goldWash },
+});

@@ -4,14 +4,22 @@ import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextIn
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
-import { Button, ErrorState, Header, IconButton, LoadingList, Notice, Sheet, T, useConfirm, useToast } from '@/components/ui';
+import { Avatar, Button, ErrorState, Header, IconButton, LoadingList, Notice, Row, Sheet, StatusPill, T, useConfirm, useToast } from '@/components/ui';
 import { call, toMessage } from '@/lib/api';
-import { relative, timeLabel } from '@/lib/format';
+import { dateLabel, rangeLabel, timeLabel } from '@/lib/format';
 import { useLive } from '@/lib/live';
-import type { Message, Role } from '@/lib/types';
+import type { BookingStatus, Message, Role } from '@/lib/types';
 import { colors, maxWidth, radius, space } from '@/theme/tokens';
 
-type Thread = { can_chat: boolean; counterpart: { id: string; display_name: string; role: Role; photos: string[] }; messages: Message[] };
+type Thread = {
+  can_chat: boolean;
+  counterpart: { id: string; display_name: string; role: Role; photos: string[] };
+  /** 相手が読んだ最新のメッセージID（既読表示に使う） */
+  counterpart_read_id: number;
+  /** この相手との予約（確定済み > 承認待ち > 申立て中 > 直近） */
+  booking: { id: string; status: BookingStatus; start_at: string; end_at: string } | null;
+  messages: Message[];
+};
 
 export default function Chat() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -78,7 +86,8 @@ export default function Chat() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Header title={thread?.counterpart.display_name ?? 'メッセージ'} right={<IconButton name="flag" label="その他の操作" onPress={() => setMenu('thread')} />} />
+      <Header title="メッセージ" right={<IconButton name="flag" label="その他の操作" onPress={() => setMenu('thread')} />} />
+      {thread ? <ThreadBar thread={thread} /> : null}
       {error && !thread ? <ErrorState message={error} onRetry={() => load(true)} /> : !thread ? <View style={{ padding: space.lg }}><LoadingList count={4} h={44} /></View> : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
           <FlatList
@@ -87,26 +96,30 @@ export default function Chat() {
             keyExtractor={(m) => String(m.id)}
             contentContainerStyle={[styles.listContent, { maxWidth }]}
             ListHeaderComponent={
-              <View style={{ marginBottom: space.lg }}>
-                <Notice icon="shield" tone="neutral">
-                  連絡先の交換や、性的サービス・金銭の個別取引のお誘いは禁止です。不快なメッセージは長押しで通報できます。
-                </Notice>
-              </View>
+              <Row gap={6} style={styles.rule}>
+                <Icon name="shield" size={14} color={colors.faint} />
+                <T v="small" style={{ flex: 1, fontSize: 11.5 }}>連絡先の交換や、性的サービス・金銭の個別取引のお誘いは禁止です。不快なメッセージは長押しで通報できます。</T>
+              </Row>
             }
             ListEmptyComponent={<T v="sub" center style={{ marginTop: space.xl }}>最初のメッセージを送ってみましょう</T>}
             renderItem={({ item, index }) => {
               const prev = thread.messages[index - 1];
-              const showTime = !prev || new Date(item.created_at).getTime() - new Date(prev.created_at).getTime() > 15 * 60000;
+              const showDay = !prev || dateLabel(prev.created_at) !== dateLabel(item.created_at);
+              // 自分の最後の既読メッセージにだけ「既読」を付ける
+              const lastRead = item.mine && item.id <= thread.counterpart_read_id
+                && !thread.messages.slice(index + 1).some((m) => m.mine && m.id <= thread.counterpart_read_id);
               return (
                 <View>
-                  {showTime ? <T v="small" center style={{ marginVertical: space.sm }}>{relative(item.created_at)}</T> : null}
+                  {showDay ? <T v="small" center style={styles.day}>{dayLabel(item.created_at)}</T> : null}
                   <Pressable onLongPress={() => !item.mine && setMenu(item)} delayLongPress={350} accessibilityHint={!item.mine ? '長押しで通報' : undefined}
                     style={[styles.bubbleRow, item.mine ? { justifyContent: 'flex-end' } : null]}>
                     <View style={[styles.bubble, item.mine ? styles.mine : styles.theirs]}>
                       <T v="body" color={item.mine ? '#fff' : colors.text} selectable>{item.body}</T>
                     </View>
                   </Pressable>
-                  <T v="small" style={[{ fontSize: 10.5, marginTop: 2 }, item.mine ? { textAlign: 'right' } : null]}>{timeLabel(item.created_at)}</T>
+                  <T v="small" style={[{ fontSize: 10.5, marginTop: 2, marginBottom: 4 }, item.mine ? { textAlign: 'right' } : null]}>
+                    {lastRead ? '既読 ・ ' : ''}{timeLabel(item.created_at)}
+                  </T>
                 </View>
               );
             }}
@@ -160,7 +173,41 @@ export default function Chat() {
   );
 }
 
+function dayLabel(iso: string) {
+  const today = dateLabel(new Date().toISOString());
+  const yesterday = dateLabel(new Date(Date.now() - 86400000).toISOString());
+  const d = dateLabel(iso);
+  return d === today ? '今日' : d === yesterday ? '昨日' : d;
+}
+
+/** 誰と、どの予約についての会話かを上部に示す。予約があれば詳細へ移動できる */
+function ThreadBar({ thread }: { thread: Thread }) {
+  const b = thread.booking;
+  const body = (
+    <Row gap={space.md} style={[styles.barInner, { maxWidth }]}>
+      <Avatar path={thread.counterpart.photos[0]} size={40} />
+      <View style={{ flex: 1 }}>
+        <T v="h3" numberOfLines={1}>{thread.counterpart.display_name}さん</T>
+        <T v="small" numberOfLines={1}>{b ? rangeLabel(b.start_at, b.end_at) : '予約はまだありません'}</T>
+      </View>
+      {b ? <StatusPill status={b.status} /> : null}
+      {b ? <Icon name="chevron-right" size={16} color={colors.faint} /> : null}
+    </Row>
+  );
+  if (!b) return <View style={styles.bar}>{body}</View>;
+  return (
+    <Pressable style={({ pressed }) => [styles.bar, pressed && { backgroundColor: colors.goldWash }]} onPress={() => router.push(`/booking/${b.id}`)}
+      accessibilityRole="button" accessibilityLabel="予約の詳細を見る" testID="chat-booking">
+      {body}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  bar: { backgroundColor: colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, paddingVertical: space.sm, paddingHorizontal: space.lg },
+  barInner: { width: '100%', alignSelf: 'center', minHeight: 44 },
+  rule: { alignItems: 'flex-start', paddingHorizontal: space.sm, paddingVertical: space.sm, marginBottom: space.md, borderRadius: radius.md, backgroundColor: colors.goldWash },
+  day: { marginVertical: space.md, alignSelf: 'center' },
   listContent: { padding: space.lg, gap: 4, width: '100%', alignSelf: 'center', flexGrow: 1 },
   bubbleRow: { flexDirection: 'row' },
   bubble: { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg },

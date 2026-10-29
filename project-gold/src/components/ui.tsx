@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet,
+  AccessibilityInfo, ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet,
   Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +37,7 @@ const tStyles = StyleSheet.create({
   sub: { fontSize: 13.5, lineHeight: 21, color: colors.sub },
   small: { fontSize: 12, lineHeight: 18, color: colors.sub },
   caption: { fontSize: 11, lineHeight: 16, letterSpacing: 2.2, color: colors.goldDeep, fontWeight: '600' },
-  num: { fontFamily: fonts.serif, fontSize: 30, lineHeight: 36, color: colors.text, letterSpacing: 0.5 },
+  num: { fontFamily: fonts.serif, fontSize: 30, lineHeight: 36, color: colors.text, letterSpacing: 0.5, fontVariant: ['lining-nums', 'tabular-nums'] },
 });
 
 // ------------------------------------------------------------------ layout
@@ -213,7 +213,7 @@ function GoldFill() {
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={colors.goldLight} />
+            <Stop offset="0" stopColor={colors.goldMid} />
             <Stop offset="0.55" stopColor={colors.gold} />
             <Stop offset="1" stopColor={colors.goldDeep} />
           </LinearGradient>
@@ -271,23 +271,51 @@ export function StatusPill({ status }: { status: string }) {
 }
 
 /** 控えめな金色の進捗バー */
-export function Meter({ value, max, label, left, right }: { value: number; max: number; label?: string; left?: string; right?: string }) {
-  const pct = max <= 0 ? 1 : Math.max(0, Math.min(1, value / max));
+/** 動きを減らす設定（OS のアクセシビリティ設定）に追従する */
+export function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => alive && setReduced(v)).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  return reduced;
+}
+
+/** 控えめな金色の進捗バー（表示時に 300ms で伸びる。動きを減らす設定では即時表示） */
+export function Meter({ value, max, label, left, right, height = 6, complete }: {
+  value: number; max: number; label?: string; left?: string; right?: string; height?: number; complete?: boolean;
+}) {
+  const pct = complete ? 1 : max <= 0 ? 1 : Math.max(0, Math.min(1, value / max));
+  const reduced = useReducedMotion();
+  const [anim] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduced) {
+      anim.setValue(pct);
+      return;
+    }
+    Animated.timing(anim, { toValue: pct, duration: 320, useNativeDriver: false }).start();
+  }, [pct, reduced, anim]);
+  const width = anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   return (
     <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}>
-      {label ? <T v="small" style={{ marginBottom: 6 }}>{label}</T> : null}
-      <View style={styles.meterTrack}>
-        <View style={[styles.meterFill, { width: `${pct * 100}%` }]}>
+      {label ? <T v="small" style={{ marginBottom: 6, color: colors.text }}>{label}</T> : null}
+      <View style={[styles.meterTrack, { height, borderRadius: height / 2 }]}>
+        <Animated.View style={[styles.meterFill, { width, height, borderRadius: height / 2 }]}>
           <Svg width="100%" height="100%">
             <Defs>
               <LinearGradient id="m" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor={colors.goldLight} />
-                <Stop offset="1" stopColor={colors.gold} />
+                <Stop offset="0" stopColor={colors.goldMid} />
+                <Stop offset="1" stopColor={complete ? colors.goldDeep : colors.gold} />
               </LinearGradient>
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" fill="url(#m)" />
           </Svg>
-        </View>
+        </Animated.View>
       </View>
       {left || right ? (
         <Row style={{ justifyContent: 'space-between', marginTop: 6 }}>
@@ -295,6 +323,20 @@ export function Meter({ value, max, label, left, right }: { value: number; max: 
           <T v="small">{right}</T>
         </Row>
       ) : null}
+    </View>
+  );
+}
+
+/** 開閉できる詳細（トップ画面を数字だらけにしないため） */
+export function Disclosure({ title, children, testID }: { title: string; children: ReactNode; testID?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable testID={testID} accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} style={styles.disclosure} hitSlop={hitSlop}>
+        <T v="small" style={{ color: colors.goldDeep, fontWeight: '600' }}>{title}</T>
+        <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}><Icon name="chevron-down" size={16} color={colors.goldDeep} /></View>
+      </Pressable>
+      {open ? <View style={{ marginTop: space.sm }}>{children}</View> : null}
     </View>
   );
 }
@@ -597,6 +639,7 @@ const styles = StyleSheet.create({
   rank: { borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 3, borderRadius: radius.pill, borderWidth: 1, alignSelf: 'flex-start' },
   pillText: { fontSize: 11.5, fontWeight: '600', letterSpacing: 0.3, fontFamily: fonts.sans },
+  disclosure: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, alignSelf: 'flex-start' },
   meterTrack: { height: 6, borderRadius: 3, backgroundColor: '#EFEAE0', overflow: 'hidden' },
   meterFill: { height: 6, borderRadius: 3, overflow: 'hidden' },
   notice: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, alignItems: 'flex-start' },

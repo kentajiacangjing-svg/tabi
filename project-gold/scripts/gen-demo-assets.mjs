@@ -1,5 +1,7 @@
-// デモ用プロフィール画像（権利上安全な自作の抽象イラスト）を生成する。
-// 実在人物の写真は使用しない。出力: supabase/seed-assets/demo/*.svg
+// デモ用プロフィール画像を生成する（権利上安全な自作イラスト）。
+// 実在人物の写真や人物シルエットは使わず、「写真の代わりのデモ画像」であることが分かる上品なイラストにする。
+//   1枚目: モノグラム（頭文字）  2枚目: ラウンジの静物（グラス・キャンドル）  3枚目: 花のスケッチ
+// 出力: supabase/seed-assets/demo/*.svg
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,55 +9,81 @@ import { fileURLToPath } from 'node:url';
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'seed-assets', 'demo');
 mkdirSync(out, { recursive: true });
 
-const palettes = [
-  ['#F3EDE2', '#E4D6BC', '#C9B28A', '#8A6A35'],
-  ['#F1ECEA', '#E2D3CF', '#BFA3A0', '#7D5F5B'],
-  ['#EEF0EA', '#D9DDCF', '#AEB59D', '#66704F'],
-  ['#ECEEF2', '#D5DAE3', '#A7B0C2', '#59637A'],
-  ['#F4EFE6', '#EADBC2', '#D5B98C', '#9B7841'],
-  ['#F0EDF2', '#DDD5E2', '#B5A6C0', '#6C5A7A'],
+// [背景上, 背景下, 線の色, 名前]
+const women = [
+  ['#F6EFE3', '#E8D9BE', '#9A7638', 'MISAKI'],
+  ['#F5ECEA', '#E6D2CD', '#8E6158', 'RENA'],
+  ['#F0F1EA', '#DADFCF', '#66724F', 'SAKURA'],
+  ['#EEF0F3', '#D6DCE5', '#56627A', 'HINANO'],
+  ['#F7F0E6', '#EDDCC2', '#97733B', 'YUI'],
+  ['#F2EEF3', '#DED4E3', '#6E5B7C', 'AKARI'],
 ];
+const men = [['#F1F0EC', '#DCD9D1', '#5B564C', 'TARO'], ['#EFF0F2', '#D6D9DE', '#4C535E', 'KENICHI']];
 
-function rand(seed) {
+const SERIF = "Cormorant Garamond, 'Times New Roman', Georgia, serif";
+const SANS = 'Helvetica, Arial, sans-serif';
+
+function frame(bg1, bg2, ink, body, seed) {
   let s = seed;
-  return () => ((s = (s * 16807) % 2147483647) / 2147483647);
-}
-
-function portrait(seed, [bg1, bg2, mid, deep], variant) {
-  const r = rand(seed);
-  const bokeh = Array.from({ length: 7 }, () =>
-    `<circle cx="${(r() * 800).toFixed(0)}" cy="${(r() * 600).toFixed(0)}" r="${(30 + r() * 110).toFixed(0)}" fill="#FFFFFF" opacity="${(0.12 + r() * 0.25).toFixed(2)}"/>`
-  ).join('');
-  const tilt = (r() - 0.5) * 30;
-  const headY = 380 + variant * 18;
+  const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const glow = Array.from({ length: 6 }, () =>
+    `<circle cx="${(80 + r() * 640).toFixed(0)}" cy="${(80 + r() * 520).toFixed(0)}" r="${(40 + r() * 120).toFixed(0)}" fill="#FFFFFF" opacity="${(0.10 + r() * 0.18).toFixed(2)}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${bg1}"/><stop offset="1" stop-color="${bg2}"/></linearGradient>
-    <linearGradient id="fig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mid}"/><stop offset="1" stop-color="${deep}"/></linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D7BE88"/><stop offset="1" stop-color="#B89B5E"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="${bg1}"/><stop offset="1" stop-color="${bg2}"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E2CFA6"/><stop offset="1" stop-color="#B99755"/></linearGradient>
   </defs>
   <rect width="800" height="1000" fill="url(#bg)"/>
-  ${bokeh}
-  <g transform="rotate(${tilt.toFixed(1)} 400 ${headY})" opacity="0.92">
-    <path d="M400 ${headY - 175} C ${470 + variant * 10} ${headY - 180}, 520 ${headY - 90}, 515 ${headY + 10} C 512 ${headY + 120}, 470 ${headY + 170}, 400 ${headY + 175} C 330 ${headY + 170}, 288 ${headY + 120}, 285 ${headY + 10} C 280 ${headY - 90}, ${330 - variant * 10} ${headY - 180}, 400 ${headY - 175} Z" fill="url(#fig)" opacity="0.55"/>
-    <ellipse cx="400" cy="${headY}" rx="98" ry="122" fill="url(#fig)" opacity="0.85"/>
-  </g>
-  <path d="M150 1000 C 170 ${headY + 260}, 290 ${headY + 190}, 400 ${headY + 190} C 510 ${headY + 190}, 630 ${headY + 260}, 650 1000 Z" fill="url(#fig)" opacity="0.9"/>
-  <path d="M90 ${180 + variant * 40} A 330 330 0 0 1 ${700 - variant * 30} ${120 + variant * 30}" stroke="url(#gold)" stroke-width="2" fill="none" opacity="0.8"/>
-  <text x="760" y="960" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="22" letter-spacing="4" fill="#FFFFFF" opacity="0.75">DEMO</text>
+  ${glow}
+  <rect x="36" y="36" width="728" height="928" fill="none" stroke="url(#gold)" stroke-width="1.5" opacity="0.8"/>
+  <rect x="48" y="48" width="704" height="904" fill="none" stroke="url(#gold)" stroke-width="0.8" opacity="0.5"/>
+  ${body(ink)}
+  <text x="400" y="918" text-anchor="middle" font-family="${SANS}" font-size="20" letter-spacing="6" fill="${ink}" opacity="0.55">DEMO IMAGE</text>
 </svg>`;
 }
 
+const monogram = (name) => (ink) => `
+  <path d="M400 190 C 560 190 640 330 640 470 C 640 640 540 760 400 760 C 260 760 160 640 160 470 C 160 330 240 190 400 190 Z" fill="#FFFFFF" opacity="0.35"/>
+  <text x="400" y="590" text-anchor="middle" font-family="${SERIF}" font-size="330" fill="${ink}" opacity="0.88">${name[0]}</text>
+  <line x1="320" y1="660" x2="480" y2="660" stroke="url(#gold)" stroke-width="2"/>
+  <text x="400" y="712" text-anchor="middle" font-family="${SERIF}" font-size="40" letter-spacing="14" fill="${ink}">${name}</text>`;
+
+const lounge = () => (ink) => `
+  <path d="M250 820 L250 330 A150 150 0 0 1 550 330 L550 820" fill="#FFFFFF" opacity="0.32" stroke="url(#gold)" stroke-width="1.5"/>
+  <line x1="170" y1="820" x2="630" y2="820" stroke="${ink}" stroke-width="2" opacity="0.6"/>
+  <g stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85">
+    <path d="M330 560 Q 330 620 380 628 Q 430 620 430 560 Z"/>
+    <line x1="380" y1="628" x2="380" y2="760"/><line x1="345" y1="764" x2="415" y2="764"/>
+    <path d="M440 590 Q 440 640 478 646 Q 516 640 516 590 Z"/>
+    <line x1="478" y1="646" x2="478" y2="764"/><line x1="450" y1="768" x2="506" y2="768"/>
+    <rect x="252" y="660" width="40" height="160" rx="6"/>
+    <path d="M272 650 Q 262 630 272 610 Q 282 630 272 650 Z" fill="#E2CFA6"/>
+  </g>
+  <circle cx="356" cy="586" r="5" fill="#E2CFA6"/><circle cx="372" cy="574" r="4" fill="#E2CFA6"/><circle cx="392" cy="590" r="3.5" fill="#E2CFA6"/>
+  <text x="400" y="230" text-anchor="middle" font-family="${SERIF}" font-size="34" letter-spacing="10" fill="${ink}" opacity="0.7">LOUNGE</text>`;
+
+const floral = () => (ink) => `
+  <g stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85">
+    <path d="M330 820 Q 320 700 360 640 L440 640 Q 480 700 470 820 Z" fill="#FFFFFF" fill-opacity="0.35"/>
+    <path d="M400 640 Q 395 520 380 420"/><path d="M400 640 Q 430 520 480 450"/><path d="M400 640 Q 350 540 300 480"/>
+    <path d="M380 420 m -34 0 a 34 34 0 1 0 68 0 a 34 34 0 1 0 -68 0"/>
+    <path d="M480 450 m -28 0 a 28 28 0 1 0 56 0 a 28 28 0 1 0 -56 0"/>
+    <path d="M300 480 m -24 0 a 24 24 0 1 0 48 0 a 24 24 0 1 0 -48 0"/>
+    <path d="M420 540 Q 460 520 470 540 Q 450 560 420 540 Z"/><path d="M370 560 Q 330 540 320 560 Q 340 580 370 560 Z"/>
+  </g>
+  <circle cx="380" cy="420" r="9" fill="#E2CFA6"/><circle cx="480" cy="450" r="7" fill="#E2CFA6"/><circle cx="300" cy="480" r="6" fill="#E2CFA6"/>
+  <text x="400" y="230" text-anchor="middle" font-family="${SERIF}" font-size="34" letter-spacing="10" fill="${ink}" opacity="0.7">FLEUR</text>`;
+
 let n = 0;
-for (let w = 1; w <= 6; w++) {
-  for (let i = 1; i <= 3; i++) {
-    writeFileSync(join(out, `w${w}-${i}.svg`), portrait(w * 97 + i * 13, palettes[w - 1], i - 1));
-    n++;
-  }
-}
-const menPalette = [['#EEEEEC', '#D8D6D0', '#A9A59B', '#4F4B44'], ['#ECEDEF', '#D3D6DB', '#9EA4AE', '#454B55']];
-for (let m = 1; m <= 2; m++) {
-  writeFileSync(join(out, `m${m}-1.svg`), portrait(m * 311, menPalette[m - 1], 1));
+women.forEach(([a, b, ink, name], i) => {
+  const w = i + 1;
+  writeFileSync(join(out, `w${w}-1.svg`), frame(a, b, ink, monogram(name), w * 97 + 13));
+  writeFileSync(join(out, `w${w}-2.svg`), frame(a, b, ink, lounge(), w * 97 + 29));
+  writeFileSync(join(out, `w${w}-3.svg`), frame(a, b, ink, floral(), w * 97 + 41));
+  n += 3;
+});
+men.forEach(([a, b, ink, name], i) => {
+  writeFileSync(join(out, `m${i + 1}-1.svg`), frame(a, b, ink, monogram(name), (i + 1) * 311));
   n++;
-}
+});
 console.log(`generated ${n} demo images in ${out}`);

@@ -109,6 +109,13 @@ export type Notification = { id: number; kind: string; title: string; body: stri
 
 export type WomanDashboard = {
   pending_applications: number; pending_bookings: number; month_net: number; total_net: number; is_sandbox: boolean;
+  /** 今月完了した予約の件数（確定報酬の根拠） */
+  month_completed: number;
+  /** 予定: 予約確定済み・未完了の見込み額（手数料控除後、まだ確定していない） */
+  expected_net: number; expected_count: number;
+  /** 保留: 申立て中で運営の判断待ちの額 */
+  held_net: number; held_count: number;
+  is_top_rank: boolean; rank_floor: number;
   upcoming: { id: string; start_at: string; end_at: string; area: string; plan_type: string; man_name: string }[];
   rank_code: string; rank_score: number; next_rank: { code: string; min_value: number } | null;
   rank_breakdown: { profile: number; review: number; venue: number; earnings: number; record: number; penalty: number; inputs: Record<string, unknown> } | null;

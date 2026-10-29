@@ -4,9 +4,9 @@ import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSh
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
-import { Button, Card, IconButton, Meter, Notice, Photo, Pill, RankBadge, Row, T } from '@/components/ui';
+import { Card, IconButton, Meter, Photo, Pill, RankBadge, Row, T } from '@/components/ui';
 import { useAuth, useServiceName } from '@/lib/auth';
-import { dateLabel, rangeLabel, timeLabel, yen } from '@/lib/format';
+import { dateLabel, timeLabel, yen } from '@/lib/format';
 import type { Badge, Me, WomanCard as WomanCardT } from '@/lib/types';
 import { colors, fonts, maxWidth, radius, space } from '@/theme/tokens';
 
@@ -28,24 +28,31 @@ export function TopBar({ title }: { title?: string }) {
   );
 }
 
+/** 本人確認の案内。主役（女性一覧）を押し下げないよう1行のコンパクト表示にする */
 export function VerifyBanner({ me }: { me: Me }) {
   const s = me.verification.status;
   if (s === 'approved') return null;
-  const text = {
-    unsubmitted: '本人確認（20歳以上）を完了すると、申し込み・予約・プロフィール公開ができるようになります。',
-    pending: '本人確認を審査中です。完了までしばらくお待ちください。',
-    rejected: `本人確認ができませんでした。${me.verification.rejection_reason ?? ''}`,
+  const t = {
+    unsubmitted: ['本人確認（20歳以上）が未完了です', '完了すると申し込み・予約ができます'],
+    pending: ['本人確認を審査中です', '完了までしばらくお待ちください'],
+    rejected: ['本人確認ができませんでした', me.verification.rejection_reason ?? '内容を確認して再提出してください'],
   }[s];
+  const danger = s === 'rejected';
   return (
-    <View style={{ marginTop: space.lg }}>
-      <Notice
-        tone={s === 'rejected' ? 'danger' : 'gold'}
-        icon="shield"
-        title={s === 'pending' ? '本人確認：審査中' : '本人確認が必要です'}
-        action={s !== 'pending' ? <Button small variant="outline" title="本人確認へ進む" onPress={() => router.push('/verification')} testID="verify-cta" /> : null}>
-        {text}
-      </Notice>
-    </View>
+    <Pressable
+      testID="verify-cta"
+      accessibilityRole="button"
+      accessibilityLabel={`${t[0]}。${t[1]}`}
+      disabled={s === 'pending'}
+      onPress={() => router.push('/verification')}
+      style={({ pressed }) => [styles.verify, danger && { backgroundColor: colors.dangerWash }, pressed && { opacity: 0.85 }]}>
+      <Icon name="shield" size={18} color={danger ? colors.danger : colors.goldDeep} />
+      <View style={{ flex: 1 }}>
+        <T v="h3" style={{ fontSize: 14 }} color={danger ? colors.danger : colors.text}>{t[0]}</T>
+        <T v="small" numberOfLines={1}>{t[1]}</T>
+      </View>
+      {s !== 'pending' ? <Row gap={2}><T v="small" color={colors.goldDeep} style={{ fontWeight: '600' }}>確認へ</T><Icon name="chevron-right" size={14} color={colors.goldDeep} /></Row> : null}
+    </Pressable>
   );
 }
 
@@ -74,9 +81,13 @@ export function WomanCard({ w, width }: { w: WomanCardT; width?: number }) {
         </Row>
         <T v="small" numberOfLines={1}>{[w.area, ...(w.areas ?? []).filter((a) => a !== w.area)].slice(0, 2).join('・')}{w.venue ? ` ／ ${w.venue.name}` : ''}</T>
         {w.headline ? <T v="sub" numberOfLines={1}>{w.headline}</T> : null}
-        <Row gap={6} wrap style={{ marginTop: 2 }}>
-          <Pill label={w.accept_mode === 'open' ? '幅広く受付中' : '承認制'} tone={w.accept_mode === 'open' ? 'gold' : 'neutral'} />
-          {w.next_slot ? <Pill label={`空き ${rangeLabel(w.next_slot.start_at, w.next_slot.end_at).split(' ')[0]}`} tone="neutral" icon="calendar" /> : null}
+        <Row gap={6} style={{ marginTop: 2 }}>
+          {w.next_slot ? (
+            <Row gap={4} style={{ flexShrink: 1 }}>
+              <Icon name="calendar" size={13} color={colors.goldDeep} />
+              <T v="small" color={colors.goldDeep} numberOfLines={1} style={{ fontWeight: '600' }}>{dateLabel(w.next_slot.start_at).replace(/（.）/, '')} 空き</T>
+            </Row>
+          ) : <T v="small" color={colors.faint}>空き枠なし</T>}
         </Row>
       </View>
     </Pressable>
@@ -99,7 +110,7 @@ export function Grid<T>({ items, render, min }: { items: T[]; render: (item: T, 
 export function Carousel({ paths, height }: { paths: string[]; height?: number }) {
   const { width } = useWindowDimensions();
   const w = Math.min(width, maxWidth);
-  const h = height ?? Math.min(w * 1.2, 640);
+  const h = height ?? Math.min(w * 1.05, 560);
   const [idx, setIdx] = useState(0);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => setIdx(Math.round(e.nativeEvent.contentOffset.x / w));
   if (!paths.length) return <Photo path={null} style={{ width: w, height: h }} rounded={0} />;
@@ -164,6 +175,7 @@ const styles = StyleSheet.create({
   top: { backgroundColor: colors.bg, paddingHorizontal: space.lg, paddingBottom: space.sm },
   topRow: { flexDirection: 'row', alignItems: 'center', width: '100%', alignSelf: 'center' },
   wCard: { marginBottom: space.lg },
+  verify: { marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: colors.goldWash },
   lockChip: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.94)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: '#E9DDC4' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.md },
   dots: { position: 'absolute', bottom: 14, alignSelf: 'center', flexDirection: 'row', gap: 6, backgroundColor: 'rgba(23,23,23,0.25)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 999 },

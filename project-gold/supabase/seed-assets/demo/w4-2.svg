@@ -1,16 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#ECEEF2"/><stop offset="1" stop-color="#D5DAE3"/></linearGradient>
-    <linearGradient id="fig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A7B0C2"/><stop offset="1" stop-color="#59637A"/></linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D7BE88"/><stop offset="1" stop-color="#B89B5E"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#EEF0F3"/><stop offset="1" stop-color="#D6DCE5"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E2CFA6"/><stop offset="1" stop-color="#B99755"/></linearGradient>
   </defs>
   <rect width="800" height="1000" fill="url(#bg)"/>
-  <circle cx="3" cy="274" r="120" fill="#FFFFFF" opacity="0.34"/><circle cx="453" cy="389" r="82" fill="#FFFFFF" opacity="0.13"/><circle cx="183" cy="578" r="115" fill="#FFFFFF" opacity="0.13"/><circle cx="16" cy="188" r="45" fill="#FFFFFF" opacity="0.19"/><circle cx="685" cy="112" r="111" fill="#FFFFFF" opacity="0.29"/><circle cx="671" cy="194" r="122" fill="#FFFFFF" opacity="0.17"/><circle cx="250" cy="89" r="38" fill="#FFFFFF" opacity="0.30"/>
-  <g transform="rotate(-8.3 400 398)" opacity="0.92">
-    <path d="M400 223 C 480 218, 520 308, 515 408 C 512 518, 470 568, 400 573 C 330 568, 288 518, 285 408 C 280 308, 320 218, 400 223 Z" fill="url(#fig)" opacity="0.55"/>
-    <ellipse cx="400" cy="398" rx="98" ry="122" fill="url(#fig)" opacity="0.85"/>
+  <circle cx="82" cy="523" r="50" fill="#FFFFFF" opacity="0.15"/><circle cx="185" cy="239" r="114" fill="#FFFFFF" opacity="0.12"/><circle cx="251" cy="479" r="150" fill="#FFFFFF" opacity="0.21"/><circle cx="408" cy="297" r="75" fill="#FFFFFF" opacity="0.26"/><circle cx="636" cy="189" r="146" fill="#FFFFFF" opacity="0.26"/><circle cx="139" cy="280" r="112" fill="#FFFFFF" opacity="0.28"/>
+  <rect x="36" y="36" width="728" height="928" fill="none" stroke="url(#gold)" stroke-width="1.5" opacity="0.8"/>
+  <rect x="48" y="48" width="704" height="904" fill="none" stroke="url(#gold)" stroke-width="0.8" opacity="0.5"/>
+  
+  <path d="M250 820 L250 330 A150 150 0 0 1 550 330 L550 820" fill="#FFFFFF" opacity="0.32" stroke="url(#gold)" stroke-width="1.5"/>
+  <line x1="170" y1="820" x2="630" y2="820" stroke="#56627A" stroke-width="2" opacity="0.6"/>
+  <g stroke="#56627A" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85">
+    <path d="M330 560 Q 330 620 380 628 Q 430 620 430 560 Z"/>
+    <line x1="380" y1="628" x2="380" y2="760"/><line x1="345" y1="764" x2="415" y2="764"/>
+    <path d="M440 590 Q 440 640 478 646 Q 516 640 516 590 Z"/>
+    <line x1="478" y1="646" x2="478" y2="764"/><line x1="450" y1="768" x2="506" y2="768"/>
+    <rect x="252" y="660" width="40" height="160" rx="6"/>
+    <path d="M272 650 Q 262 630 272 610 Q 282 630 272 650 Z" fill="#E2CFA6"/>
   </g>
-  <path d="M150 1000 C 170 658, 290 588, 400 588 C 510 588, 630 658, 650 1000 Z" fill="url(#fig)" opacity="0.9"/>
-  <path d="M90 220 A 330 330 0 0 1 670 150" stroke="url(#gold)" stroke-width="2" fill="none" opacity="0.8"/>
-  <text x="760" y="960" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="22" letter-spacing="4" fill="#FFFFFF" opacity="0.75">DEMO</text>
+  <circle cx="356" cy="586" r="5" fill="#E2CFA6"/><circle cx="372" cy="574" r="4" fill="#E2CFA6"/><circle cx="392" cy="590" r="3.5" fill="#E2CFA6"/>
+  <text x="400" y="230" text-anchor="middle" font-family="Cormorant Garamond, 'Times New Roman', Georgia, serif" font-size="34" letter-spacing="10" fill="#56627A" opacity="0.7">LOUNGE</text>
+  <text x="400" y="918" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="6" fill="#56627A" opacity="0.55">DEMO IMAGE</text>
 </svg>

@@ -1,3 +1,30 @@
+# UI/UX 改善（KAIZEN）テスト結果（2026-10-29 実施・開発環境）
+
+| 項目 | コマンド | 結果 |
+|---|---|---|
+| 型チェック | `npx tsc --noEmit` | ✅ エラー 0 |
+| Lint | `npx expo lint` | ✅ エラー 0・警告 0 |
+| Web ビルド | `npm run build:web` | ✅ 成功 |
+| iOS / Android バンドル | `npm run build:native-bundle` | ✅ 成功 |
+| マイグレーション（実 PostgreSQL 16） | shim → 7 本 → seed | ✅ 適用。`tests/race-pg.sh` も PASS |
+| API 統合テスト（既存＋追加） | `npm test` | ✅ 13/13（既存 9 ＋ `tests/kaizen.e2e.test.mjs` 4） |
+| UI E2E（Chromium） | `npm run test:ui` | ✅ 14/14。コンソールエラー 2 件は意図した拒否（禁止語メッセージ・第三者のチャット閲覧）による HTTP 400 |
+| 画面幅 | run-ui 内 | ✅ 320/375/390/430/768/1280px で横スクロール・はみ出しなし |
+| ブラウザ版デモ（wasm を octet-stream で配信する条件） | 申込→承認→再読込で保持 | ✅ |
+
+追加テスト（`tests/kaizen.e2e.test.mjs`）
+- K1: FREE 会員は S ランクへ申請不可 → BLACK（デモ）で解放 → 申請できるが「自分で選ぶ」女性は辞退でき、辞退後は予約申請不可
+- K2: 予約は女性の承認で確定。承認済み・与信のみの決済は利用額に入らず、完了で初めて計上。女性ホームの「予定」「確定」、チャットの予約状況・既読位置
+- K3: ブロック後は予約申請・プロフィール申請ができず、検索にも出ない
+- K4: 女性の最上位ランク判定、管理ダッシュボードの状態別件数（合計が申込総数と一致）・一般ユーザーは呼べない
+
+改修前後のスクリーンショット: `docs/screenshots/before/`・`docs/screenshots/after/`（`node tests/ui/screens.mjs <label>` で再取得）。
+改修前はデモ画像が人物シルエットだったため、改修後はモノグラム・静物・花のイラスト（「DEMO IMAGE」表記）に差し替え済み。
+
+未確認: iOS / Android 実機・シミュレータでの表示、VoiceOver / TalkBack での読み上げ、`supabase start`（Docker）での動作。
+
+---
+
 # テスト結果（2026-10-28 実施・開発環境）
 
 実行環境: Linux / Node.js 22 / Chromium（Playwright）/ PGlite 0.5（PostgreSQL 18 相当）/ PostgreSQL 16。

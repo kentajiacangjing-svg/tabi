@@ -56,7 +56,7 @@ try {
   await man.getByTestId('signup-submit').click();
   await man.waitForURL(/\/m/, { timeout: 20000 });
   await shot(man, '01-man-home-after-signup');
-  step('男性が新規登録してホームに遷移', (await man.getByText('本人確認が必要です').count()) > 0, email);
+  step('男性が新規登録してホームに遷移', (await man.getByTestId('verify-cta').count()) > 0, email);
 
   // ------------------------------------------------------------ 2. 本人確認（テスト提出）→ 運営が承認
   await go(man, '/verification');

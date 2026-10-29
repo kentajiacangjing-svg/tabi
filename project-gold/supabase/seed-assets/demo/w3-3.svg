@@ -1,16 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#EEF0EA"/><stop offset="1" stop-color="#D9DDCF"/></linearGradient>
-    <linearGradient id="fig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#AEB59D"/><stop offset="1" stop-color="#66704F"/></linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D7BE88"/><stop offset="1" stop-color="#B89B5E"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#F0F1EA"/><stop offset="1" stop-color="#DADFCF"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E2CFA6"/><stop offset="1" stop-color="#B99755"/></linearGradient>
   </defs>
   <rect width="800" height="1000" fill="url(#bg)"/>
-  <circle cx="2" cy="244" r="68" fill="#FFFFFF" opacity="0.21"/><circle cx="651" cy="154" r="88" fill="#FFFFFF" opacity="0.13"/><circle cx="134" cy="269" r="91" fill="#FFFFFF" opacity="0.22"/><circle cx="175" cy="245" r="101" fill="#FFFFFF" opacity="0.32"/><circle cx="383" cy="324" r="88" fill="#FFFFFF" opacity="0.13"/><circle cx="616" cy="381" r="70" fill="#FFFFFF" opacity="0.13"/><circle cx="188" cy="532" r="68" fill="#FFFFFF" opacity="0.32"/>
-  <g transform="rotate(-6.6 400 416)" opacity="0.92">
-    <path d="M400 241 C 490 236, 520 326, 515 426 C 512 536, 470 586, 400 591 C 330 586, 288 536, 285 426 C 280 326, 310 236, 400 241 Z" fill="url(#fig)" opacity="0.55"/>
-    <ellipse cx="400" cy="416" rx="98" ry="122" fill="url(#fig)" opacity="0.85"/>
+  <circle cx="82" cy="429" r="143" fill="#FFFFFF" opacity="0.15"/><circle cx="642" cy="441" r="114" fill="#FFFFFF" opacity="0.17"/><circle cx="417" cy="245" r="79" fill="#FFFFFF" opacity="0.18"/><circle cx="644" cy="329" r="130" fill="#FFFFFF" opacity="0.25"/><circle cx="606" cy="369" r="75" fill="#FFFFFF" opacity="0.13"/><circle cx="467" cy="84" r="105" fill="#FFFFFF" opacity="0.26"/>
+  <rect x="36" y="36" width="728" height="928" fill="none" stroke="url(#gold)" stroke-width="1.5" opacity="0.8"/>
+  <rect x="48" y="48" width="704" height="904" fill="none" stroke="url(#gold)" stroke-width="0.8" opacity="0.5"/>
+  
+  <g stroke="#66724F" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85">
+    <path d="M330 820 Q 320 700 360 640 L440 640 Q 480 700 470 820 Z" fill="#FFFFFF" fill-opacity="0.35"/>
+    <path d="M400 640 Q 395 520 380 420"/><path d="M400 640 Q 430 520 480 450"/><path d="M400 640 Q 350 540 300 480"/>
+    <path d="M380 420 m -34 0 a 34 34 0 1 0 68 0 a 34 34 0 1 0 -68 0"/>
+    <path d="M480 450 m -28 0 a 28 28 0 1 0 56 0 a 28 28 0 1 0 -56 0"/>
+    <path d="M300 480 m -24 0 a 24 24 0 1 0 48 0 a 24 24 0 1 0 -48 0"/>
+    <path d="M420 540 Q 460 520 470 540 Q 450 560 420 540 Z"/><path d="M370 560 Q 330 540 320 560 Q 340 580 370 560 Z"/>
   </g>
-  <path d="M150 1000 C 170 676, 290 606, 400 606 C 510 606, 630 676, 650 1000 Z" fill="url(#fig)" opacity="0.9"/>
-  <path d="M90 260 A 330 330 0 0 1 640 180" stroke="url(#gold)" stroke-width="2" fill="none" opacity="0.8"/>
-  <text x="760" y="960" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="22" letter-spacing="4" fill="#FFFFFF" opacity="0.75">DEMO</text>
+  <circle cx="380" cy="420" r="9" fill="#E2CFA6"/><circle cx="480" cy="450" r="7" fill="#E2CFA6"/><circle cx="300" cy="480" r="6" fill="#E2CFA6"/>
+  <text x="400" y="230" text-anchor="middle" font-family="Cormorant Garamond, 'Times New Roman', Georgia, serif" font-size="34" letter-spacing="10" fill="#66724F" opacity="0.7">FLEUR</text>
+  <text x="400" y="918" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="6" fill="#66724F" opacity="0.55">DEMO IMAGE</text>
 </svg>
