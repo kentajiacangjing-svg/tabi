@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { Link, Redirect, router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,6 +8,7 @@ import { DemoStatus } from '@/components/DemoStatus';
 import { Icon, type IconName } from '@/components/Icon';
 import { Button, Pill, RankBadge, Row, Screen, T } from '@/components/ui';
 import { useAuth, useServiceName } from '@/lib/auth';
+import { DEMO_BROWSER } from '@/lib/supabase';
 import { homeFor } from '@/lib/nav';
 import { colors, fonts, radius, shadow, space } from '@/theme/tokens';
 
@@ -44,6 +46,7 @@ export default function Landing() {
               <Button title="はじめる" onPress={() => router.push('/auth/role')} testID="cta-start" style={wide ? { flex: 1 } : undefined} />
               <Button title="ログイン" variant="outline" onPress={() => router.push('/auth/sign-in')} testID="cta-login" style={wide ? { flex: 1 } : undefined} />
             </View>
+            {DEMO_BROWSER || __DEV__ ? <QuickDemo /> : null}
             <DemoStatus compact />
           </View>
           <Showcase wide={wide} />
@@ -64,6 +67,42 @@ export default function Landing() {
         <T v="small" center style={{ marginBottom: space.xl }}>名称・料金・ランク条件は仮設定です。人物画像は AI 生成のデモ画像で、実在の会員ではありません。</T>
       </View>
     </Screen>
+  );
+}
+
+/** デモ版のみ：登録なしで、用意したデモアカウントにワンタップで入れる */
+function QuickDemo() {
+  const { signIn } = useAuth();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const go = async (email: string) => {
+    setBusy(email);
+    setErr(null);
+    try {
+      await signIn(email, 'DemoPass123!');
+      router.replace('/');
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const list = [
+    { label: '男性で試す', email: 'taro@demo.projectgold.local', id: 'quick-man' },
+    { label: '女性で試す', email: 'misaki@demo.projectgold.local', id: 'quick-woman' },
+    { label: '運営で試す', email: 'admin@demo.projectgold.local', id: 'quick-admin' },
+  ];
+  return (
+    <View style={styles.quick}>
+      <T v="h3" style={{ fontSize: 14 }}>登録せずにすぐ試す（デモ）</T>
+      <T v="small">押すだけでデモ用アカウントに入れます。</T>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm }}>
+        {list.map((d) => (
+          <Button key={d.id} small variant="outline" title={d.label} loading={busy === d.email} disabled={!!busy} onPress={() => go(d.email)} testID={d.id} style={{ flexGrow: 1 }} />
+        ))}
+      </View>
+      {err ? <T v="small" color={colors.danger} style={{ marginTop: space.sm }}>{err}</T> : null}
+    </View>
   );
 }
 
@@ -112,6 +151,7 @@ const styles = StyleSheet.create({
   headline: { fontSize: 30, lineHeight: 42, letterSpacing: 0.5 },
   lead: { fontSize: 15, lineHeight: 24, maxWidth: 440 },
   ctas: { gap: space.sm, marginTop: space.md, maxWidth: 460 },
+  quick: { padding: space.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.goldLight, backgroundColor: colors.surface, gap: 2, maxWidth: 460 },
   showcase: { position: 'relative', alignSelf: 'center', width: '100%', maxWidth: 420 },
   sample: { position: 'absolute', backgroundColor: colors.surface, borderRadius: radius.lg, padding: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   trust: { marginTop: space.xxl, gap: space.md },

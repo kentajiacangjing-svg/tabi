@@ -36,6 +36,8 @@ for (const s of scripts) {
     if (!used.some((u) => p.includes(`/${u}.`))) return m;
     return JSON.stringify(`data:font/ttf;base64,${readFileSync(join(tmp, p)).toString('base64')}`);
   });
+  // ランディングの見本画像など、アプリに同梱した SVG もデータ URI にして単一ファイルで配れるようにする
+  js = js.replace(/"\/(assets\/[^"]+\.svg)"/g, (m, p) => JSON.stringify(`data:image/svg+xml;base64,${readFileSync(join(tmp, p)).toString('base64')}`));
   writeFileSync(join(out, 'app', s.split('/').pop()), js);
 }
 
