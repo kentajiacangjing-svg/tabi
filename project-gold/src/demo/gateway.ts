@@ -109,7 +109,9 @@ async function openDb(): Promise<DB> {
   if (!window.__PG) throw new Error('データベースの読み込み処理が見つかりません（ページを再読み込みしてください）');
   setStatus({ step: 'データベースを読み込み中（約17MB）' });
   const { PGlite, wasm, data, ext } = await withTimeout(window.__PG, 180000, 'データベースの読み込み');
-  const opts = { wasmModule: wasm, fsBundle: data, extensions: { btree_gist: ext('btree_gist'), pgcrypto: ext('pgcrypto') } };
+  // 拡張機能は使わない（scripts/gen-demo-sql.mjs の DEMO_EXT_SHIM で代替）
+  void ext;
+  const opts = { wasmModule: wasm, fsBundle: data };
   let db: PG | null = null;
   // 1) 端末内保存（IndexedDB）で起動。前回の途中データ・保存不可・失敗のときは消してメモリ上で作り直す
   try {
